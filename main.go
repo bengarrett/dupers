@@ -1,4 +1,4 @@
-// © Ben Garrett https://github.com/bengarrett
+// © Ben Garrett https://github.com/bengarrett/dupers
 
 // BBStruction todo
 package main

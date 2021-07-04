@@ -1,4 +1,4 @@
-module github.com/bengarrett/BBStruction
+module github.com/bengarrett/dupers
 
 go 1.16
 

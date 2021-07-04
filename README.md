@@ -1,4 +1,4 @@
-# BBStruction
+# dupers
 [Request from sensenstahl 06/06/21](https://discord.com/channels/@me/808676590351024158/850992251408482336)
 
 ### Original request
@@ -32,4 +32,4 @@
   structure into a main directory so the original (e.g. unpacked) stuff is
   available in case something needs to get checked again by hand so it is not
   needed to extract a .zip again. thoughts? maybe a switch for that?
-  
+
