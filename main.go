@@ -26,9 +26,28 @@ var (
 
 const winOS = "windows"
 
+// scan folders & files
+// search location
+//
+// archives/collection location
+// scan location (where to look)
+//
+// --scan [file/directory] // ~/zipcmt.deb
+//
+// --delete-dupes
+// --move-dupes
+// --copy-dupes
+//
+// --deep-scan (open archives and hash binary files)
+//
+//
+// dupers --scan=~/zipcmt.deb ~
+// dupers --scan=C:\Users\ben\Downloads\zipcmt.deb C:\Users\ben
+
 func main() {
 	var c dupers.Config
 	c.Timer = time.Now()
+	flag.StringVar(&c.Scan, "scan", "", "scan this file or directory")
 
 	ver := flag.Bool("version", false, "version and information for this program")
 	v := flag.Bool("v", false, "alias for version")
@@ -42,6 +61,8 @@ func main() {
 	c.Dirs = flag.Args()
 	// file and directory scan
 	c.WalkDirs()
+	// find dupes
+	c.ScanDirs()
 	// summaries
 	fmt.Println(c.Status())
 }
@@ -79,7 +100,7 @@ func flags(ver, v *bool) {
 // Help, usage and examples.
 func help(logo bool) {
 	var f *flag.Flag
-	const ps = string(os.PathSeparator)
+	//const ps = string(os.PathSeparator)
 	if logo {
 		fmt.Fprintln(os.Stderr, brand)
 	}
@@ -95,6 +116,8 @@ func help(logo bool) {
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Options:")
 	w := tabwriter.NewWriter(os.Stderr, 0, 0, 4, ' ', 0)
+	f = flag.Lookup("scan")
+	fmt.Fprintf(w, "    -%v, -%v=<DIRECTORY|FILE>\t%v\n", "s", f.Name, f.Usage)
 	f = flag.Lookup("version")
 	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
 	fmt.Fprintln(w, "    -h, -help\tshow this list of options")
