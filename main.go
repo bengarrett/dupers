@@ -1,6 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
 
-// BBStruction todo
+// dupers todo
 package main
 
 import (
@@ -10,7 +10,9 @@ import (
 	"runtime"
 	"strings"
 	"text/tabwriter"
+	"time"
 
+	dupers "github.com/bengarrett/dupers/lib"
 	"github.com/gookit/color"
 )
 
@@ -25,7 +27,23 @@ var (
 const winOS = "windows"
 
 func main() {
+	var c dupers.Config
+	c.Timer = time.Now()
 
+	ver := flag.Bool("version", false, "version and information for this program")
+	v := flag.Bool("v", false, "alias for version")
+
+	flag.Usage = func() {
+		help(true)
+	}
+	flag.Parse()
+	flags(ver, v)
+	// directories to scan
+	c.Dirs = flag.Args()
+	// file and directory scan
+	c.WalkDirs()
+	// summaries
+	fmt.Println(c.Status())
 }
 
 func flags(ver, v *bool) {
@@ -48,9 +66,9 @@ func flags(ver, v *bool) {
 	// print help if no arguments are given
 	if len(flag.Args()) == 0 {
 		if runtime.GOOS == winOS {
-			color.Warn.Println("zipcmt requires at least one directory or drive letter to scan")
+			color.Warn.Println("dupers requires at least one directory or drive letter to scan")
 		} else {
-			color.Warn.Println("zipcmt requires at least one directory to scan")
+			color.Warn.Println("dupers requires at least one directory to scan")
 		}
 		fmt.Println()
 		help(false)
@@ -67,20 +85,30 @@ func help(logo bool) {
 	}
 	fmt.Fprintln(os.Stderr, "Usage:")
 	if runtime.GOOS == winOS {
-		fmt.Fprintln(os.Stderr, "    zipcmt [options] <directories or drive letters>")
+		fmt.Fprintln(os.Stderr, "    dupers [options] <directories or drive letters>")
 	} else {
-		fmt.Fprintln(os.Stderr, "    zipcmt [options] <directories>")
+		fmt.Fprintln(os.Stderr, "    dupers [options] <directories>")
 	}
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Examples:")
+	// todo
+	fmt.Fprintln(os.Stderr, "")
+	fmt.Fprintln(os.Stderr, "Options:")
+	w := tabwriter.NewWriter(os.Stderr, 0, 0, 4, ' ', 0)
+	f = flag.Lookup("version")
+	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
+	fmt.Fprintln(w, "    -h, -help\tshow this list of options")
+	fmt.Fprintln(w)
+	optimial(w)
+	w.Flush()
 }
 
 // Info prints out the program information and version.
 func info() {
 	const copyright = "\u00A9"
 	fmt.Println(brand)
-	fmt.Printf("zipcmt v%s\n%s 2021 Ben Garrett, logo by sensenstahl\n", version, copyright)
-	fmt.Printf("https://github.com/bengarrett/zipcmt\n\n")
+	fmt.Printf("dupers v%s\n%s 2021 Ben Garrett\n", version, copyright)
+	fmt.Printf("https://github.com/bengarrett/dupers\n\n")
 	fmt.Printf("build: %s (%s)\n", commit, date)
 	exe, err := self()
 	if err != nil {
