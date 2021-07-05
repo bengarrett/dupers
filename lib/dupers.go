@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,6 +17,7 @@ import (
 	"time"
 
 	"github.com/gookit/color"
+	bolt "go.etcd.io/bbolt"
 )
 
 type Config struct {
@@ -25,14 +27,17 @@ type Config struct {
 	NoWalk bool
 	Quiet  bool
 	test   bool
-	files  int // rename to files
+	files  int
 	hashes hash
 	scans  hash
+	db     *bolt.DB
 }
 
 type (
 	hash map[[32]byte]string
 )
+
+var ExistingPath = errors.New("blah blah blah")
 
 // Status summarizes the files scan.
 func (c Config) Status() string {
@@ -82,24 +87,31 @@ func (c *Config) WalkDirs() {
 
 // WalkDir walks the root directory for zip archives and to extract any found comments.
 func (c *Config) WalkDir(root string) error {
-
 	c.init()
 
-	var wg sync.WaitGroup // Move to Config via c.init()?
-	//defer wg.Done()
+	if c.db == nil {
+		var err error
+		c.db, err = bolt.Open("my.db", 0600, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer c.db.Close()
+	}
 
-	// var hasher = func(path string) {
-	// 	defer wg.Done()
-	// 	hash, err := sum(path)
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 		return
-	// 	}
-	// 	if hash == [32]byte{} {
-	// 		return
-	// 	}
-	// 	c.hashes[hash] = path
-	// }
+	var wg sync.WaitGroup // Move to Config via c.init()?
+
+	errDB := c.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(root))
+		if b == nil {
+			fmt.Println("Creating a database bucket for", root)
+			_, err := tx.CreateBucket([]byte(root))
+			return err
+		}
+		return nil
+	})
+	if errDB != nil {
+		log.Fatalln(errDB)
+	}
 
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -111,6 +123,7 @@ func (c *Config) WalkDir(root string) error {
 		// skip directories
 		if d.IsDir() {
 			switch d.Name() {
+			// the SkipDir return tells WalkDir to skip all files in these directories
 			case ".git", ".cache", ".config", ".local":
 				return filepath.SkipDir
 			default:
@@ -120,79 +133,63 @@ func (c *Config) WalkDir(root string) error {
 				return nil
 			}
 		}
-
+		// skip non-files such as symlinks
 		if !d.Type().IsRegular() {
 			return nil
 		}
 
-		// skip hidden files and directories
-		// if len(path) > 1 && strings.HasPrefix(filepath.Base(path), ".") {
-		// 	return nil
-		// }
-		// if len(path) > 1 && strings.Index(path, "/.") > 0 {
-		// 	return nil
-		// }
-
-		// p := strings.Split(path, string(os.PathSeparator))
-		// //fmt.Println(p)
-		// for _, sub := range p {
-		// 	if sub == "" {
-		// 		continue
-		// 	}
-		// 	if sub[0:1] == "." {
-		// 		return nil //filepath.SkipDir
-		// 	}
-		// }
-		// skip sub-directories
-		//c.NoWalk = true
-		// fmt.Println(path)
-		// fmt.Println(d.Type())
-		// fmt.Println(filepath.Dir(path), "<-->", filepath.Dir(root))
 		if c.NoWalk && filepath.Dir(path) != filepath.Dir(root) {
 			return nil
 		}
 		c.files++
+
+		errDB := c.db.View(func(tx *bolt.Tx) error {
+			if !c.test && !c.Quiet {
+				fmt.Print("\u001b[2K")
+				fmt.Print("\r", color.Secondary.Sprint("Looked up "), color.Primary.Sprintf("%d files:", c.files), " ", path)
+			}
+			b := tx.Bucket([]byte(root))
+			if b == nil {
+				return nil
+			}
+			h := b.Get([]byte(path))
+			if len(h) > 0 {
+				var hash [32]byte
+				copy(hash[:], h)
+				c.hashes[hash] = path
+				return ExistingPath
+			}
+			return nil
+		})
+		if errDB != nil {
+			if errDB == ExistingPath {
+				return nil
+			}
+			log.Fatalln(errDB)
+		}
+
 		if !c.test && !c.Quiet {
 			fmt.Print("\u001b[2K")
 			fmt.Print("\r", color.Secondary.Sprint("Scanned "), color.Primary.Sprintf("%d files:", c.files), " ", path)
 		}
-
-		// TODO: hash or read file
-
-		// read zip file comment
-		// cmmt, err := Read(path, c.Raw)
-		// if err != nil {
-		// 	c.Error(err)
-		// 	return nil
-		// }
-		// if cmmt == "" {
-		// 	return nil
-		// }
-
-		// hash the comment
-
-		//hash := sha256.Sum256([]byte(strings.TrimSpace(cmmt)))
-
+		// hash the file
 		wg.Add(1)
-		go c.hash(path, &wg)
-		//go hasher(path)
-		//hasher(path)
+		go c.hash(path, root, &wg)
 		wg.Wait()
 
 		return err
 	})
-	//fmt.Printf("\n%+v\n", c.hashes)
 	return err
 }
 
-// init initialise the Config maps.
+// init initialises the Config maps and database.
 func (c *Config) init() {
 	if c.hashes == nil {
 		c.hashes = make(hash)
 	}
 }
 
-func (c *Config) hash(path string, wg *sync.WaitGroup) {
+func (c *Config) hash(path, root string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	hash, err := sum(path)
 	if err != nil {
@@ -202,7 +199,14 @@ func (c *Config) hash(path string, wg *sync.WaitGroup) {
 	if hash == [32]byte{} {
 		return
 	}
+	if err = c.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(root))
+		return b.Put([]byte(path), hash[:])
+	}); err != nil {
+		log.Println(err)
+	}
 	c.hashes[hash] = path
+
 }
 
 func sum(path string) (hash [32]byte, err error) {

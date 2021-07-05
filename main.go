@@ -13,6 +13,7 @@ import (
 	"time"
 
 	dupers "github.com/bengarrett/dupers/lib"
+	"github.com/bengarrett/dupers/lib/database"
 	"github.com/gookit/color"
 )
 
@@ -49,14 +50,16 @@ func main() {
 	c.Timer = time.Now()
 	flag.StringVar(&c.Scan, "scan", "", "scan this file or directory")
 
+	db := flag.Bool("database", false, "database statistics and information")
 	ver := flag.Bool("version", false, "version and information for this program")
 	v := flag.Bool("v", false, "alias for version")
+	d := flag.Bool("d", false, "alias for database")
 
 	flag.Usage = func() {
 		help(true)
 	}
 	flag.Parse()
-	flags(ver, v)
+	flags(ver, db, v, d)
 	// directories to scan
 	c.Dirs = flag.Args()
 	// file and directory scan
@@ -67,10 +70,13 @@ func main() {
 	fmt.Println(c.Status())
 }
 
-func flags(ver, v *bool) {
+func flags(ver, db, v, d *bool) {
 	// convenience for when a help or version flag is passed as an argument
 	for _, arg := range flag.Args() {
 		switch strings.ToLower(arg) {
+		case "-d", "-database", "--database":
+			fmt.Println(database.Name())
+			os.Exit(0)
 		case "-h", "-help", "--help":
 			help(true)
 			os.Exit(0)
@@ -78,6 +84,11 @@ func flags(ver, v *bool) {
 			info()
 			os.Exit(0)
 		}
+	}
+	// print database information
+	if *db || *d {
+		fmt.Println(database.Info())
+		os.Exit(0)
 	}
 	// print version information
 	if *ver || *v {
@@ -118,6 +129,9 @@ func help(logo bool) {
 	w := tabwriter.NewWriter(os.Stderr, 0, 0, 4, ' ', 0)
 	f = flag.Lookup("scan")
 	fmt.Fprintf(w, "    -%v, -%v=<DIRECTORY|FILE>\t%v\n", "s", f.Name, f.Usage)
+	fmt.Fprintln(w)
+	f = flag.Lookup("database")
+	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
 	f = flag.Lookup("version")
 	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
 	fmt.Fprintln(w, "    -h, -help\tshow this list of options")
