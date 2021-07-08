@@ -4,8 +4,10 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"runtime"
 	"strings"
@@ -14,7 +16,7 @@ import (
 
 	dupers "github.com/bengarrett/dupers/lib"
 	"github.com/bengarrett/dupers/lib/database"
-	"github.com/gookit/color"
+	"github.com/dustin/go-humanize"
 )
 
 var (
@@ -27,56 +29,211 @@ var (
 
 const winOS = "windows"
 
-// scan folders & files
-// search location
-//
-// archives/collection location
-// scan location (where to look)
-//
-// --scan [file/directory] // ~/zipcmt.deb
-//
 // --delete-dupes
 // --move-dupes
 // --copy-dupes
 //
 // --deep-scan (open archives and hash binary files)
-//
-//
-// dupers --scan=~/zipcmt.deb ~
-// dupers --scan=C:\Users\ben\Downloads\zipcmt.deb C:\Users\ben
 
 func main() {
 	var c dupers.Config
 	c.Timer = time.Now()
-	flag.StringVar(&c.Scan, "scan", "", "scan this file or directory")
 
-	db := flag.Bool("database", false, "database statistics and information")
+	flag.BoolVar(&c.Lookup, "fast", false, "query the database for a much faster match,\n\t\tthe results maybe stale as it does not look for any file or directory changes")
+	f := flag.Bool("f", false, "alias for fast")
+	exact := flag.Bool("exact", false, "match case")
+	ex := flag.Bool("e", false, "alias for exact")
+	filename := flag.Bool("name", false, "search for filenames and ignore directories")
+	fn := flag.Bool("n", false, "alias for name")
 	ver := flag.Bool("version", false, "version and information for this program")
 	v := flag.Bool("v", false, "alias for version")
-	d := flag.Bool("d", false, "alias for database")
 
 	flag.Usage = func() {
 		help(true)
 	}
 	flag.Parse()
-	flags(ver, db, v, d)
-	// directories to scan
-	c.Dirs = flag.Args()
-	// file and directory scan
-	c.WalkDirs()
+	options(ver, v)
+
+	selection := strings.ToLower(flag.Args()[0])
+	switch selection {
+	case "database", "db":
+		taskDatabase(flag.Args()...)
+	case "dupe":
+		if *f {
+			c.Lookup = true
+		}
+		taskScan(c)
+	case "search":
+		if *ex {
+			exact = ex
+		}
+		if *fn {
+			filename = fn
+		}
+		taskSearch(exact, filename)
+	}
+}
+
+// Help, usage and examples.
+func help(logo bool) {
+	var f *flag.Flag
+	w := tabwriter.NewWriter(os.Stderr, 0, 0, 4, ' ', 0)
+	//const ps = string(os.PathSeparator)
+	if logo {
+		fmt.Fprintln(os.Stderr, brand)
+	}
+	fmt.Fprintln(w, "Dupe:\n  Scan for duplicate files.")
+	fmt.Fprintln(w, "\n  Usage:")
+	if runtime.GOOS == winOS {
+		fmt.Fprintln(w, "    dupers [options] dupe <directory or file to match> <directories or drive letters to lookup>")
+	} else {
+		fmt.Fprintln(w, "    dupers [options] dupe <directory or file to match> <directories to lookup>")
+	}
+	fmt.Fprintln(w, "\n  Options:")
+	f = flag.Lookup("fast")
+	fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
+	w.Flush()
+	fmt.Fprintln(w, "\n  Examples:")
+
+	fmt.Fprintln(w, "\nSearch:\n  Lookup file and directory names in the database.")
+	fmt.Fprintln(w, "\n  Usage:")
+	fmt.Fprintln(w, "    dupers [options] search <search name> [directories to search]")
+	fmt.Fprintln(w, "\n  Options:")
+	f = flag.Lookup("exact")
+	fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
+	f = flag.Lookup("name")
+	fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
+	fmt.Fprintln(w, "\n  Examples:")
+
+	fmt.Fprintln(w, "\nDatabase:\n  View information and run maintenance on the internal database.\n  All of these commands are optional and are not required for the normal usage of dupers.")
+	fmt.Fprintln(w, "\n  Usage:")
+	fmt.Fprintln(w, "    dupers database\tdisplay statistics and bucket information")
+	fmt.Fprintf(w, "    dupers database %s\t%s\n", "backup", "make a copy of the database to: "+home())
+	fmt.Fprintf(w, "    dupers database %s\t%s\n", "clean", "remove all items in the database that point to missing files")
+	fmt.Fprintf(w, "    dupers database %s <bucket>\t%s\n", "rm", "remove the bucket (a scanned directory path) from the database")
+
+	fmt.Fprintln(w, "\nOptions:")
+	f = flag.Lookup("version")
+	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
+	fmt.Fprintln(w, "    -h, -help\tshow this list of options")
+	fmt.Fprintln(w)
+	optimial(w)
+	w.Flush()
+}
+
+func taskDatabase(args ...string) {
+	// handle any database tasks and exit
+	l := len(args)
+	if l < 2 {
+		fmt.Println(database.Info())
+		return
+	}
+	switch args[1] {
+	case "backup":
+		n, w, err := database.Backup()
+		if err != nil {
+			log.Fatalln(err)
+		}
+		fmt.Println("saved a copy of the database", humanize.Bytes(uint64(w)), ":", n)
+		return
+	case "clean":
+		if err := database.Clean(); err != nil {
+			log.Fatalln(err)
+		}
+		return
+	case "rm":
+		if l == 2 {
+			fmt.Println("no bucket was provided")
+			os.Exit(1)
+		}
+		name := args[2]
+		if err := database.RM(name); err != nil {
+			if errors.Is(err, database.ErrNoBucket) {
+				fmt.Printf("The bucket does not exist in the database: %q\n", name)
+				buckets, err := database.Buckets()
+				if err != nil {
+					log.Fatalln(err)
+				}
+				fmt.Printf("Buckets in use: %s\n", strings.Join(buckets, "\n\t\t"))
+				os.Exit(1)
+			}
+			log.Fatalln(err)
+		}
+		fmt.Printf("Removed bucket from the database: %q\n", name)
+		return
+	}
+}
+
+func taskScan(c dupers.Config) {
+	// if runtime.GOOS == winOS {
+	// 	color.Warn.Println("dupers requires at least one directory or drive letter to scan")
+	// } else {
+	// 	color.Warn.Println("dupers requires at least one directory to dupe")
+	// }
+	fmt.Println()
+	l := len(flag.Args())
+	if l <= 1 {
+		fmt.Println("dupe requires both a directory/file to match and one or more directories to lookup")
+		os.Exit(1)
+	}
+	if l == 2 {
+		fmt.Println("dupe requires at least one directory to lookup")
+		// todo show example with user params
+		os.Exit(1)
+	}
+	// directory or a file to match
+	c.Bucket = flag.Args()[1]
+	// directories and files to scan, a bucket is the name given to database tables
+	c.Buckets = flag.Args()[2:]
+	// files or directories to compare (these are not saved to database)
+	c.Queries()
+	// walk, scan and save file paths and hashes to the database
+	if c.Lookup {
+		c.Query()
+	} else {
+		if err := database.Clean(); err != nil {
+			log.Println(err)
+		}
+		c.WalkDirs()
+	}
+	fmt.Println()
 	// find dupes
-	c.ScanDirs()
+	c.Matches()
 	// summaries
 	fmt.Println(c.Status())
 }
 
-func flags(ver, db, v, d *bool) {
+func taskSearch(exact, filename *bool) {
+	fmt.Println()
+	l := len(flag.Args())
+	if l <= 1 {
+		fmt.Println("search requires a <search name> which can be a partial or complete filename or directory")
+		os.Exit(1)
+	}
+	term := flag.Args()[1]
+	var buckets = []string{}
+	if l > 2 {
+		buckets = flag.Args()[2:]
+	}
+	if *filename {
+		if !*exact {
+			database.CompareBaseNoCase(term, buckets)
+			return
+		}
+		database.CompareBase(term, buckets)
+		return
+	}
+	if !*exact {
+		database.CompareNoCase(term, buckets)
+		return
+	}
+	database.Compare(term, buckets)
+}
+
+func options(ver, v *bool) {
 	// convenience for when a help or version flag is passed as an argument
 	for _, arg := range flag.Args() {
 		switch strings.ToLower(arg) {
-		case "-d", "-database", "--database":
-			fmt.Println(database.Name())
-			os.Exit(0)
 		case "-h", "-help", "--help":
 			help(true)
 			os.Exit(0)
@@ -85,11 +242,6 @@ func flags(ver, db, v, d *bool) {
 			os.Exit(0)
 		}
 	}
-	// print database information
-	if *db || *d {
-		fmt.Println(database.Info())
-		os.Exit(0)
-	}
 	// print version information
 	if *ver || *v {
 		info()
@@ -97,47 +249,9 @@ func flags(ver, db, v, d *bool) {
 	}
 	// print help if no arguments are given
 	if len(flag.Args()) == 0 {
-		if runtime.GOOS == winOS {
-			color.Warn.Println("dupers requires at least one directory or drive letter to scan")
-		} else {
-			color.Warn.Println("dupers requires at least one directory to scan")
-		}
-		fmt.Println()
 		help(false)
 		os.Exit(0)
 	}
-}
-
-// Help, usage and examples.
-func help(logo bool) {
-	var f *flag.Flag
-	//const ps = string(os.PathSeparator)
-	if logo {
-		fmt.Fprintln(os.Stderr, brand)
-	}
-	fmt.Fprintln(os.Stderr, "Usage:")
-	if runtime.GOOS == winOS {
-		fmt.Fprintln(os.Stderr, "    dupers [options] <directories or drive letters>")
-	} else {
-		fmt.Fprintln(os.Stderr, "    dupers [options] <directories>")
-	}
-	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "Examples:")
-	// todo
-	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "Options:")
-	w := tabwriter.NewWriter(os.Stderr, 0, 0, 4, ' ', 0)
-	f = flag.Lookup("scan")
-	fmt.Fprintf(w, "    -%v, -%v=<DIRECTORY|FILE>\t%v\n", "s", f.Name, f.Usage)
-	fmt.Fprintln(w)
-	f = flag.Lookup("database")
-	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
-	f = flag.Lookup("version")
-	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
-	fmt.Fprintln(w, "    -h, -help\tshow this list of options")
-	fmt.Fprintln(w)
-	optimial(w)
-	w.Flush()
 }
 
 // Info prints out the program information and version.
@@ -162,6 +276,16 @@ func optimial(w *tabwriter.Writer) {
 		fmt.Fprintln(w, "Or create Windows Security Exclusions for the directories to be scanned.")
 		fmt.Fprintln(w, "https://support.microsoft.com/en-us/windows/add-an-exclusion-to-windows-security-811816c0-4dfd-af4a-47e4-c301afe13b26")
 	}
+}
+
+func home() string {
+	h, err := os.UserHomeDir()
+	if err != nil {
+		if h, err = os.Getwd(); err != nil {
+			log.Println(err)
+		}
+	}
+	return h
 }
 
 func self() (string, error) {
