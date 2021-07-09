@@ -39,7 +39,7 @@ func main() {
 	var c dupers.Config
 	c.Timer = time.Now()
 
-	flag.BoolVar(&c.Lookup, "fast", false, "query the database for a much faster match,\n\t\tthe results maybe stale as it does not look for any file or directory changes")
+	look := flag.Bool("fast", false, "query the database for a much faster match,\n\t\tthe results maybe stale as it does not look for any file or directory changes")
 	f := flag.Bool("f", false, "alias for fast")
 	exact := flag.Bool("exact", false, "match case")
 	ex := flag.Bool("e", false, "alias for exact")
@@ -60,9 +60,9 @@ func main() {
 		taskDatabase(flag.Args()...)
 	case "dupe":
 		if *f {
-			c.Lookup = true
+			*look = true
 		}
-		taskScan(c)
+		taskScan(c, *look)
 	case "search":
 		if *ex {
 			exact = ex
@@ -164,7 +164,7 @@ func taskDatabase(args ...string) {
 	}
 }
 
-func taskScan(c dupers.Config) {
+func taskScan(c dupers.Config, lookup bool) {
 	// if runtime.GOOS == winOS {
 	// 	color.Warn.Println("dupers requires at least one directory or drive letter to scan")
 	// } else {
@@ -186,19 +186,19 @@ func taskScan(c dupers.Config) {
 	// directories and files to scan, a bucket is the name given to database tables
 	c.Buckets = flag.Args()[2:]
 	// files or directories to compare (these are not saved to database)
-	c.Queries()
+	c.WalkSource()
 	// walk, scan and save file paths and hashes to the database
-	if c.Lookup {
-		c.Query()
-	} else {
+	if !lookup {
 		if err := database.Clean(); err != nil {
 			log.Println(err)
 		}
 		c.WalkDirs()
+	} else {
+		c.Seek()
 	}
 	fmt.Println()
-	// find dupes
-	c.Matches()
+	// print the found dupes
+	c.Print()
 	// summaries
 	fmt.Println(c.Status())
 }
@@ -215,19 +215,60 @@ func taskSearch(exact, filename *bool) {
 	if l > 2 {
 		buckets = flag.Args()[2:]
 	}
+
 	if *filename {
 		if !*exact {
-			database.CompareBaseNoCase(term, buckets)
+			m, err := database.CompareBaseNoCase(term, buckets)
+			if err != nil {
+				log.Fatalln(err)
+			}
+			dupers.Print(term, m)
+			fmt.Println(compareResults(len(*m), term, exact, filename))
 			return
 		}
-		database.CompareBase(term, buckets)
+		m, err := database.CompareBase(term, buckets)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		dupers.Print(term, m)
+		fmt.Println(compareResults(len(*m), term, exact, filename))
 		return
 	}
 	if !*exact {
-		database.CompareNoCase(term, buckets)
+		m, err := database.CompareNoCase(term, buckets)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		dupers.Print(term, m)
+		fmt.Println(compareResults(len(*m), term, exact, filename))
 		return
 	}
-	database.Compare(term, buckets)
+	m, err := database.Compare(term, buckets)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	fmt.Println(compareResults(len(*m), term, exact, filename))
+	dupers.Print(term, m)
+}
+
+func compareResults(total int, term string, exact, filename *bool) string {
+	s := ""
+	if total == 0 {
+		return fmt.Sprintf("No results exist for %q\n", term)
+	}
+	s = fmt.Sprintf("\n%d", total)
+	if *exact && *filename {
+		s += fmt.Sprintf(" exact filename results for %q", term)
+		return s
+	}
+	if *exact {
+		s += fmt.Sprintf(" exact results for %q", term)
+	} else if *filename {
+		s += fmt.Sprintf(" filename results for %q", term)
+	} else {
+		s += fmt.Sprintf(" results for %q", term)
+	}
+	return s
 }
 
 func options(ver, v *bool) {
