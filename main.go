@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"text/tabwriter"
@@ -17,6 +18,7 @@ import (
 	dupers "github.com/bengarrett/dupers/lib"
 	"github.com/bengarrett/dupers/lib/database"
 	"github.com/dustin/go-humanize"
+	"github.com/gookit/color"
 )
 
 var (
@@ -45,6 +47,9 @@ func main() {
 	ex := flag.Bool("e", false, "alias for exact")
 	filename := flag.Bool("name", false, "search for filenames and ignore directories")
 	fn := flag.Bool("n", false, "alias for name")
+
+	quiet := flag.Bool("quiet", false, "quiet mode hides all but essential feedback")
+	q := flag.Bool("q", false, "alias for quiet")
 	ver := flag.Bool("version", false, "version and information for this program")
 	v := flag.Bool("v", false, "alias for version")
 
@@ -52,15 +57,21 @@ func main() {
 		help(true)
 	}
 	flag.Parse()
+	if *q {
+		*quiet = true
+	}
 	options(ver, v)
 
 	selection := strings.ToLower(flag.Args()[0])
 	switch selection {
 	case "database", "db":
-		taskDatabase(flag.Args()...)
+		taskDatabase(*quiet, flag.Args()...)
 	case "dupe":
 		if *f {
 			*look = true
+		}
+		if *q || *quiet {
+			c.Quiet = true
 		}
 		taskScan(c, *look)
 	case "search":
@@ -70,7 +81,7 @@ func main() {
 		if *fn {
 			filename = fn
 		}
-		taskSearch(exact, filename)
+		taskSearch(exact, filename, quiet)
 	}
 }
 
@@ -78,11 +89,12 @@ func main() {
 func help(logo bool) {
 	var f *flag.Flag
 	w := tabwriter.NewWriter(os.Stderr, 0, 0, 4, ' ', 0)
-	//const ps = string(os.PathSeparator)
 	if logo {
 		fmt.Fprintln(os.Stderr, brand)
 	}
-	fmt.Fprintln(w, "Dupe:\n  Scan for duplicate files.")
+	fmt.Fprintln(w, "Dupe:\n  Scan for duplicate files, looking for files that share identical content.")
+	fmt.Fprintln(w, "  The \"directory or file to match\" is never added to the database.")
+	fmt.Fprintln(w, "  The contents of the \"directories to look up\" will always be added to the database for quicker, future scans.")
 	fmt.Fprintln(w, "\n  Usage:")
 	if runtime.GOOS == winOS {
 		fmt.Fprintln(w, "    dupers [options] dupe <directory or file to match> <directories or drive letters to lookup>")
@@ -94,16 +106,28 @@ func help(logo bool) {
 	fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
 	w.Flush()
 	fmt.Fprintln(w, "\n  Examples:")
+	fmt.Fprint(w, color.Info.Sprintf("    dupers dupe %q %q",
+		filepath.Join(home(), "file.zip"), filepath.Join(home(), "Downloads")))
+	fmt.Fprint(w, color.Note.Sprint("\t# search for identical copies of file.zip in the Downloads directory\n"))
+	fmt.Fprint(w, color.Info.Sprintf("    dupers -fast dupe %q %q",
+		"doc.txt", filepath.Join(home(), "Documents")))
+	fmt.Fprint(w, color.Note.Sprint("\t\t# search the database for identical copies of doc.txt in the Documents directory\n"))
 
-	fmt.Fprintln(w, "\nSearch:\n  Lookup file and directory names in the database.")
+	fmt.Fprintln(w, "\nSearch:\n  Lookup a file or a directory name in the database.")
 	fmt.Fprintln(w, "\n  Usage:")
-	fmt.Fprintln(w, "    dupers [options] search <search name> [directories to search]")
+	fmt.Fprintln(w, "    dupers [options] search <search expression> [directories to search]")
 	fmt.Fprintln(w, "\n  Options:")
 	f = flag.Lookup("exact")
 	fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
 	f = flag.Lookup("name")
 	fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
 	fmt.Fprintln(w, "\n  Examples:")
+	fmt.Fprint(w, "    "+color.Info.Sprintf("dupers search \"foo\" %q", home()))
+	fmt.Fprint(w, color.Note.Sprint("\t# search for the expression foo in your home directory\n"))
+	fmt.Fprint(w, "    "+color.Info.Sprint("dupers search \"bar\""))
+	fmt.Fprint(w, color.Note.Sprint("\t\t# search for the expression bar in the database\n"))
+	fmt.Fprint(w, "    "+color.Info.Sprint("dupers -name search \".zip\""))
+	fmt.Fprint(w, color.Note.Sprint("\t\t# search for filenames containing .zip\n"))
 
 	fmt.Fprintln(w, "\nDatabase:\n  View information and run maintenance on the internal database.\n  All of these commands are optional and are not required for the normal usage of dupers.")
 	fmt.Fprintln(w, "\n  Usage:")
@@ -113,6 +137,8 @@ func help(logo bool) {
 	fmt.Fprintf(w, "    dupers database %s <bucket>\t%s\n", "rm", "remove the bucket (a scanned directory path) from the database")
 
 	fmt.Fprintln(w, "\nOptions:")
+	f = flag.Lookup("quiet")
+	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
 	f = flag.Lookup("version")
 	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
 	fmt.Fprintln(w, "    -h, -help\tshow this list of options")
@@ -121,8 +147,7 @@ func help(logo bool) {
 	w.Flush()
 }
 
-func taskDatabase(args ...string) {
-	// handle any database tasks and exit
+func taskDatabase(quiet bool, args ...string) {
 	l := len(args)
 	if l < 2 {
 		fmt.Println(database.Info())
@@ -134,16 +159,20 @@ func taskDatabase(args ...string) {
 		if err != nil {
 			log.Fatalln(err)
 		}
-		fmt.Println("saved a copy of the database", humanize.Bytes(uint64(w)), ":", n)
+		if !quiet {
+			fmt.Println("saved a copy of the database", humanize.Bytes(uint64(w)), ":", n)
+		}
 		return
 	case "clean":
-		if err := database.Clean(); err != nil {
+		if err := database.Clean(quiet); err != nil {
 			log.Fatalln(err)
 		}
 		return
 	case "rm":
 		if l == 2 {
-			fmt.Println("no bucket was provided")
+			color.Warn.Println("Cannot remove a bucket from the database as no bucket name was provided")
+			fmt.Println("\ndupers database rm <bucket name>")
+			fmt.Println()
 			os.Exit(1)
 		}
 		name := args[2]
@@ -165,108 +194,129 @@ func taskDatabase(args ...string) {
 }
 
 func taskScan(c dupers.Config, lookup bool) {
-	// if runtime.GOOS == winOS {
-	// 	color.Warn.Println("dupers requires at least one directory or drive letter to scan")
-	// } else {
-	// 	color.Warn.Println("dupers requires at least one directory to dupe")
-	// }
-	fmt.Println()
 	l := len(flag.Args())
-	if l <= 1 {
-		fmt.Println("dupe requires both a directory/file to match and one or more directories to lookup")
-		os.Exit(1)
-	}
-	if l == 2 {
-		fmt.Println("dupe requires at least one directory to lookup")
-		// todo show example with user params
-		os.Exit(1)
+	if l < 3 {
+		tsPrintErr(l)
 	}
 	// directory or a file to match
-	c.Bucket = flag.Args()[1]
+	c.Source = flag.Args()[1]
 	// directories and files to scan, a bucket is the name given to database tables
 	c.Buckets = flag.Args()[2:]
 	// files or directories to compare (these are not saved to database)
 	c.WalkSource()
 	// walk, scan and save file paths and hashes to the database
 	if !lookup {
-		if err := database.Clean(); err != nil {
+		if err := database.Clean(true); err != nil {
 			log.Println(err)
 		}
 		c.WalkDirs()
 	} else {
 		c.Seek()
 	}
-	fmt.Println()
 	// print the found dupes
 	c.Print()
 	// summaries
-	fmt.Println(c.Status())
+	if !c.Quiet {
+		fmt.Println(c.Status())
+	}
 }
 
-func taskSearch(exact, filename *bool) {
-	fmt.Println()
-	l := len(flag.Args())
-	if l <= 1 {
-		fmt.Println("search requires a <search name> which can be a partial or complete filename or directory")
-		os.Exit(1)
+func tsPrintErr(l int) {
+	if l < 2 {
+		color.Warn.Println("the dupe request requires at both a source and target to run a check against")
+		fmt.Println("the source can be either a directory or file")
+		if runtime.GOOS == winOS {
+			fmt.Println("the target can be one or more directories or drive letters")
+		} else {
+			fmt.Println("the target can be one or more directories")
+		}
+		fmt.Println("\ndupers dupe <source file or directory> <target one or more directories>")
 	}
+	if l == 2 {
+		if runtime.GOOS == winOS {
+			color.Warn.Println("the dupe request requires at least one target directory or drive letter")
+		} else {
+			color.Warn.Println("the dupe request requires at least one target directory")
+		}
+		fmt.Printf("\ndupers dupe %s <target one or more directories>\n", flag.Args()[1])
+	}
+	fmt.Println("")
+	os.Exit(1)
+}
+
+func taskSearch(exact, filename, quiet *bool) {
+	l := len(flag.Args())
+	tscrPrintErr(l)
 	term := flag.Args()[1]
 	var buckets = []string{}
 	if l > 2 {
 		buckets = flag.Args()[2:]
 	}
-
+	var (
+		m   *database.Matches
+		err error
+	)
 	if *filename {
 		if !*exact {
-			m, err := database.CompareBaseNoCase(term, buckets)
-			if err != nil {
+			if m, err = database.CompareBaseNoCase(term, buckets); err != nil {
 				log.Fatalln(err)
 			}
-			dupers.Print(term, m)
-			fmt.Println(compareResults(len(*m), term, exact, filename))
-			return
 		}
-		m, err := database.CompareBase(term, buckets)
-		if err != nil {
-			log.Fatalln(err)
+		if *exact {
+			if m, err = database.CompareBase(term, buckets); err != nil {
+				log.Fatalln(err)
+			}
 		}
-		dupers.Print(term, m)
+	}
+	if !*filename {
+		if !*exact {
+			if m, err = database.CompareNoCase(term, buckets); err != nil {
+				log.Fatalln(err)
+			}
+		}
+		if *exact {
+			if m, err = database.Compare(term, buckets); err != nil {
+				log.Fatalln(err)
+			}
+		}
+	}
+	dupers.Print(term, *quiet, m)
+	if !*quiet {
 		fmt.Println(compareResults(len(*m), term, exact, filename))
-		return
 	}
-	if !*exact {
-		m, err := database.CompareNoCase(term, buckets)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		dupers.Print(term, m)
-		fmt.Println(compareResults(len(*m), term, exact, filename))
-		return
+}
+
+func tscrPrintErr(l int) {
+	if l <= 1 {
+		color.Warn.Println("the search request needs an expression")
+		fmt.Println("a search expression can be a partial or complete filename,")
+		fmt.Println("or a partial or complete directory")
+		fmt.Println("\ndupers search <search expression> [optional, directories to search]")
+		fmt.Println("")
+		os.Exit(1)
 	}
-	m, err := database.Compare(term, buckets)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	fmt.Println(compareResults(len(*m), term, exact, filename))
-	dupers.Print(term, m)
 }
 
 func compareResults(total int, term string, exact, filename *bool) string {
-	s := ""
+	s, r := "", "results"
 	if total == 0 {
 		return fmt.Sprintf("No results exist for %q\n", term)
 	}
+	if total == 1 {
+		r = "result"
+	}
+
 	s = fmt.Sprintf("\n%d", total)
 	if *exact && *filename {
-		s += fmt.Sprintf(" exact filename results for %q", term)
+		s += fmt.Sprintf(" exact filename %s for %q", r, term)
 		return s
 	}
 	if *exact {
-		s += fmt.Sprintf(" exact results for %q", term)
+		s += fmt.Sprintf(" exact %s for %q", r, term)
 	} else if *filename {
-		s += fmt.Sprintf(" filename results for %q", term)
+		s += fmt.Sprintf(" filename %s for %q", r, term)
 	} else {
-		s += fmt.Sprintf(" results for %q", term)
+		s += fmt.Sprintf(" %s for %q", r, term)
 	}
 	return s
 }

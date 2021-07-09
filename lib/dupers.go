@@ -23,28 +23,26 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-// Config x.
+// Config options for duper.
 type Config struct {
 	Timer   time.Time
 	Buckets []string
-	Bucket  string
-	NoWalk  bool // todo
-	Quiet   bool // todo
-	test    bool // todo
-	files   int
-	db      *bolt.DB
-	compare hash // database or file system hashes
-	queries hash // user scan or lookup requests hashes
+	Source  string   // directory or file to compare
+	NoWalk  bool     // todo
+	Quiet   bool     // todo
+	test    bool     // todo
+	files   int      // total files or database items read
+	db      *bolt.DB // interal Bolt database
+	compare hash     // hashes fetched from the database or file system
+	sources hash     // hashes for files to compare
 }
 
-type (
-	hash map[[32]byte]string
-)
+type hash map[[32]byte]string
 
 var ErrPathExist = errors.New("path exists in the database bucket")
 
 // Print the results of the database comparisons.
-func Print(term string, m *database.Matches) {
+func Print(term string, quiet bool, m *database.Matches) {
 	if len(*m) == 0 {
 		return
 	}
@@ -70,10 +68,16 @@ func Print(term string, m *database.Matches) {
 			cnt++
 			if b != bucket {
 				bucket = b
-				if cnt > 1 {
-					fmt.Println()
+				if !quiet {
+					if cnt > 1 {
+						fmt.Println()
+					}
+					fmt.Printf("Results from: %q\n", b)
 				}
-				fmt.Printf("Results from: %q\n", b)
+			}
+			if quiet {
+				fmt.Printf("%s\n", file)
+				continue
 			}
 			fmt.Printf("%d.\t%s\n", cnt, file)
 		}
@@ -106,9 +110,9 @@ func (c *Config) init() {
 	}
 }
 
-// Print x.
+// Print the results of a dupe request.
 func (c *Config) Print() {
-	for h, path := range c.queries {
+	for h, path := range c.sources {
 		l := c.lookupOne(h)
 		if l == "" {
 			continue
@@ -149,10 +153,10 @@ func matchItem(match string) string {
 	return s
 }
 
-// Seek x.
+// Seek sources from the database and print out the matches.
 func (c *Config) Seek() {
 	c.init()
-	for hash, path := range c.queries {
+	for hash, path := range c.sources {
 		s := "\n"
 		s += color.Info.Sprint("Looking up") +
 			":" +
@@ -186,7 +190,7 @@ func (c *Config) Seek() {
 	}
 }
 
-// Status summarizes the files scan.
+// Status summarizes the file total and time taken.
 func (c *Config) Status() string {
 	if c.Quiet {
 		return ""
@@ -201,7 +205,7 @@ func (c *Config) Status() string {
 	return s
 }
 
-// WalkDirs walks the directories provided by the Arg slice for zip archives to extract any found comments.
+// WalkDirs walks the directories provided by the arguments for zip archives to extract any found comments.
 func (c *Config) WalkDirs() {
 	c.init()
 	// walk through the directories provided
@@ -216,7 +220,6 @@ func (c *Config) WalkDirs() {
 func (c *Config) WalkDir(root string) error {
 	c.init()
 	skip := c.skipFiles()
-	fmt.Println(skip)
 	// open database
 	if c.db == nil {
 		name, err := database.DB()
@@ -273,6 +276,9 @@ func (c *Config) WalkDir(root string) error {
 
 		return err
 	})
+	if !c.Quiet {
+		fmt.Println()
+	}
 	return err
 }
 
@@ -282,37 +288,7 @@ func printWalk(path string, c *Config) {
 	}
 	fmt.Print("\u001b[2K")
 	fmt.Print("\r", color.Secondary.Sprint("Scanned "),
-		color.Primary.Sprintf("%d files:", c.files), " ", path)
-}
-
-func skipSelf(path string, skip []string) bool {
-	for _, n := range skip {
-		if path == n {
-			return true
-		}
-	}
-	return false
-}
-
-func walkDir(root, path string, c *Config) error {
-	return c.db.View(func(tx *bolt.Tx) error {
-		if !c.test && !c.Quiet {
-			fmt.Print("\u001b[2K")
-			fmt.Print("\r", color.Secondary.Sprint("Looked up "), color.Primary.Sprintf("%d files:", c.files), " ", path)
-		}
-		b := tx.Bucket([]byte(root))
-		if b == nil {
-			return nil
-		}
-		h := b.Get([]byte(path))
-		if len(h) > 0 {
-			var hash [32]byte
-			copy(hash[:], h)
-			c.compare[hash] = path
-			return ErrPathExist
-		}
-		return nil
-	})
+		color.Primary.Sprintf("%d files ", c.files))
 }
 
 func skipDir(d fs.DirEntry) error {
@@ -332,6 +308,37 @@ func skipDir(d fs.DirEntry) error {
 	return nil
 }
 
+func skipSelf(path string, skip []string) bool {
+	for _, n := range skip {
+		if path == n {
+			return true
+		}
+	}
+	return false
+}
+
+func walkDir(root, path string, c *Config) error {
+	return c.db.View(func(tx *bolt.Tx) error {
+		if !c.test && !c.Quiet {
+			fmt.Print("\u001b[2K")
+			fmt.Print("\r", color.Secondary.Sprint("Looked up "),
+				color.Primary.Sprintf("%d files ", c.files))
+		}
+		b := tx.Bucket([]byte(root))
+		if b == nil {
+			return nil
+		}
+		h := b.Get([]byte(path))
+		if len(h) > 0 {
+			var hash [32]byte
+			copy(hash[:], h)
+			c.compare[hash] = path
+			return ErrPathExist
+		}
+		return nil
+	})
+}
+
 func (c *Config) createBucket(root string) error {
 	return c.db.Update(func(tx *bolt.Tx) error {
 		if b := tx.Bucket([]byte(root)); b == nil {
@@ -343,13 +350,13 @@ func (c *Config) createBucket(root string) error {
 	})
 }
 
-// WalkSource x.
+// WalkSource walks the source directory or a file to collect its hashed content for future comparision.
 func (c *Config) WalkSource() {
-	if c.queries == nil {
-		c.queries = make(hash)
+	if c.sources == nil {
+		c.sources = make(hash)
 	}
 
-	root, err := filepath.Abs(c.Bucket)
+	root, err := filepath.Abs(c.Source)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -383,15 +390,6 @@ func (c *Config) WalkSource() {
 	}
 }
 
-func (c *Config) store(path string) error {
-	s, err := sum(path)
-	if err != nil {
-		return err
-	}
-	c.queries[s] = path
-	return nil
-}
-
 func (c *Config) hash(path, root string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	hash, err := sum(path)
@@ -412,10 +410,19 @@ func (c *Config) hash(path, root string, wg *sync.WaitGroup) {
 }
 
 func (c *Config) skipFiles() (files []string) {
-	for _, path := range c.queries {
+	for _, path := range c.sources {
 		files = append(files, path)
 	}
 	return files
+}
+
+func (c *Config) store(path string) error {
+	s, err := sum(path)
+	if err != nil {
+		return err
+	}
+	c.sources[s] = path
+	return nil
 }
 
 func sum(path string) (hash [32]byte, err error) {

@@ -101,7 +101,7 @@ func Buckets() (names []string, err error) {
 
 // Clean the stale items from all database buckets.
 // Stale items are file pointers that no longer exist on the host file system.
-func Clean() error {
+func Clean(quiet bool) error {
 	buckets, err := Buckets()
 	if err != nil {
 		return err
@@ -145,6 +145,9 @@ func Clean() error {
 		}); err != nil {
 			log.Println(err)
 		}
+	}
+	if quiet {
+		return nil
 	}
 	if cnt == 0 {
 		fmt.Println("nothing was cleaned")
