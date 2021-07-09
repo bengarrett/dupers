@@ -268,7 +268,7 @@ func (c *Config) WalkDir(root string) error {
 			}
 			log.Fatalln(errD)
 		}
-		printWalk(path, c)
+		printWalk(c)
 		// hash the file
 		wg.Add(1)
 		go c.hash(path, root, &wg)
@@ -282,7 +282,7 @@ func (c *Config) WalkDir(root string) error {
 	return err
 }
 
-func printWalk(path string, c *Config) {
+func printWalk(c *Config) {
 	if c.test || c.Quiet {
 		return
 	}
@@ -350,7 +350,7 @@ func (c *Config) createBucket(root string) error {
 	})
 }
 
-// WalkSource walks the source directory or a file to collect its hashed content for future comparision.
+// WalkSource walks the source directory or a file to collect its hashed content for future comparison.
 func (c *Config) WalkSource() {
 	if c.sources == nil {
 		c.sources = make(hash)
