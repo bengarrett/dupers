@@ -110,8 +110,18 @@ func help(logo bool) {
 		filepath.Join(home(), "file.zip"), filepath.Join(home(), "Downloads")))
 	fmt.Fprint(w, color.Note.Sprint("\t# search for identical copies of file.zip in the Downloads directory\n"))
 	fmt.Fprint(w, color.Info.Sprintf("    dupers -fast dupe %q %q",
-		"doc.txt", filepath.Join(home(), "Documents")))
+		"doc.txt", filepath.Join(home(), "Downloads")))
 	fmt.Fprint(w, color.Note.Sprint("\t\t# search the database for identical copies of doc.txt in the Documents directory\n"))
+
+	if runtime.GOOS == winOS {
+		fmt.Fprint(w, color.Info.Sprintf("    dupers dupe %q %q",
+			filepath.Join(home(), "Documents"), "D: E:"))
+		fmt.Fprint(w, color.Note.Sprint("\t\t# search for files in Documents that also exist on drives D: and E:\n"))
+	} else {
+		fmt.Fprint(w, color.Info.Sprintf("    dupers dupe %q %q",
+			filepath.Join(home(), "Documents"), "/var/www"))
+		fmt.Fprint(w, color.Note.Sprint("\t\t# search for files in Documents that also exist in /var/www\n"))
+	}
 
 	fmt.Fprintln(w, "\nSearch:\n  Lookup a file or a directory name in the database.")
 	fmt.Fprintln(w, "\n  Usage:")
