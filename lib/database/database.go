@@ -20,7 +20,10 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-type matches map[string]string
+type (
+	Filepath string
+	Matches  map[Filepath]string
+)
 
 const (
 	FileMode fs.FileMode = 0600
@@ -30,13 +33,13 @@ const (
 
 var ErrNoBucket = errors.New("bucket does not exist")
 
+// Backup makes a copy of the database to the named location.
 func Backup() (name string, written int64, err error) {
 	src, err := DB()
 	if err != nil {
 		return "", 0, err
 	}
-	now := time.Now().Format("20060102-150405")
-	ext := filepath.Ext(dbName)
+	now, ext := time.Now().Format("20060102-150405"), filepath.Ext(dbName)
 	file := fmt.Sprintf("%s-backup-%s%s", strings.TrimSuffix(dbName, ext), now, ext)
 
 	dir, err := os.UserHomeDir()
@@ -45,14 +48,14 @@ func Backup() (name string, written int64, err error) {
 	}
 	name = filepath.Join(dir, file)
 
-	written, err = copy(src, name)
+	written, err = copyFile(src, name)
 	if err != nil {
 		return "", 0, err
 	}
 	return name, written, nil
 }
 
-func copy(src, dest string) (int64, error) {
+func copyFile(src, dest string) (int64, error) {
 	// read source
 	f, err := os.Open(src)
 	if err != nil {
@@ -60,13 +63,13 @@ func copy(src, dest string) (int64, error) {
 	}
 	defer f.Close()
 	// create backup file
-	new, err := os.Create(dest)
+	bu, err := os.Create(dest)
 	if err != nil {
 		return 0, err
 	}
-	defer new.Close()
+	defer bu.Close()
 	// duplicate data
-	return io.Copy(new, f)
+	return io.Copy(bu, f)
 }
 
 // Buckets lists all the stored bucket names in the database.
@@ -81,7 +84,7 @@ func Buckets() (names []string, err error) {
 	}
 	defer db.Close()
 
-	if err = db.View(func(tx *bolt.Tx) error {
+	if err1 := db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 			v := tx.Bucket(name)
 			if v == nil {
@@ -90,8 +93,8 @@ func Buckets() (names []string, err error) {
 			names = append(names, string(name))
 			return nil
 		})
-	}); err != nil {
-		return nil, err
+	}); err1 != nil {
+		return nil, err1
 	}
 	return names, nil
 }
@@ -124,11 +127,11 @@ func Clean() error {
 				return ErrNoBucket
 			}
 			err = b.ForEach(func(k, v []byte) error {
-				if _, err := os.Stat(string(k)); err != nil {
-					if err = db.Update(func(tx *bolt.Tx) error {
+				if _, err1 := os.Stat(string(k)); err1 != nil {
+					if err2 := db.Update(func(tx *bolt.Tx) error {
 						return tx.Bucket(abs).Delete(k)
-					}); err != nil {
-						return err
+					}); err2 != nil {
+						return err2
 					}
 					cnt++
 					return nil
@@ -152,22 +155,23 @@ func Clean() error {
 }
 
 // Compare finds exact matches of the string contained within the stored filenames and paths.
-func Compare(s string, buckets []string) error {
+func Compare(s string, buckets []string) (*Matches, error) {
 	return compare([]byte(s), buckets, false, false)
 }
 
 // CompareBase finds exact matches of the string contained within the stored filenames.
-func CompareBase(s string, buckets []string) error {
+func CompareBase(s string, buckets []string) (*Matches, error) {
 	return compare([]byte(s), buckets, false, true)
 }
 
 // CompareBaseNoCase finds case insensitive matches of the string contained within the stored filenames.
-func CompareBaseNoCase(s string, buckets []string) error {
-	return compare([]byte(s), buckets, true, true)
+func CompareBaseNoCase(s string, buckets []string) (*Matches, error) {
+	m, err := compare([]byte(s), buckets, true, true)
+	return m, err
 }
 
 // CompareNoCase finds case insensitive matches of the string contained within the stored filenames and paths.
-func CompareNoCase(s string, buckets []string) error {
+func CompareNoCase(s string, buckets []string) (*Matches, error) {
 	return compare([]byte(s), buckets, true, false)
 }
 
@@ -179,24 +183,25 @@ func bucketAbs(name string) ([]byte, error) {
 	return []byte(s), nil
 }
 
-func compare(term []byte, buckets []string, noCase, base bool) error {
+func compare(term []byte, buckets []string, noCase, base bool) (*Matches, error) {
 	path, err := DB()
 	if err != nil {
 		log.Fatalln(err)
 	}
 	db, err := bolt.Open(path, FileMode, &bolt.Options{ReadOnly: true})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer db.Close()
 
 	if len(buckets) == 0 {
 		buckets, err = Buckets()
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
+	finds := make(Matches)
 	for _, bucket := range buckets {
 		abs, err := bucketAbs(bucket)
 		if err != nil {
@@ -212,7 +217,7 @@ func compare(term []byte, buckets []string, noCase, base bool) error {
 			if noCase {
 				s = bytes.ToLower(term)
 			}
-			b.ForEach(func(key, _ []byte) error {
+			err = b.ForEach(func(key, _ []byte) error {
 				k := key
 				if noCase {
 					k = bytes.ToLower(key)
@@ -220,21 +225,21 @@ func compare(term []byte, buckets []string, noCase, base bool) error {
 				if base {
 					k = []byte(filepath.Base(string(k)))
 					if bytes.Contains(k, s) {
-						fmt.Printf("\nMatch: %s\n", key)
+						finds[Filepath(key)] = bucket
 					}
 					return nil
 				}
 				if bytes.Contains(k, s) {
-					fmt.Printf("\nMatch: %s\n", key)
+					finds[Filepath(key)] = bucket
 				}
 				return nil
 			})
-			return nil
+			return err
 		}); err != nil {
 			log.Println(err)
 		}
 	}
-	return nil
+	return &finds, nil
 }
 
 // DB returns the absolute path of the Bolt database.
@@ -305,7 +310,7 @@ func RM(name string) error {
 	if err != nil {
 		return err
 	}
-	db, err := bolt.Open(path, FileMode, &bolt.Options{})
+	db, err := bolt.Open(path, FileMode, nil)
 	if err != nil {
 		return err
 	}
@@ -332,14 +337,14 @@ func Seek(hash [32]byte, bucket string) (finds []string, records int, err error)
 		if b == nil {
 			return ErrNoBucket
 		}
-		h := []byte(hash[:])
-		b.ForEach(func(k, v []byte) error {
+		h := hash[:]
+		err = b.ForEach(func(k, v []byte) error {
 			records++
 			if bytes.Equal(v, h) {
 				finds = append(finds, string(k))
 			}
 			return nil
 		})
-		return nil
+		return err
 	})
 }
