@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -175,32 +176,32 @@ func Compact() error {
 	// open both databases
 	srcDB, err := bolt.Open(src, 0600, nil)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer srcDB.Close()
 	tmpDB, err := bolt.Open(tmp, 0600, nil)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer tmpDB.Close()
 	// compress and copy the results to the temporary database
-	if err = bolt.Compact(tmpDB, srcDB, 0); err != nil {
-		log.Fatalln(err)
+	if err1 := bolt.Compact(tmpDB, srcDB, 0); err1 != nil {
+		return err1
 	}
 	srcSt, err := os.Stat(src)
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
 	tmpSt, err := os.Stat(tmp)
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
 	// compare size of the two databases
 	// if the compacted temporary database is smaller,
 	// copy it to the active database
 	if tmpSt.Size() >= srcSt.Size() {
 		tmpDB.Close()
-		if err := os.Remove(tmp); err != nil {
+		if err = os.Remove(tmp); err != nil {
 			log.Println(err)
 		}
 		return ErrDBCompact
@@ -312,7 +313,16 @@ func DB() (string, error) {
 			return "", err
 		}
 	}
-	return filepath.Join(dir, dbPath, dbName), nil
+	dir = filepath.Join(dir, dbPath)
+	if runtime.GOOS == "windows" {
+		_, err := os.Stat(dir)
+		if os.IsNotExist(err) {
+			if err1 := os.MkdirAll(dir, 0700); err != nil {
+				return "", err1
+			}
+		}
+	}
+	return filepath.Join(dir, dbName), nil
 }
 
 // Info returns a printout of the buckets and their statistics.
@@ -377,13 +387,13 @@ func IsEmpty() (bool, error) {
 	}
 	defer db.Close()
 	cnt := 0
-	if err = db.View(func(tx *bolt.Tx) error {
+	if err1 := db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 			cnt++
 			return nil
 		})
-	}); err != nil {
-		return true, err
+	}); err1 != nil {
+		return true, err1
 	}
 	if cnt == 0 {
 		return true, nil
