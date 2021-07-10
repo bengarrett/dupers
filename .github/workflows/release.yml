@@ -5,6 +5,13 @@ on:
   push:
     tags:
       - '*'
+  workflow_dispatch:
+    inputs:
+      name:
+        description: 'Manual build'
+        # Default value if no value is explicitly provided
+        default: 'build'
+        required: true
 
 jobs:
   goreleaser:
