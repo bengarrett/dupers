@@ -62,7 +62,7 @@ func main() {
 
 	selection := strings.ToLower(flag.Args()[0])
 	switch selection {
-	case "database", "db":
+	case "database", "db", "backup", "clean", "rm", "up":
 		taskDatabase(*quiet, flag.Args()...)
 	case "dupe":
 		if *f {
@@ -117,9 +117,10 @@ func help() {
 		color.Primary.Sprint("Database:"))
 	fmt.Fprintln(w, "\n  Usage:")
 	fmt.Fprintln(w, "    dupers database\tdisplay statistics and bucket information")
-	fmt.Fprintf(w, "    dupers database %s\t%s\n", "backup", "make a copy of the database to: "+home())
-	fmt.Fprintf(w, "    dupers database %s\t%s\n", "clean", "compact and remove all items in the database that point to missing files")
-	fmt.Fprintf(w, "    dupers database %s <bucket>\t%s\n", "rm", "remove the bucket (a scanned directory path) from the database")
+	fmt.Fprintf(w, "    dupers %s\t%s\n", "backup", "make a copy of the database to: "+home())
+	fmt.Fprintf(w, "    dupers %s\t%s\n", "clean", "compact and remove all items in the database that point to missing files")
+	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", "rm", "remove the bucket (a scanned directory path) from the database")
+	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", "up", "add or update the bucket (a directory path) to the database")
 	fmt.Fprintln(w, "\nOptions:")
 	f = flag.Lookup("quiet")
 	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
@@ -167,23 +168,19 @@ func exampleDupe(w *tabwriter.Writer) *tabwriter.Writer {
 
 func exampleSearch(w *tabwriter.Writer) *tabwriter.Writer {
 	fmt.Fprintln(w, "\n  Examples:")
-	fmt.Fprint(w, "    "+color.Info.Sprintf("dupers search \"foo\" '%s'", home()))
+	fmt.Fprint(w, "    "+color.Info.Sprintf("dupers search 'foo' '%s'", home()))
 	fmt.Fprint(w, color.Note.Sprint("\t# search for the expression foo in your home directory\n"))
-	fmt.Fprint(w, "    "+color.Info.Sprint("dupers search \"bar\""))
+	fmt.Fprint(w, "    "+color.Info.Sprint("dupers search 'bar'"))
 	fmt.Fprint(w, color.Note.Sprint("\t\t# search for the expression bar in the database\n"))
-	fmt.Fprint(w, "    "+color.Info.Sprint("dupers -name search \".zip\""))
+	fmt.Fprint(w, "    "+color.Info.Sprint("dupers -name search '.zip'"))
 	fmt.Fprint(w, color.Note.Sprint("\t\t# search for filenames containing .zip\n"))
 	return w
 }
 
 func taskDatabase(quiet bool, args ...string) {
 	l := len(args)
-	const minArgs = 2
-	if l < minArgs {
-		fmt.Println(database.Info())
-		return
-	}
-	switch args[1] {
+	const minArgs = 1
+	switch args[0] {
 	case "backup":
 		n, w, err := database.Backup()
 		if err != nil {
@@ -205,6 +202,9 @@ func taskDatabase(quiet bool, args ...string) {
 				log.Fatalln(err)
 			}
 		}
+		return
+	case "db", "database":
+		fmt.Println(database.Info())
 		return
 	case "rm":
 		if l == minArgs {
@@ -228,8 +228,10 @@ func taskDatabase(quiet bool, args ...string) {
 		}
 		fmt.Printf("Removed bucket from the database: '%s'\n", name)
 		return
+	case "up":
+		fmt.Println("todo")
 	default:
-		color.Warn.Printf("This database command is not valid: '%s'\n", args[1])
+		color.Warn.Printf("This database command is not valid: '%s'\n", args[0])
 	}
 }
 
@@ -339,7 +341,7 @@ func taskSearchErr(term string, err error) {
 		fmt.Printf("The database %s\n\n", err)
 		fmt.Println("To manually add the directory to the database:")
 		dir := strings.ReplaceAll(err.Error(), errors.Unwrap(err).Error()+": ", "")
-		fmt.Printf("dupers dupe \"\" %s\n", dir)
+		fmt.Printf("dupers up %s\n", dir)
 		os.Exit(1)
 	}
 	log.Fatalln(err)
