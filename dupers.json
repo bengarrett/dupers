@@ -1,0 +1,15 @@
+{
+    "version": "0.0.1",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/bengarrett/dupers/releases/download/v0.0.1/dupers_Windows_Intel.zip",
+            "bin": [
+                "dupers.exe"
+            ],
+            "hash": "d92d3b63192f47799d51bb64140a1b5863e13d4378950f0ea447b6347c053986"
+        }
+    },
+    "homepage": "https://github.com/bengarrett/dupers/",
+    "license": "LGPL 3.0",
+    "description": "A batch viewer and extractor for large collections of zip archives."
+}
