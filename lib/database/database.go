@@ -296,7 +296,7 @@ func compare(term []byte, buckets []string, noCase, base bool) (*Matches, error)
 			})
 			return err
 		}); errors.Is(err, ErrNoBucket) {
-			return nil, fmt.Errorf("%w: %q", err, abs)
+			return nil, fmt.Errorf("%w: '%s'", err, abs)
 		} else if err != nil {
 			return nil, err
 		}
@@ -367,7 +367,7 @@ func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, error) {
 			}
 			cnt++
 			fmt.Fprintln(w)
-			fmt.Fprintf(w, "\tBucket #%002d\t%q\n", cnt, string(name))
+			fmt.Fprintf(w, "\tBucket #%002d\t'%s'\n", cnt, string(name))
 			fmt.Fprintf(w, "\t\titems: %d\tdata: %s\n", v.Stats().KeyN, humanize.Bytes(uint64(v.Stats().LeafInuse)))
 			return nil
 		})

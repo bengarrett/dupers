@@ -147,18 +147,18 @@ func windowsNotice(w *tabwriter.Writer) *tabwriter.Writer {
 
 func exampleDupe(w *tabwriter.Writer) *tabwriter.Writer {
 	fmt.Fprintln(w, "\n  Examples:")
-	fmt.Fprint(w, color.Info.Sprintf("    dupers dupe %q %q",
+	fmt.Fprint(w, color.Info.Sprintf("    dupers dupe '%s' '%s'",
 		filepath.Join(home(), "file.zip"), filepath.Join(home(), "Downloads")))
 	fmt.Fprint(w, color.Note.Sprint("\t# find identical copies of file.zip in the Downloads directory\n"))
-	fmt.Fprint(w, color.Info.Sprintf("    dupers -fast dupe %q %q",
+	fmt.Fprint(w, color.Info.Sprintf("    dupers -fast dupe '%s' '%s'",
 		"doc.txt", filepath.Join(home(), "Documents")))
 	fmt.Fprint(w, color.Note.Sprint("\t\t# use the database to find doc.txt in the Documents directory\n"))
 	if runtime.GOOS == winOS {
-		fmt.Fprint(w, color.Info.Sprintf("    dupers dupe %q %q",
-			filepath.Join(home(), "Documents"), "D: E:"))
+		fmt.Fprint(w, color.Info.Sprintf("    dupers dupe '%s' %s %s",
+			filepath.Join(home(), "Documents"), "D:", "E:"))
 		fmt.Fprint(w, color.Note.Sprint("\t\t# search for files in Documents that also exist on drives D: and E:\n"))
 	} else {
-		fmt.Fprint(w, color.Info.Sprintf("    dupers dupe %q %q",
+		fmt.Fprint(w, color.Info.Sprintf("    dupers dupe '%s' '%s'",
 			filepath.Join(home(), "Documents"), "/var/www"))
 		fmt.Fprint(w, color.Note.Sprint("\t\t# search for files in Documents that also exist in /var/www\n"))
 	}
@@ -167,7 +167,7 @@ func exampleDupe(w *tabwriter.Writer) *tabwriter.Writer {
 
 func exampleSearch(w *tabwriter.Writer) *tabwriter.Writer {
 	fmt.Fprintln(w, "\n  Examples:")
-	fmt.Fprint(w, "    "+color.Info.Sprintf("dupers search \"foo\" %q", home()))
+	fmt.Fprint(w, "    "+color.Info.Sprintf("dupers search \"foo\" '%s'", home()))
 	fmt.Fprint(w, color.Note.Sprint("\t# search for the expression foo in your home directory\n"))
 	fmt.Fprint(w, "    "+color.Info.Sprint("dupers search \"bar\""))
 	fmt.Fprint(w, color.Note.Sprint("\t\t# search for the expression bar in the database\n"))
@@ -216,7 +216,7 @@ func taskDatabase(quiet bool, args ...string) {
 		name := args[2]
 		if err := database.RM(name); err != nil {
 			if errors.Is(err, database.ErrNoBucket) {
-				fmt.Printf("The bucket does not exist in the database: %q\n", name)
+				fmt.Printf("The bucket does not exist in the database: '%s'\n", name)
 				buckets, err1 := database.Buckets()
 				if err1 != nil {
 					log.Fatalln(err1)
@@ -226,10 +226,10 @@ func taskDatabase(quiet bool, args ...string) {
 			}
 			log.Fatalln(err)
 		}
-		fmt.Printf("Removed bucket from the database: %q\n", name)
+		fmt.Printf("Removed bucket from the database: '%s'\n", name)
 		return
 	default:
-		color.Warn.Printf("This database command is not valid: %q\n", args[1])
+		color.Warn.Printf("This database command is not valid: '%s'\n", args[1])
 	}
 }
 
@@ -335,7 +335,7 @@ func taskSearch(exact, filename, quiet *bool) {
 
 func taskSearchErr(term string, err error) {
 	if errors.As(err, &database.ErrNoBucket) {
-		color.Warn.Printf("Could not search for %q\n", term)
+		color.Warn.Printf("Could not search for '%s'\n", term)
 		fmt.Printf("The database %s\n\n", err)
 		fmt.Println("To manually add the directory to the database:")
 		dir := strings.ReplaceAll(err.Error(), errors.Unwrap(err).Error()+": ", "")
@@ -359,7 +359,7 @@ func tscrPrintErr(l int) {
 func compareResults(total int, term string, exact, filename *bool) string {
 	s, r := "", "results"
 	if total == 0 {
-		return fmt.Sprintf("No results exist for %q\n", term)
+		return fmt.Sprintf("No results exist for '%s'\n", term)
 	}
 	if total == 1 {
 		r = "result"
@@ -367,15 +367,15 @@ func compareResults(total int, term string, exact, filename *bool) string {
 
 	s = fmt.Sprintf("\n%d", total)
 	if *exact && *filename {
-		s += fmt.Sprintf(" exact filename %s for %q", r, term)
+		s += fmt.Sprintf(" exact filename %s for '%s'", r, term)
 		return s
 	}
 	if *exact {
-		s += fmt.Sprintf(" exact %s for %q", r, term)
+		s += fmt.Sprintf(" exact %s for '%s'", r, term)
 	} else if *filename {
-		s += fmt.Sprintf(" filename %s for %q", r, term)
+		s += fmt.Sprintf(" filename %s for '%s'", r, term)
 	} else {
-		s += fmt.Sprintf(" %s for %q", r, term)
+		s += fmt.Sprintf(" %s for '%s'", r, term)
 	}
 	return s
 }

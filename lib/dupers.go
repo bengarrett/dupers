@@ -75,7 +75,7 @@ func Print(term string, quiet bool, m *database.Matches) {
 					if cnt > 1 {
 						fmt.Println()
 					}
-					fmt.Printf("Results from: %q\n", b)
+					fmt.Printf("Results from: '%s'\n", b)
 				}
 			}
 			if quiet {
