@@ -3,8 +3,6 @@
 package dupers
 
 import (
-	"fmt"
-
 	"github.com/gookit/color"
 )
 
@@ -13,6 +11,6 @@ func (c *Config) Error(err error) {
 	if err == nil {
 		return
 	}
-	color.Error.Tips(fmt.Sprint(err))
+	color.Error.Tips(" " + err.Error())
 	//c.WriteLog(fmt.Sprintf("ERROR: %s", err))
 }

@@ -31,7 +31,11 @@ const (
 	dbPath               = "dupers"
 )
 
-var ErrNoBucket = errors.New("bucket does not exist")
+var (
+	ErrNoBucket  = errors.New("bucket does not exist")
+	ErrDBClean   = errors.New("database had nothing to clean")
+	ErrDBCompact = errors.New("database compression has not reduced the size")
+)
 
 // Backup makes a copy of the database to the named location.
 func Backup() (name string, written int64, err error) {
@@ -39,20 +43,23 @@ func Backup() (name string, written int64, err error) {
 	if err != nil {
 		return "", 0, err
 	}
-	now, ext := time.Now().Format("20060102-150405"), filepath.Ext(dbName)
-	file := fmt.Sprintf("%s-backup-%s%s", strings.TrimSuffix(dbName, ext), now, ext)
 
 	dir, err := os.UserHomeDir()
 	if err != nil {
 		return "", 0, err
 	}
-	name = filepath.Join(dir, file)
+	name = filepath.Join(dir, backupName())
 
 	written, err = copyFile(src, name)
 	if err != nil {
 		return "", 0, err
 	}
 	return name, written, nil
+}
+
+func backupName() string {
+	now, ext := time.Now().Format("20060102-150405"), filepath.Ext(dbName)
+	return fmt.Sprintf("%s-backup-%s%s", strings.TrimSuffix(dbName, ext), now, ext)
 }
 
 func copyFile(src, dest string) (int64, error) {
@@ -150,10 +157,59 @@ func Clean(quiet bool) error {
 		return nil
 	}
 	if cnt == 0 {
-		fmt.Println("nothing was cleaned")
-		return nil
+		return ErrDBClean
 	}
-	fmt.Println("removed", cnt, "stale items")
+	fmt.Printf("The database removed %d stale items", cnt)
+	return nil
+}
+
+// Compact the database by reclaiming space.
+func Compact() error {
+	// active database
+	src, err := DB()
+	if err != nil {
+		return err
+	}
+	// make a temporary database
+	tmp := filepath.Join(os.TempDir(), backupName())
+	// open both databases
+	srcDB, err := bolt.Open(src, 0600, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer srcDB.Close()
+	tmpDB, err := bolt.Open(tmp, 0600, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer tmpDB.Close()
+	// compress and copy the results to the temporary database
+	if err = bolt.Compact(tmpDB, srcDB, 0); err != nil {
+		log.Fatalln(err)
+	}
+	srcSt, err := os.Stat(src)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	tmpSt, err := os.Stat(tmp)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	// compare size of the two databases
+	// if the compacted temporary database is smaller,
+	// copy it to the active database
+	if tmpSt.Size() >= srcSt.Size() {
+		tmpDB.Close()
+		if err := os.Remove(tmp); err != nil {
+			log.Println(err)
+		}
+		return ErrDBCompact
+	}
+	srcDB.Close()
+	_, err = copyFile(tmp, src)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -238,8 +294,10 @@ func compare(term []byte, buckets []string, noCase, base bool) (*Matches, error)
 				return nil
 			})
 			return err
-		}); err != nil {
-			log.Println(err)
+		}); errors.Is(err, ErrNoBucket) {
+			return nil, fmt.Errorf("%w: %q", err, abs)
+		} else if err != nil {
+			return nil, err
 		}
 	}
 	return &finds, nil
@@ -305,6 +363,32 @@ func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, error) {
 		})
 	})
 	return w, err
+}
+
+// IsEmpty returns true if the database has no buckets.
+func IsEmpty() (bool, error) {
+	path, err := DB()
+	if err != nil {
+		return true, err
+	}
+	db, err := bolt.Open(path, FileMode, nil)
+	if err != nil {
+		return true, err
+	}
+	defer db.Close()
+	cnt := 0
+	if err = db.View(func(tx *bolt.Tx) error {
+		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
+			cnt++
+			return nil
+		})
+	}); err != nil {
+		return true, err
+	}
+	if cnt == 0 {
+		return true, nil
+	}
+	return false, nil
 }
 
 // RM removes the named bucket from the database.

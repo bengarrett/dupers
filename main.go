@@ -34,7 +34,6 @@ const winOS = "windows"
 // --delete-dupes
 // --move-dupes
 // --copy-dupes
-//
 // --deep-scan (open archives and hash binary files)
 
 func main() {
@@ -42,11 +41,11 @@ func main() {
 	c.Timer = time.Now()
 
 	look := flag.Bool("fast", false, "query the database for a much faster match,"+
-		"\n\t\tthe results maybe stale as it does not look for any file or directory changes")
+		"\n\t\tthe results maybe stale as it does not look for any file changes on your system")
 	f := flag.Bool("f", false, "alias for fast")
 	exact := flag.Bool("exact", false, "match case")
 	ex := flag.Bool("e", false, "alias for exact")
-	filename := flag.Bool("name", false, "search for filenames and ignore directories")
+	filename := flag.Bool("name", false, "search for filenames, and ignore directories")
 	fn := flag.Bool("n", false, "alias for name")
 
 	quiet := flag.Bool("quiet", false, "quiet mode hides all but essential feedback")
@@ -93,20 +92,24 @@ func help(logo bool) {
 	if logo {
 		fmt.Fprintln(os.Stderr, brand)
 	}
-	fmt.Fprintln(w, "Dupe:\n  Scan for duplicate files, looking for files that share identical content.")
+	fmt.Fprintf(w, "Dupers is the blazing-fast file duplicate checker and filename search.\n")
+	windowsNotice(w)
+	fmt.Fprintf(w, "\n%s\n  Scan for duplicate files, matching files that share the identical content.\n",
+		color.Primary.Sprint("Dupe:"))
 	fmt.Fprintln(w, "  The \"directory or file to match\" is never added to the database.")
-	fmt.Fprintln(w, "  The contents of the \"directories to look up\" will always be added to the database for quicker, future scans.")
+	fmt.Fprintln(w, "  The \"directories to look in\" contents get added to the database for quicker, future scans.")
 	fmt.Fprintln(w, "\n  Usage:")
 	if runtime.GOOS == winOS {
-		fmt.Fprintln(w, "    dupers [options] dupe <directory or file to match> <directories or drive letters to lookup>")
+		fmt.Fprintln(w, "    dupers [options] dupe <directory or file to match> <directories or drive letters to look in>")
 	} else {
-		fmt.Fprintln(w, "    dupers [options] dupe <directory or file to match> <directories to lookup>")
+		fmt.Fprintln(w, "    dupers [options] dupe <directory or file to match> <directories to look in>")
 	}
 	fmt.Fprintln(w, "\n  Options:")
 	f = flag.Lookup("fast")
 	fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
 	exampleDupe(w)
-	fmt.Fprintln(w, "\nSearch:\n  Lookup a file or a directory name in the database.")
+	fmt.Fprintf(w, "\n%s\n  Lookup a file or a directory name in the database.\n",
+		color.Primary.Sprint("Search:"))
 	fmt.Fprintln(w, "\n  Usage:")
 	fmt.Fprintln(w, "    dupers [options] search <search expression> [directories to search]")
 	fmt.Fprintln(w, "\n  Options:")
@@ -115,12 +118,12 @@ func help(logo bool) {
 	f = flag.Lookup("name")
 	fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
 	exampleSearch(w)
-	fmt.Fprintln(w, "\nDatabase:\n  View information and run maintenance on the internal database."+
-		"\n  All of these commands are optional and are not required for the normal usage of dupers.")
+	fmt.Fprintf(w, "\n%s\n  View information and run optional maintenance on the internal database.\n",
+		color.Primary.Sprint("Database:"))
 	fmt.Fprintln(w, "\n  Usage:")
 	fmt.Fprintln(w, "    dupers database\tdisplay statistics and bucket information")
 	fmt.Fprintf(w, "    dupers database %s\t%s\n", "backup", "make a copy of the database to: "+home())
-	fmt.Fprintf(w, "    dupers database %s\t%s\n", "clean", "remove all items in the database that point to missing files")
+	fmt.Fprintf(w, "    dupers database %s\t%s\n", "clean", "compact and remove all items in the database that point to missing files")
 	fmt.Fprintf(w, "    dupers database %s <bucket>\t%s\n", "rm", "remove the bucket (a scanned directory path) from the database")
 	fmt.Fprintln(w, "\nOptions:")
 	f = flag.Lookup("quiet")
@@ -133,14 +136,28 @@ func help(logo bool) {
 	w.Flush()
 }
 
+func windowsNotice(w *tabwriter.Writer) *tabwriter.Writer {
+	if runtime.GOOS != winOS {
+		return w
+	}
+	empty, err := database.IsEmpty()
+	if err != nil {
+		log.Println(err)
+	}
+	if empty {
+		fmt.Fprintf(w, "\n%s\n", color.Danger.Sprint("To greatly improve performance, please apply Windows Security Exclusions to the directories to be scanned."))
+	}
+	return w
+}
+
 func exampleDupe(w *tabwriter.Writer) *tabwriter.Writer {
 	fmt.Fprintln(w, "\n  Examples:")
 	fmt.Fprint(w, color.Info.Sprintf("    dupers dupe %q %q",
 		filepath.Join(home(), "file.zip"), filepath.Join(home(), "Downloads")))
-	fmt.Fprint(w, color.Note.Sprint("\t# search for identical copies of file.zip in the Downloads directory\n"))
+	fmt.Fprint(w, color.Note.Sprint("\t# find identical copies of file.zip in the Downloads directory\n"))
 	fmt.Fprint(w, color.Info.Sprintf("    dupers -fast dupe %q %q",
-		"doc.txt", filepath.Join(home(), "Downloads")))
-	fmt.Fprint(w, color.Note.Sprint("\t\t# search the database for identical copies of doc.txt in the Documents directory\n"))
+		"doc.txt", filepath.Join(home(), "Documents")))
+	fmt.Fprint(w, color.Note.Sprint("\t\t# use the database to find doc.txt in the Documents directory\n"))
 	if runtime.GOOS == winOS {
 		fmt.Fprint(w, color.Info.Sprintf("    dupers dupe %q %q",
 			filepath.Join(home(), "Documents"), "D: E:"))
@@ -178,11 +195,24 @@ func taskDatabase(quiet bool, args ...string) {
 			log.Fatalln(err)
 		}
 		if !quiet {
-			fmt.Println("saved a copy of the database", humanize.Bytes(uint64(w)), ":", n)
+			fmt.Printf("A new copy of the database (%s) is at: %s\n", humanize.Bytes(uint64(w)), n)
 		}
 		return
 	case "clean":
 		if err := database.Clean(quiet); err != nil {
+			if b := errors.Is(err, database.ErrDBClean); !b {
+				log.Fatalln(err)
+			}
+			fmt.Printf("The %s\n", err.Error())
+		}
+		if err := database.Compact(); err != nil {
+			if b := errors.Is(err, database.ErrDBCompact); !b {
+				log.Fatalln(err)
+			}
+		}
+		return
+	case "compact":
+		if err := database.Compact(); err != nil {
 			log.Fatalln(err)
 		}
 		return
@@ -208,6 +238,8 @@ func taskDatabase(quiet bool, args ...string) {
 		}
 		fmt.Printf("Removed bucket from the database: %q\n", name)
 		return
+	default:
+		color.Warn.Printf("This database command is not valid: %q\n", args[1])
 	}
 }
 
@@ -280,24 +312,24 @@ func taskSearch(exact, filename, quiet *bool) {
 	if *filename {
 		if !*exact {
 			if m, err = database.CompareBaseNoCase(term, buckets); err != nil {
-				log.Fatalln(err)
+				taskSearchErr(term, err)
 			}
 		}
 		if *exact {
 			if m, err = database.CompareBase(term, buckets); err != nil {
-				log.Fatalln(err)
+				taskSearchErr(term, err)
 			}
 		}
 	}
 	if !*filename {
 		if !*exact {
 			if m, err = database.CompareNoCase(term, buckets); err != nil {
-				log.Fatalln(err)
+				taskSearchErr(term, err)
 			}
 		}
 		if *exact {
 			if m, err = database.Compare(term, buckets); err != nil {
-				log.Fatalln(err)
+				taskSearchErr(term, err)
 			}
 		}
 	}
@@ -307,11 +339,23 @@ func taskSearch(exact, filename, quiet *bool) {
 	}
 }
 
+func taskSearchErr(term string, err error) {
+	if errors.As(err, &database.ErrNoBucket) {
+		color.Warn.Printf("Could not search for %q\n", term)
+		fmt.Printf("The database %s\n\n", err)
+		fmt.Println("To manually add the directory to the database:")
+		dir := strings.ReplaceAll(err.Error(), errors.Unwrap(err).Error()+": ", "")
+		fmt.Printf("dupers dupe \"\" %s\n", dir)
+		os.Exit(1)
+	}
+	log.Fatalln(err)
+}
+
 func tscrPrintErr(l int) {
 	if l <= 1 {
-		color.Warn.Println("the search request needs an expression")
-		fmt.Println("a search expression can be a partial or complete filename,")
-		fmt.Println("or a partial or complete directory")
+		color.Warn.Println("This search request needs an expression")
+		fmt.Println("A search expression can be a partial or complete filename,")
+		fmt.Println("or a partial or complete directory.")
 		fmt.Println("\ndupers search <search expression> [optional, directories to search]")
 		fmt.Println("")
 		os.Exit(1)
