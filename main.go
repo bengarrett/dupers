@@ -22,8 +22,6 @@ import (
 )
 
 var (
-	brand string // nolint: gochecknoglobals
-
 	version = "0.0.0"
 	commit  = "unset" // nolint: gochecknoglobals
 	date    = "unset" // nolint: gochecknoglobals
@@ -54,7 +52,7 @@ func main() {
 	v := flag.Bool("v", false, "alias for version")
 
 	flag.Usage = func() {
-		help(true)
+		help()
 	}
 	flag.Parse()
 	if *q {
@@ -86,12 +84,9 @@ func main() {
 }
 
 // Help, usage and examples.
-func help(logo bool) {
+func help() {
 	var f *flag.Flag
 	w := tabwriter.NewWriter(os.Stderr, 0, 0, 4, ' ', 0)
-	if logo {
-		fmt.Fprintln(os.Stderr, brand)
-	}
 	fmt.Fprintf(w, "Dupers is the blazing-fast file duplicate checker and filename search.\n")
 	windowsNotice(w)
 	fmt.Fprintf(w, "\n%s\n  Scan for duplicate files, matching files that share the identical content.\n",
@@ -246,6 +241,7 @@ func taskScan(c *dupers.Config, lookup bool) {
 	}
 	// directory or a file to match
 	c.Source = flag.Args()[1]
+	fmt.Println(c.Source)
 	// directories and files to scan, a bucket is the name given to database tables
 	c.Buckets = flag.Args()[2:]
 	// files or directories to compare (these are not saved to database)
@@ -386,7 +382,7 @@ func options(ver, v *bool) {
 	for _, arg := range flag.Args() {
 		switch strings.ToLower(arg) {
 		case "-h", "-help", "--help":
-			help(true)
+			help()
 			os.Exit(0)
 		case "-v", "-version", "--version":
 			info()
@@ -400,7 +396,7 @@ func options(ver, v *bool) {
 	}
 	// print help if no arguments are given
 	if len(flag.Args()) == 0 {
-		help(false)
+		help()
 		os.Exit(0)
 	}
 }
@@ -408,7 +404,6 @@ func options(ver, v *bool) {
 // Info prints out the program information and version.
 func info() {
 	const copyright = "\u00A9"
-	fmt.Println(brand)
 	fmt.Printf("dupers v%s\n%s 2021 Ben Garrett\n", version, copyright)
 	fmt.Printf("https://github.com/bengarrett/dupers\n\n")
 	fmt.Printf("build: %s (%s)\n", commit, date)
