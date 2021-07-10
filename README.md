@@ -1,35 +1,64 @@
 # dupers
-[Request from sensenstahl 06/06/21](https://discord.com/channels/@me/808676590351024158/850992251408482336)
 
-### Original request
+Dupers is the blazing-fast file duplicate checker and filename search.
 
-- tool makes a table (hash values) of all files in a given directory (the db)
-  - maybe doing so with a white/blacklist or simply "all"-option for files?
-    and maybe 3-4 sub dirs deep
-  - switch to do a new indexing only without running the tool afterwards
-  - switch to do a new indexing and running the tool afterwards
-  - switch to run the tool if there is already a table present
-    (like in the case there is no data base update)
+- TODO list features
 
-- tool checks a given directory (maybe e.g. 3-4 sub dirs deep?)
-  comparing the files
-  - if files are identical in content based on the
-    index table then delete those files
-  - white/blacklist for deleting no matter any switches?
+## Downloads
 
-- if a directory is empty after a check delete that directory as well
-  (maybe white/blacklist if there is NO filetype present based on
-  file extension then delete a directory no matter the left content)
+<small>dupers is a standalone (portable) terminal application and doesn't require installation.</small>
 
-- goal is to scrap all unneeded data so you have to look at less content
-  since you don't get to see stuff that is already in your indexed db
-  (does need 1:1 visual comparing if there is e.g. data rot/typo in a scroller/
-  hidden vs. clear number)
+- [Windows](https://github.com/bengarrett/dupers/releases/latest/download/zipcmt_Windows_Intel.zip)
+- [macOS](https://github.com/bengarrett/dupers/releases/latest/download/zipcmt_macOS_Intel.tar.gz
+), [or for the Apple M chip](https://github.com/bengarrett/dupers/releases/latest/download/zipcmt_macOS_M-series.tar.gz
+)
+- [FreeBSD](https://github.com/bengarrett/dupers/releases/latest/download/zipcmt_FreeBSD_Intel.tar.gz
+)
+- [Linux](https://github.com/bengarrett/dupers/releases/latest/download/zipcmt_Linux_Intel.tar.gz
+)
 
-- white/blacklist(s) in an extra .txt file that can be edited easily
+### Packages
 
-- or maybe not deleting files but copy all potential remaining data keeping the
-  structure into a main directory so the original (e.g. unpacked) stuff is
-  available in case something needs to get checked again by hand so it is not
-  needed to extract a .zip again. thoughts? maybe a switch for that?
+TODO
 
+## Windows Performance
+
+It is highly encouraged that Windows users temporarily disable **Virus & threat protection, Real-time protection**, or [create **Windows Security Exclusion**s](https://support.microsoft.com/en-us/windows/add-an-exclusion-to-windows-security-811816c0-4dfd-af4a-47e4-c301afe13b26) for the folders to be scanned before running `zipcmt`. Otherwise, the hit to performance is amazingly stark!
+
+## Usage
+
+TODO screenshots
+
+## Example usage
+#### Dupe check
+```sh
+# todo
+```
+
+#### Dupe check a second time
+```sh
+# todo, show the time taken difference
+```
+
+#### Search for a filename
+```sh
+# todo
+```
+
+## Build
+
+[Go](https://golang.org/doc/install) supports dozens of architectures and operating systems letting dupers to [be built for most platforms](https://golang.org/doc/install/source#environment).
+
+```sh
+# clone this repo
+git clone git@github.com:bengarrett/dupers.git
+
+# access the repo
+cd dupers
+
+# target and build the app for the host system
+go build
+
+# target and build for OpenBSD
+env GOOS=openbsd GOARCH=amd64 go build
+```
