@@ -71,7 +71,7 @@ func main() {
 		if *q || *quiet {
 			c.Quiet = true
 		}
-		taskScan(&c, *look)
+		taskScan(&c, *look, *quiet)
 	case "search":
 		if *ex {
 			exact = ex
@@ -233,7 +233,7 @@ func taskDatabase(quiet bool, args ...string) {
 	}
 }
 
-func taskScan(c *dupers.Config, lookup bool) {
+func taskScan(c *dupers.Config, lookup, quiet bool) {
 	l := len(flag.Args())
 	const minArgs = 3
 	if l < minArgs {
@@ -241,11 +241,14 @@ func taskScan(c *dupers.Config, lookup bool) {
 	}
 	// directory or a file to match
 	c.Source = flag.Args()[1]
-	fmt.Println(c.Source)
 	// directories and files to scan, a bucket is the name given to database tables
 	c.Buckets = flag.Args()[2:]
 	// files or directories to compare (these are not saved to database)
 	c.WalkSource()
+	// windows notice
+	if runtime.GOOS == winOS && !quiet {
+		fmt.Printf("To improve performance on Windows use the quiet flag: duper -quiet dupe %s %s\n", c.Source, strings.Join(c.Buckets, " "))
+	}
 	// walk, scan and save file paths and hashes to the database
 	if !lookup {
 		if err := database.Clean(true); err != nil {
@@ -258,7 +261,7 @@ func taskScan(c *dupers.Config, lookup bool) {
 	// print the found dupes
 	c.Print()
 	// summaries
-	if !c.Quiet {
+	if runtime.GOOS == winOS || !c.Quiet {
 		fmt.Println(c.Status())
 	}
 }

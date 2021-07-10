@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -38,6 +39,8 @@ type Config struct {
 }
 
 type hash map[[32]byte]string
+
+const winOS = "windows"
 
 var ErrPathExist = errors.New("path exists in the database bucket")
 
@@ -192,15 +195,15 @@ func (c *Config) Seek() {
 
 // Status summarizes the file total and time taken.
 func (c *Config) Status() string {
-	if c.Quiet {
-		return ""
-	}
 	s := "\n"
 	s += color.Secondary.Sprint("Scanned ") +
 		color.Primary.Sprintf("%d files", c.files)
 	if !c.test {
 		s += color.Secondary.Sprint(", taking ") +
-			color.Primary.Sprintf("%s", time.Since(c.Timer)) + "\n"
+			color.Primary.Sprintf("%s", time.Since(c.Timer))
+	}
+	if runtime.GOOS != winOS {
+		s += "\n"
 	}
 	return s
 }
@@ -286,9 +289,14 @@ func printWalk(c *Config) {
 	if c.test || c.Quiet {
 		return
 	}
-	fmt.Print("\u001b[2K")
-	fmt.Print("\r", color.Secondary.Sprint("Scanned "),
-		color.Primary.Sprintf("%d files ", c.files))
+	if runtime.GOOS == winOS {
+		// color output slows down large scans on Windows
+		fmt.Printf("\rScanning %d files  ", c.files)
+	} else {
+		fmt.Print("\u001b[2K")
+		fmt.Print("\r", color.Secondary.Sprint("Scanning "),
+			color.Primary.Sprintf("%d files ", c.files))
+	}
 }
 
 func skipDir(d fs.DirEntry) error {
@@ -320,9 +328,14 @@ func skipSelf(path string, skip []string) bool {
 func walkDir(root, path string, c *Config) error {
 	return c.db.View(func(tx *bolt.Tx) error {
 		if !c.test && !c.Quiet {
-			fmt.Print("\u001b[2K")
-			fmt.Print("\r", color.Secondary.Sprint("Looked up "),
-				color.Primary.Sprintf("%d files ", c.files))
+			if runtime.GOOS == winOS {
+				// color output slows down large scans on Windows
+				fmt.Printf("\rLooking up %d files", c.files)
+			} else {
+				fmt.Print("\u001b[2K")
+				fmt.Print("\r", color.Secondary.Sprint("Looking up "),
+					color.Primary.Sprintf("%d files", c.files))
+			}
 		}
 		b := tx.Bucket([]byte(root))
 		if b == nil {
