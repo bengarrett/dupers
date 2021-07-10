@@ -132,7 +132,6 @@ func help(logo bool) {
 	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
 	fmt.Fprintln(w, "    -h, -help\tshow this list of options")
 	fmt.Fprintln(w)
-	optimial(w)
 	w.Flush()
 }
 
@@ -145,7 +144,8 @@ func windowsNotice(w *tabwriter.Writer) *tabwriter.Writer {
 		log.Println(err)
 	}
 	if empty {
-		fmt.Fprintf(w, "\n%s\n", color.Danger.Sprint("To greatly improve performance, please apply Windows Security Exclusions to the directories to be scanned."))
+		fmt.Fprintf(w, "\n%s\n", color.Danger.Sprint("To greatly improve performance,"+
+			" please apply Windows Security Exclusions to the directories to be scanned."))
 	}
 	return w
 }
@@ -209,11 +209,6 @@ func taskDatabase(quiet bool, args ...string) {
 			if b := errors.Is(err, database.ErrDBCompact); !b {
 				log.Fatalln(err)
 			}
-		}
-		return
-	case "compact":
-		if err := database.Compact(); err != nil {
-			log.Fatalln(err)
 		}
 		return
 	case "rm":
@@ -423,15 +418,6 @@ func info() {
 		return
 	}
 	fmt.Printf("path: %s\n", exe)
-}
-
-func optimial(w *tabwriter.Writer) {
-	if runtime.GOOS == winOS {
-		fmt.Fprintln(w, "For optimal performance Windows users may wish to temporarily disable"+
-			" the Virus & threat 'Real-time protection' under Windows Security.")
-		fmt.Fprintln(w, "Or create Windows Security Exclusions for the directories to be scanned.")
-		fmt.Fprintln(w, "https://support.microsoft.com/en-us/windows/add-an-exclusion-to-windows-security-811816c0-4dfd-af4a-47e4-c301afe13b26")
-	}
 }
 
 func home() string {
