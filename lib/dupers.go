@@ -40,9 +40,14 @@ type Config struct {
 
 type hash map[[32]byte]string
 
-const winOS = "windows"
+const (
+	winOS = "windows"
+)
 
-var ErrPathExist = errors.New("path exists in the database bucket")
+var (
+	ErrNoPath    = errors.New("path does not exist")
+	ErrPathExist = errors.New("path exists in the database bucket")
+)
 
 // Print the results of the database comparisons.
 func Print(term string, quiet bool, m *database.Matches) {
@@ -251,6 +256,10 @@ func (c *Config) WalkDir(root string) error {
 		if err1 := skipDir(d); err1 != nil {
 			return err1
 		}
+		// skip files
+		if skipFile(d) {
+			return nil
+		}
 		// skip non-files such as symlinks
 		if !d.Type().IsRegular() {
 			return nil
@@ -300,20 +309,28 @@ func printWalk(c *Config) {
 }
 
 func skipDir(d fs.DirEntry) error {
-	// skip directories
-	if d.IsDir() {
-		switch d.Name() {
-		// the SkipDir return tells WalkDir to skip all files in these directories
-		case ".git", ".cache", ".config", ".local", "node_modules":
-			return filepath.SkipDir
-		default:
-			if strings.HasPrefix(d.Name(), ".") {
-				return filepath.SkipDir
-			}
-			return nil
-		}
+	if !d.IsDir() {
+		return nil
 	}
-	return nil
+	// skip directories
+	switch strings.ToLower(d.Name()) {
+	// the SkipDir return tells WalkDir to skip all files in these directories
+	case ".git", ".cache", ".config", ".local", "node_modules", "__macosx":
+		return filepath.SkipDir
+	default:
+		if strings.HasPrefix(d.Name(), ".") {
+			return filepath.SkipDir
+		}
+		return nil
+	}
+}
+
+func skipFile(d fs.DirEntry) bool {
+	switch strings.ToLower(d.Name()) {
+	case ".ds_store":
+		return true
+	}
+	return false
 }
 
 func skipSelf(path string, skip []string) bool {
@@ -353,6 +370,12 @@ func walkDir(root, path string, c *Config) error {
 }
 
 func (c *Config) createBucket(root string) error {
+	_, err := os.Stat(root)
+	if errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("%w: %s", ErrNoPath, root)
+	} else if err != nil {
+		return err
+	}
 	return c.db.Update(func(tx *bolt.Tx) error {
 		if b := tx.Bucket([]byte(root)); b == nil {
 			fmt.Println("Creating a database bucket for", root)
@@ -439,7 +462,7 @@ func (c *Config) store(path string) error {
 }
 
 func sum(path string) (hash [32]byte, err error) {
-	const Kb = 1024
+	const oneKb = 1024
 
 	f, err := os.Open(path)
 	if err != nil {
@@ -447,12 +470,29 @@ func sum(path string) (hash [32]byte, err error) {
 	}
 	defer f.Close()
 
-	buf := make([]byte, Kb*Kb)
+	buf := make([]byte, oneKb*oneKb)
 
 	h := sha256.New()
 	if _, err := io.CopyBuffer(h, f, buf); err != nil {
 		return hash, err
 	}
+
+	if IsText(&buf) {
+		const needle = "break"
+		finds := Highlights(needle, true, &buf)
+		l := len(finds)
+		if l > 0 {
+			o := "occurrences"
+			if l == 1 {
+				o = "occurrence"
+			}
+			fmt.Printf("\nFound %d %s of %s in: %s\n", l, o, needle, path)
+			for i, f := range finds {
+				fmt.Printf("%d. Line %4d: %s\n", i+1, f.Line, f.Text)
+			}
+		}
+	}
+
 	copy(hash[:], h.Sum(nil))
 
 	return hash, nil

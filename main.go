@@ -63,7 +63,7 @@ func main() {
 	selection := strings.ToLower(flag.Args()[0])
 	switch selection {
 	case "database", "db", "backup", "clean", "rm", "up":
-		taskDatabase(*quiet, flag.Args()...)
+		taskDatabase(c, *quiet, flag.Args()...)
 	case "dupe":
 		if *f {
 			*look = true
@@ -91,22 +91,23 @@ func help() {
 	windowsNotice(w)
 	fmt.Fprintf(w, "\n%s\n  Scan for duplicate files, matching files that share the identical content.\n",
 		color.Primary.Sprint("Dupe:"))
-	fmt.Fprintln(w, "  The \"directory or file to match\" is never added to the database.")
-	fmt.Fprintln(w, "  The \"directories to look in\" contents get added to the database for quicker, future scans.")
-	fmt.Fprintln(w, "\n  Usage:")
+	fmt.Fprintln(w, "  The \"directory or file to check\" is never added to the database.")
 	if runtime.GOOS == winOS {
-		fmt.Fprintln(w, "    dupers [options] dupe <directory or file to match> <directories or drive letters to look in>")
+		fmt.Fprintln(w, "  The \"buckets to lookup\" are directories or drive letters that get added to the database for quicker scans.")
 	} else {
-		fmt.Fprintln(w, "    dupers [options] dupe <directory or file to match> <directories to look in>")
+		fmt.Fprintln(w, "  The \"buckets to lookup\" are directories that get added to the database for quicker scans.")
 	}
+	fmt.Fprintln(w, "\n  Usage:")
+	fmt.Fprintln(w, "    dupers [options] dupe <directory or file to check> <buckets to lookup>")
 	fmt.Fprintln(w, "\n  Options:")
 	f = flag.Lookup("fast")
 	fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
 	exampleDupe(w)
 	fmt.Fprintf(w, "\n%s\n  Lookup a file or a directory name in the database.\n",
 		color.Primary.Sprint("Search:"))
+	fmt.Fprintf(w, "  The <search expression> can be a partial or complete, file or directory name.\n")
 	fmt.Fprintln(w, "\n  Usage:")
-	fmt.Fprintln(w, "    dupers [options] search <search expression> [directories to search]")
+	fmt.Fprintln(w, "    dupers [options] search <search expression> [optional, buckets to search]")
 	fmt.Fprintln(w, "\n  Options:")
 	f = flag.Lookup("exact")
 	fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
@@ -119,8 +120,8 @@ func help() {
 	fmt.Fprintln(w, "    dupers database\tdisplay statistics and bucket information")
 	fmt.Fprintf(w, "    dupers %s\t%s\n", "backup", "make a copy of the database to: "+home())
 	fmt.Fprintf(w, "    dupers %s\t%s\n", "clean", "compact and remove all items in the database that point to missing files")
-	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", "rm", "remove the bucket (a scanned directory path) from the database")
-	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", "up", "add or update the bucket (a directory path) to the database")
+	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", "rm", "remove the bucket (a scanned directory) from the database")
+	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", "up", "add or update the bucket (a directory to scan) to the database")
 	fmt.Fprintln(w, "\nOptions:")
 	f = flag.Lookup("quiet")
 	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
@@ -177,7 +178,7 @@ func exampleSearch(w *tabwriter.Writer) *tabwriter.Writer {
 	return w
 }
 
-func taskDatabase(quiet bool, args ...string) {
+func taskDatabase(c dupers.Config, quiet bool, args ...string) {
 	l := len(args)
 	const minArgs = 1
 	switch args[0] {
@@ -213,7 +214,7 @@ func taskDatabase(quiet bool, args ...string) {
 			fmt.Println()
 			os.Exit(1)
 		}
-		name := args[2]
+		name := args[1]
 		if err := database.RM(name); err != nil {
 			if errors.Is(err, database.ErrNoBucket) {
 				fmt.Printf("The bucket does not exist in the database: '%s'\n", name)
@@ -229,7 +230,23 @@ func taskDatabase(quiet bool, args ...string) {
 		fmt.Printf("Removed bucket from the database: '%s'\n", name)
 		return
 	case "up":
-		fmt.Println("todo")
+		if l == minArgs {
+			color.Warn.Println("Cannot add or update a bucket to the database as no bucket name was provided")
+			fmt.Println("\ndupers database up <bucket name>")
+			fmt.Println()
+			os.Exit(1)
+		}
+		if runtime.GOOS == winOS && !quiet {
+			fmt.Printf("To improve performance on Windows use the quiet flag: duper -quiet dupe %s %s\n", c.Source, strings.Join(c.Buckets, " "))
+		}
+		if err := c.WalkDir(flag.Args()[1]); err != nil {
+			color.Warn.Printf("This %s\n", err)
+			os.Exit(1)
+		}
+		if runtime.GOOS == winOS || !c.Quiet {
+			fmt.Println(c.Status())
+		}
+		return
 	default:
 		color.Warn.Printf("This database command is not valid: '%s'\n", args[0])
 	}
