@@ -13,25 +13,37 @@ import (
 	"golang.org/x/tools/godoc/util"
 )
 
-//type hash map[[32]byte]string
-
-// type (
-// 	TextMatch map[string]int
-// )
-
 type TextMatch struct {
 	Text string
 	Line int
 }
 
-const (
-	textBucket = "_?"
-)
+const textBucket = "_?"
+
+// bucket ?= "long string", "filename"
+
+func Finds(needle, path string, buf []byte) {
+	if IsText(&buf) {
+		const needle = "break"
+		finds := Highlights(needle, true, &buf)
+		l := len(finds)
+		if l > 0 {
+			o := "occurrences"
+			if l == 1 {
+				o = "occurrence"
+			}
+			fmt.Printf("\nFound %d %s of %s in: %s\n", l, o, needle, path)
+			for i, f := range finds {
+				fmt.Printf("%d. Line %4d: %s\n", i+1, f.Line, f.Text)
+			}
+		}
+	}
+}
 
 func Highlight(needle string, buf *[]byte) string {
 	all := str.IndexAllIgnoreCase(string(*buf), needle, -1)
 	if len(all) > 0 {
-		return str.HighlightString(string(*buf), all, ">", "<")
+		return Mark(string(*buf), all)
 	}
 	return ""
 }
@@ -93,5 +105,3 @@ func IsText(buf *[]byte) bool {
 	}
 	return false
 }
-
-func Search(needle string) {}

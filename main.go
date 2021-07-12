@@ -114,6 +114,12 @@ func help() {
 	f = flag.Lookup("name")
 	fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
 	exampleSearch(w)
+
+	fmt.Fprintf(w, "\n%s\n  Lookup some text or a word contained within a textfile.\n",
+		color.Primary.Sprint("Text:"))
+	fmt.Fprintln(w, "\n  Usage:")
+	fmt.Fprintln(w, "    dupers [options] text <search text or word>")
+
 	fmt.Fprintf(w, "\n%s\n  View information and run optional maintenance on the internal database.\n",
 		color.Primary.Sprint("Database:"))
 	fmt.Fprintln(w, "\n  Usage:")
