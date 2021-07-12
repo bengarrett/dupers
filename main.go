@@ -80,6 +80,8 @@ func main() {
 			filename = fn
 		}
 		taskSearch(exact, filename, quiet)
+	case "text":
+		taskText(&c)
 	}
 }
 
@@ -118,7 +120,7 @@ func help() {
 	fmt.Fprintf(w, "\n%s\n  Lookup some text or a word contained within a textfile.\n",
 		color.Primary.Sprint("Text:"))
 	fmt.Fprintln(w, "\n  Usage:")
-	fmt.Fprintln(w, "    dupers [options] text <search text or word>")
+	fmt.Fprintln(w, "    dupers text <search text or word>")
 
 	fmt.Fprintf(w, "\n%s\n  View information and run optional maintenance on the internal database.\n",
 		color.Primary.Sprint("Database:"))
@@ -289,6 +291,15 @@ func taskScan(c *dupers.Config, lookup, quiet bool) {
 	if runtime.GOOS == winOS || !c.Quiet {
 		fmt.Println(c.Status())
 	}
+}
+
+func taskText(c *dupers.Config) {
+	l := len(flag.Args())
+	if l < 2 {
+		color.Warn.Println("the text request requires some text or a work to find")
+		os.Exit(1)
+	}
+	c.Search(strings.Join(flag.Args()[1:], " "))
 }
 
 func tsPrintErr(l int) {

@@ -283,7 +283,7 @@ func (c *Config) WalkDir(root string) error {
 		printWalk(c)
 		// hash the file
 		wg.Add(1)
-		go c.hash(path, root, &wg)
+		go c.update(path, root, &wg)
 		wg.Wait()
 
 		return err
@@ -426,9 +426,9 @@ func (c *Config) WalkSource() {
 	}
 }
 
-func (c *Config) hash(path, root string, wg *sync.WaitGroup) {
+func (c *Config) update(path, root string, wg *sync.WaitGroup) {
 	defer wg.Done()
-	hash, err := sum(path)
+	hash, b, err := read(path)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -436,9 +436,28 @@ func (c *Config) hash(path, root string, wg *sync.WaitGroup) {
 	if hash == [32]byte{} {
 		return
 	}
+
 	if err = c.db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(root))
-		return b.Put([]byte(path), hash[:])
+		// directory bucket
+		b1, p := tx.Bucket([]byte(root)), []byte(path)
+		if err1 := b1.Put([]byte(path), hash[:]); err1 != nil {
+			return err1
+		}
+		// text search bucket
+		// if len(p) > 0 {
+		// 	fmt.Println("--> is a textfile", humanize.Bytes(uint64(len(p))))
+		// }
+		return nil
+		b2 := tx.Bucket([]byte(textBucket))
+		if b2 == nil {
+			fmt.Println("Creating a database bucket for", textBucket)
+			_, err1 := tx.CreateBucket([]byte(textBucket))
+			return err1
+		}
+		if err1 := b2.Put(p, b); err1 != nil {
+			return err1
+		}
+		return nil
 	}); err != nil {
 		log.Println(err)
 	}
@@ -453,7 +472,7 @@ func (c *Config) skipFiles() (files []string) {
 }
 
 func (c *Config) store(path string) error {
-	s, err := sum(path)
+	s, _, err := read(path)
 	if err != nil {
 		return err
 	}
@@ -461,12 +480,12 @@ func (c *Config) store(path string) error {
 	return nil
 }
 
-func sum(path string) (hash [32]byte, err error) {
+func read(path string) (hash [32]byte, content []byte, err error) {
 	const oneKb = 1024
 
 	f, err := os.Open(path)
 	if err != nil {
-		return hash, err
+		return hash, nil, err
 	}
 	defer f.Close()
 
@@ -474,26 +493,8 @@ func sum(path string) (hash [32]byte, err error) {
 
 	h := sha256.New()
 	if _, err := io.CopyBuffer(h, f, buf); err != nil {
-		return hash, err
+		return hash, nil, err
 	}
-
-	if IsText(&buf) {
-		const needle = "break"
-		finds := Highlights(needle, true, &buf)
-		l := len(finds)
-		if l > 0 {
-			o := "occurrences"
-			if l == 1 {
-				o = "occurrence"
-			}
-			fmt.Printf("\nFound %d %s of %s in: %s\n", l, o, needle, path)
-			for i, f := range finds {
-				fmt.Printf("%d. Line %4d: %s\n", i+1, f.Line, f.Text)
-			}
-		}
-	}
-
 	copy(hash[:], h.Sum(nil))
-
-	return hash, nil
+	return hash, buf, nil
 }
