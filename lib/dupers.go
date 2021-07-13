@@ -428,7 +428,7 @@ func (c *Config) WalkSource() {
 
 func (c *Config) update(path, root string, wg *sync.WaitGroup) {
 	defer wg.Done()
-	hash, b, err := read(path)
+	hash, err := read(path)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -439,22 +439,8 @@ func (c *Config) update(path, root string, wg *sync.WaitGroup) {
 
 	if err = c.db.Update(func(tx *bolt.Tx) error {
 		// directory bucket
-		b1, p := tx.Bucket([]byte(root)), []byte(path)
+		b1 := tx.Bucket([]byte(root))
 		if err1 := b1.Put([]byte(path), hash[:]); err1 != nil {
-			return err1
-		}
-		// text search bucket
-		// if len(p) > 0 {
-		// 	fmt.Println("--> is a textfile", humanize.Bytes(uint64(len(p))))
-		// }
-		return nil
-		b2 := tx.Bucket([]byte(textBucket))
-		if b2 == nil {
-			fmt.Println("Creating a database bucket for", textBucket)
-			_, err1 := tx.CreateBucket([]byte(textBucket))
-			return err1
-		}
-		if err1 := b2.Put(p, b); err1 != nil {
 			return err1
 		}
 		return nil
@@ -472,7 +458,7 @@ func (c *Config) skipFiles() (files []string) {
 }
 
 func (c *Config) store(path string) error {
-	s, _, err := read(path)
+	s, err := read(path)
 	if err != nil {
 		return err
 	}
@@ -480,21 +466,19 @@ func (c *Config) store(path string) error {
 	return nil
 }
 
-func read(path string) (hash [32]byte, content []byte, err error) {
+func read(path string) (hash [32]byte, err error) {
 	const oneKb = 1024
 
 	f, err := os.Open(path)
 	if err != nil {
-		return hash, nil, err
+		return hash, err
 	}
 	defer f.Close()
 
-	buf := make([]byte, oneKb*oneKb)
-
-	h := sha256.New()
+	buf, h := make([]byte, oneKb*oneKb), sha256.New()
 	if _, err := io.CopyBuffer(h, f, buf); err != nil {
-		return hash, nil, err
+		return hash, err
 	}
 	copy(hash[:], h.Sum(nil))
-	return hash, buf, nil
+	return hash, nil
 }
