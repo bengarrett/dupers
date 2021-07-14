@@ -126,29 +126,6 @@ func (c *Config) init() {
 	}
 }
 
-// Remove all duplicate files from the source directory.
-func (c *Config) Remove() {
-	if len(c.sources) == 0 {
-		fmt.Println("no duplicate files to remove")
-		return
-	}
-	fmt.Println()
-	for h, path := range c.sources {
-		l := c.lookupOne(h)
-		if l == "" {
-			continue
-		}
-		if l == path {
-			continue
-		}
-		if err := os.Remove(path + "x"); err != nil {
-			log.Printf("could not remove: %s", err)
-			continue
-		}
-		fmt.Println("removed:", path)
-	}
-}
-
 // PurgeSrc removes all files and directories from the source directory that are not unique MS-DOS or Windows programs.
 func (c *Config) PurgeSrc() {
 	root, err := filepath.Abs(c.Source)
@@ -259,21 +236,37 @@ func matchItem(match string) string {
 	return s
 }
 
+// Remove all duplicate files from the source directory.
+func (c *Config) Remove() {
+	if len(c.sources) == 0 {
+		fmt.Println("no duplicate files to remove")
+		return
+	}
+	fmt.Println()
+	for h, path := range c.sources {
+		l := c.lookupOne(h)
+		if l == "" {
+			continue
+		}
+		if l == path {
+			continue
+		}
+		if err := os.Remove(path + "x"); err != nil {
+			log.Printf("could not remove: %s", err)
+			continue
+		}
+		fmt.Println("removed:", path)
+	}
+}
+
 // Seek sources from the database and print out the matches.
-// TODO: fix output
-// TODO: use c.compare
 func (c *Config) Seek() {
 	c.init()
+	var (
+		err   error
+		finds []string
+	)
 	for hash, path := range c.sources {
-		s := "\n"
-		s += color.Info.Sprint("Looking up") +
-			":" +
-			fmt.Sprintf("\t%s", path)
-		fmt.Print(s)
-		var (
-			err   error
-			finds []string
-		)
 		for _, bucket := range c.Buckets {
 			finds, c.files, err = database.Seek(hash, bucket)
 			if err != nil {
@@ -282,17 +275,8 @@ func (c *Config) Seek() {
 			}
 		}
 		if len(finds) > 0 {
-			verb := "duplicate matches"
-			if len(finds) == 1 {
-				verb = "a duplicate match"
-			}
-			s := "\n"
-			s += color.Info.Sprintf("Found %s", verb) +
-				":" +
-				fmt.Sprintf(" %s", path)
-			fmt.Print(s)
 			for _, find := range finds {
-				fmt.Println(matchItem(find))
+				fmt.Println(match(path, find))
 			}
 		}
 	}
@@ -380,7 +364,7 @@ func (c *Config) WalkDir(root string) error {
 			}
 			log.Fatalln(errD)
 		}
-		printWalk(c)
+		printWalk(false, c)
 		// hash the file
 		wg.Add(1)
 		go c.update(path, root, &wg)
@@ -394,16 +378,20 @@ func (c *Config) WalkDir(root string) error {
 	return err
 }
 
-func printWalk(c *Config) {
+func printWalk(lookup bool, c *Config) {
 	if c.test || c.Quiet {
 		return
 	}
+	s := "Scanning"
+	if lookup {
+		s = "Looking up"
+	}
 	if runtime.GOOS == winOS {
 		// color output slows down large scans on Windows
-		fmt.Printf("\rScanning %d files  ", c.files)
+		fmt.Printf("\r%s %d files  ", s, c.files)
 	} else {
 		fmt.Print("\u001b[2K")
-		fmt.Print("\r", color.Secondary.Sprint("Scanning "),
+		fmt.Print("\r", color.Secondary.Sprintf("%s ", s),
 			color.Primary.Sprintf("%d files ", c.files))
 	}
 }
