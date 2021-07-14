@@ -35,7 +35,7 @@ type Config struct {
 	files   int      // total files or database items read
 	db      *bolt.DB // interal Bolt database
 	compare hash     // hashes fetched from the database or file system
-	sources hash     // hashes for files to compare
+	sources []string // files paths to compare
 }
 
 type hash map[[32]byte]string
@@ -159,7 +159,7 @@ func (c *Config) PurgeSrc() {
 			continue
 		}
 		fmt.Println("remove all:", path)
-		if err := os.RemoveAll(path + "x"); err != nil {
+		if err := os.RemoveAll(path); err != nil {
 			log.Print(err)
 		}
 	}
@@ -195,7 +195,11 @@ func isProgram(path string) bool {
 
 // Print the results of a dupe request.
 func (c *Config) Print() {
-	for h, path := range c.sources {
+	for _, path := range c.sources {
+		h, err := read(path)
+		if err != nil {
+			log.Println(err)
+		}
 		l := c.lookupOne(h)
 		if l == "" {
 			continue
@@ -238,20 +242,21 @@ func matchItem(match string) string {
 
 // Remove all duplicate files from the source directory.
 func (c *Config) Remove() {
-	if len(c.sources) == 0 {
+	if len(c.sources) == 0 || len(c.compare) == 0 {
 		fmt.Println("no duplicate files to remove")
 		return
 	}
 	fmt.Println()
-	for h, path := range c.sources {
+	for _, path := range c.sources {
+		h, err := read(path)
+		if err != nil {
+			log.Println(err)
+		}
 		l := c.lookupOne(h)
 		if l == "" {
 			continue
 		}
-		if l == path {
-			continue
-		}
-		if err := os.Remove(path + "x"); err != nil {
+		if err := os.Remove(path); err != nil {
 			log.Printf("could not remove: %s", err)
 			continue
 		}
@@ -262,13 +267,16 @@ func (c *Config) Remove() {
 // Seek sources from the database and print out the matches.
 func (c *Config) Seek() {
 	c.init()
-	var (
-		err   error
-		finds []string
-	)
-	for hash, path := range c.sources {
+	var finds []string
+
+	for _, path := range c.sources {
+		h, err := read(path)
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		for _, bucket := range c.Buckets {
-			finds, c.files, err = database.Seek(hash, bucket)
+			finds, c.files, err = database.Seek(h, bucket)
 			if err != nil {
 				log.Println(err)
 				continue
@@ -276,6 +284,7 @@ func (c *Config) Seek() {
 		}
 		if len(finds) > 0 {
 			for _, find := range finds {
+				c.compare[h] = path
 				fmt.Println(match(path, find))
 			}
 		}
@@ -415,7 +424,11 @@ func skipDir(d fs.DirEntry) error {
 
 func skipFile(d fs.DirEntry) bool {
 	switch strings.ToLower(d.Name()) {
-	case ".ds_store":
+	case ".ds_store", ".trashes":
+		// macOS
+		return true
+	case "desktop.ini", "thumbs.db":
+		// Windows
 		return true
 	}
 	return false
@@ -475,10 +488,6 @@ func (c *Config) createBucket(root string) error {
 
 // WalkSource walks the source directory or a file to collect its hashed content for future comparison.
 func (c *Config) WalkSource() {
-	if c.sources == nil {
-		c.sources = make(hash)
-	}
-
 	root, err := filepath.Abs(c.Source)
 	if err != nil {
 		log.Fatalln(err)
@@ -492,9 +501,8 @@ func (c *Config) WalkSource() {
 	}
 
 	if !stat.IsDir() {
-		if err = c.store(root); err != nil {
-			log.Fatalln(err)
-		}
+		fmt.Println("walksource >>")
+		c.sources = append(c.sources, root)
 		return
 	}
 
@@ -507,7 +515,12 @@ func (c *Config) WalkSource() {
 		if !d.Type().IsRegular() {
 			return nil
 		}
-		return c.store(path)
+		// only append files
+		if d.IsDir() {
+			return nil
+		}
+		c.sources = append(c.sources, path)
+		return nil
 	}); err != nil {
 		log.Fatalln(err)
 	}
@@ -515,42 +528,31 @@ func (c *Config) WalkSource() {
 
 func (c *Config) update(path, root string, wg *sync.WaitGroup) {
 	defer wg.Done()
-	hash, err := read(path)
+	h, err := read(path)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	if hash == [32]byte{} {
+	if h == [32]byte{} {
 		return
 	}
 
 	if err = c.db.Update(func(tx *bolt.Tx) error {
 		// directory bucket
 		b1 := tx.Bucket([]byte(root))
-		if err1 := b1.Put([]byte(path), hash[:]); err1 != nil {
+		if err1 := b1.Put([]byte(path), h[:]); err1 != nil {
 			return err1
 		}
 		return nil
 	}); err != nil {
 		log.Println(err)
 	}
-	c.compare[hash] = path
+	c.compare[h] = path
 }
 
 func (c *Config) skipFiles() (files []string) {
-	for _, path := range c.sources {
-		files = append(files, path)
-	}
+	files = append(files, c.sources...)
 	return files
-}
-
-func (c *Config) store(path string) error {
-	s, err := read(path)
-	if err != nil {
-		return err
-	}
-	c.sources[s] = path
-	return nil
 }
 
 func read(path string) (hash [32]byte, err error) {
