@@ -103,6 +103,14 @@ func contains(s []string, find string) bool {
 
 // init initializes the Config maps and database.
 func (c *Config) init() {
+	// use all the buckets if no specific buckets are provided
+	if len(c.Buckets) == 0 {
+		var err error
+		c.Buckets, err = database.Buckets()
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}
 	// normalise bucket names
 	for i, b := range c.Buckets {
 		abs, err := filepath.Abs(b)
@@ -115,6 +123,96 @@ func (c *Config) init() {
 	}
 	if c.compare == nil {
 		c.compare = make(hash)
+	}
+}
+
+// Remove all duplicate files from the source directory.
+func (c *Config) Remove() {
+	if len(c.sources) == 0 {
+		fmt.Println("no duplicate files to remove")
+		return
+	}
+	fmt.Println()
+	for h, path := range c.sources {
+		l := c.lookupOne(h)
+		if l == "" {
+			continue
+		}
+		if l == path {
+			continue
+		}
+		if err := os.Remove(path + "x"); err != nil {
+			log.Printf("could not remove: %s", err)
+			continue
+		}
+		fmt.Println("removed:", path)
+	}
+}
+
+// PurgeSrc removes all files and directories from the source directory that are not unique MS-DOS or Windows programs.
+func (c *Config) PurgeSrc() {
+	root, err := filepath.Abs(c.Source)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	_, err = os.Stat(root)
+	if errors.Is(err, os.ErrNotExist) {
+		log.Fatalln("path does not exist:", root)
+	} else if err != nil {
+		log.Fatalln(err)
+	}
+
+	if len(c.sources) == 0 {
+		return
+	}
+	fmt.Println()
+
+	files, err := os.ReadDir(root)
+	if err != nil {
+		log.Println(err)
+	}
+
+	for _, item := range files {
+		if !item.IsDir() {
+			continue
+		}
+		path := filepath.Join(root, item.Name())
+		if containsBin(path) {
+			continue
+		}
+		fmt.Println("remove all:", path)
+		if err := os.RemoveAll(path + "x"); err != nil {
+			log.Print(err)
+		}
+	}
+}
+
+func containsBin(root string) bool {
+	bin := false
+	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if bin {
+			return nil
+		}
+		if !d.IsDir() {
+			if isProgram(d.Name()) {
+				bin = true
+				return nil
+			}
+		}
+		return nil
+	}); err != nil {
+		log.Println(err)
+	}
+	return bin
+}
+
+func isProgram(path string) bool {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".com", ".exe":
+		return true
+	default:
+		return false
 	}
 }
 
@@ -162,6 +260,8 @@ func matchItem(match string) string {
 }
 
 // Seek sources from the database and print out the matches.
+// TODO: fix output
+// TODO: use c.compare
 func (c *Config) Seek() {
 	c.init()
 	for hash, path := range c.sources {
@@ -186,7 +286,7 @@ func (c *Config) Seek() {
 			if len(finds) == 1 {
 				verb = "a duplicate match"
 			}
-			s := "\r"
+			s := "\n"
 			s += color.Info.Sprintf("Found %s", verb) +
 				":" +
 				fmt.Sprintf(" %s", path)
@@ -349,8 +449,7 @@ func walkDir(root, path string, c *Config) error {
 				// color output slows down large scans on Windows
 				fmt.Printf("\rLooking up %d files", c.files)
 			} else {
-				fmt.Print("\u001b[2K")
-				fmt.Print("\r", color.Secondary.Sprint("Looking up "),
+				fmt.Print("\u001b[2K\r", color.Secondary.Sprint("Looking up "),
 					color.Primary.Sprintf("%d files", c.files))
 			}
 		}

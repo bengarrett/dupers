@@ -29,28 +29,29 @@ var (
 
 const winOS = "windows"
 
-// --delete-dupes
-// --move-dupes
-// --copy-dupes
 // --deep-scan (open archives and hash binary files)
 
 func main() {
 	var c dupers.Config
 	c.Timer = time.Now()
-
+	alert := color.Danger.Sprint("use at your own risk")
+	// dupe options
 	look := flag.Bool("fast", false, "query the database for a much faster match,"+
 		"\n\t\tthe results maybe stale as it does not look for any file changes on your system")
 	f := flag.Bool("f", false, "alias for fast")
+	rmdupe := flag.Bool("delete", false, "delete the duplicate files found in the <directory or file to check>")
+	sensen := flag.Bool("sensen", false, "purges everything other than unique .exe and .com programs in the <directory to check> "+alert)
+	// search options
 	exact := flag.Bool("exact", false, "match case")
 	ex := flag.Bool("e", false, "alias for exact")
 	filename := flag.Bool("name", false, "search for filenames, and ignore directories")
 	fn := flag.Bool("n", false, "alias for name")
-
+	// general options
 	quiet := flag.Bool("quiet", false, "quiet mode hides all but essential feedback")
 	q := flag.Bool("q", false, "alias for quiet")
 	ver := flag.Bool("version", false, "version and information for this program")
 	v := flag.Bool("v", false, "alias for version")
-
+	// help and parse flags
 	flag.Usage = func() {
 		help()
 	}
@@ -71,7 +72,7 @@ func main() {
 		if *q || *quiet {
 			c.Quiet = true
 		}
-		taskScan(&c, *look, *quiet)
+		taskScan(&c, *look, *quiet, *rmdupe, *sensen)
 	case "search":
 		if *ex {
 			exact = ex
@@ -98,10 +99,14 @@ func help() {
 		fmt.Fprintln(w, "  The \"buckets to lookup\" are directories that get added to the database for quicker scans.")
 	}
 	fmt.Fprintln(w, "\n  Usage:")
-	fmt.Fprintln(w, "    dupers [options] dupe <directory or file to check> <buckets to lookup>")
+	fmt.Fprintln(w, "    dupers [options] dupe <directory or file to check> [buckets to lookup]")
 	fmt.Fprintln(w, "\n  Options:")
 	f = flag.Lookup("fast")
 	fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
+	f = flag.Lookup("delete")
+	fmt.Fprintf(w, "        -%v\t\t%v\n", f.Name, f.Usage)
+	f = flag.Lookup("sensen")
+	fmt.Fprintf(w, "        -%v\t\t%v\n", f.Name, f.Usage)
 	exampleDupe(w)
 	fmt.Fprintf(w, "\n%s\n  Lookup a file or a directory name in the database.\n",
 		color.Primary.Sprint("Search:"))
@@ -253,11 +258,15 @@ func taskDatabase(c dupers.Config, quiet bool, args ...string) {
 	}
 }
 
-func taskScan(c *dupers.Config, lookup, quiet bool) {
+func taskScan(c *dupers.Config, lookup, quiet, rm, sensen bool) {
 	l := len(flag.Args())
+	b, err := database.Buckets()
+	if err != nil {
+		log.Fatalln(err)
+	}
 	const minArgs = 3
-	if l < minArgs {
-		tsPrintErr(l)
+	if l < minArgs && len(b) == 0 {
+		tsPrintErr(l, len(b))
 	}
 	// directory or a file to match
 	c.Source = flag.Args()[1]
@@ -280,15 +289,22 @@ func taskScan(c *dupers.Config, lookup, quiet bool) {
 	}
 	// print the found dupes
 	c.Print()
+	// remove files
+	if rm || sensen {
+		c.Remove()
+		if sensen {
+			c.PurgeSrc()
+		}
+	}
 	// summaries
 	if runtime.GOOS == winOS || !c.Quiet {
 		fmt.Println(c.Status())
 	}
 }
 
-func tsPrintErr(l int) {
+func tsPrintErr(args, buckets int) {
 	const minArgs = 2
-	if l < minArgs {
+	if args < minArgs {
 		color.Warn.Println("the dupe request requires at both a source and target to run a check against")
 		fmt.Println("the source can be either a directory or file")
 		if runtime.GOOS == winOS {
@@ -298,7 +314,7 @@ func tsPrintErr(l int) {
 		}
 		fmt.Println("\ndupers dupe <source file or directory> <target one or more directories>")
 	}
-	if l == minArgs {
+	if buckets == 0 && args == minArgs {
 		if runtime.GOOS == winOS {
 			color.Warn.Println("the dupe request requires at least one target directory or drive letter")
 		} else {
