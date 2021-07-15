@@ -31,6 +31,7 @@ var (
 	ErrCmd    = errors.New("command is unknown")
 	ErrNoArgs = errors.New("request is missing arguments")
 	ErrNoDB   = errors.New("database has no bucket name")
+	ErrSearch = errors.New("search request needs an expression")
 )
 
 const winOS = "windows"
@@ -70,7 +71,7 @@ func main() {
 	selection := strings.ToLower(flag.Args()[0])
 	switch selection {
 	case "database", "db", "backup", "clean", "rm", "up":
-		taskDatabase(c, *quiet, flag.Args()...)
+		taskDatabase(&c, *quiet, flag.Args()...)
 	case "dupe":
 		if *f {
 			*look = true
@@ -195,9 +196,8 @@ func exampleSearch(w *tabwriter.Writer) *tabwriter.Writer {
 	return w
 }
 
-func taskDatabase(c dupers.Config, quiet bool, args ...string) {
+func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
 	l := len(args)
-	const minArgs = 1
 	switch args[0] {
 	case "backup":
 		n, w, err := database.Backup()
@@ -228,48 +228,58 @@ func taskDatabase(c dupers.Config, quiet bool, args ...string) {
 		fmt.Println(s)
 		return
 	case "rm":
-		if l == minArgs {
-			out.ErrCont(ErrNoDB)
-			fmt.Println("Cannot remove a bucket from the database as no bucket name was provided.")
-			out.Example("\ndupers database rm <bucket name>")
-			out.ErrFatal(nil)
-		}
-		name := args[1]
-		if err := database.RM(name); err != nil {
-			if errors.Is(err, database.ErrNoBucket) {
-				out.ErrCont(err)
-				fmt.Printf("Bucket to remove: '%s'\n", name)
-				buckets, err1 := database.Buckets()
-				if err1 != nil {
-					out.ErrFatal(err1)
-				}
-				fmt.Printf("Buckets in use: %s\n", strings.Join(buckets, "\n\t\t"))
-				out.ErrFatal(nil)
-			}
-			out.ErrFatal(err)
-		}
-		s := fmt.Sprintf("Removed bucket from the database: '%s'\n", name)
-		out.Response(s, quiet)
+		taskDBRM(l, quiet, args)
 		return
 	case "up":
-		if l == minArgs {
-			out.ErrCont(database.ErrNoBucket)
-			fmt.Println("Cannot add or update a bucket to the database as no bucket name was provided.")
-			out.Example("\ndupers database up <bucket name>")
-			out.ErrFatal(nil)
-		}
-		if runtime.GOOS == winOS && !quiet {
-			fmt.Printf("To improve performance on Windows use the quiet flag: duper -quiet dupe %s %s\n", c.Source, strings.Join(c.Buckets, " "))
-		}
-		if err := c.WalkDir(flag.Args()[1]); err != nil {
-			out.ErrFatal(err)
-		}
-		if runtime.GOOS == winOS || !c.Quiet {
-			fmt.Println(c.Status())
-		}
+		taskDBUp(c, l)
 		return
 	default:
 		out.ErrFatal(ErrCmd)
+	}
+}
+
+func taskDBRM(l int, quiet bool, args []string) {
+	const minArgs = 1
+	if l == minArgs {
+		out.ErrCont(ErrNoDB)
+		fmt.Println("Cannot remove a bucket from the database as no bucket name was provided.")
+		out.Example("\ndupers database rm <bucket name>")
+		out.ErrFatal(nil)
+	}
+	name := args[1]
+	if err := database.RM(name); err != nil {
+		if errors.Is(err, database.ErrNoBucket) {
+			out.ErrCont(err)
+			fmt.Printf("Bucket to remove: '%s'\n", name)
+			buckets, err1 := database.Buckets()
+			if err1 != nil {
+				out.ErrFatal(err1)
+			}
+			fmt.Printf("Buckets in use: %s\n", strings.Join(buckets, "\n\t\t"))
+			out.ErrFatal(nil)
+		}
+		out.ErrFatal(err)
+	}
+	s := fmt.Sprintf("Removed bucket from the database: '%s'\n", name)
+	out.Response(s, quiet)
+}
+
+func taskDBUp(c *dupers.Config, l int) {
+	const minArgs = 1
+	if l == minArgs {
+		out.ErrCont(database.ErrNoBucket)
+		fmt.Println("Cannot add or update a bucket to the database as no bucket name was provided.")
+		out.Example("\ndupers database up <bucket name>")
+		out.ErrFatal(nil)
+	}
+	if runtime.GOOS == winOS && !c.Quiet {
+		fmt.Printf("To improve performance on Windows use the quiet flag: duper -quiet dupe %s %s\n", c.Source, strings.Join(c.Buckets, " "))
+	}
+	if err := c.WalkDir(flag.Args()[1]); err != nil {
+		out.ErrFatal(err)
+	}
+	if runtime.GOOS == winOS || !c.Quiet {
+		fmt.Println(c.Status())
 	}
 }
 
@@ -358,24 +368,24 @@ func taskSearch(exact, filename, quiet *bool) {
 	if *filename {
 		if !*exact {
 			if m, err = database.CompareBaseNoCase(term, buckets); err != nil {
-				taskSearchErr(term, err)
+				taskSearchErr(err)
 			}
 		}
 		if *exact {
 			if m, err = database.CompareBase(term, buckets); err != nil {
-				taskSearchErr(term, err)
+				taskSearchErr(err)
 			}
 		}
 	}
 	if !*filename {
 		if !*exact {
 			if m, err = database.CompareNoCase(term, buckets); err != nil {
-				taskSearchErr(term, err)
+				taskSearchErr(err)
 			}
 		}
 		if *exact {
 			if m, err = database.Compare(term, buckets); err != nil {
-				taskSearchErr(term, err)
+				taskSearchErr(err)
 			}
 		}
 	}
@@ -387,8 +397,7 @@ func taskSearch(exact, filename, quiet *bool) {
 
 func taskExpErr(l int) {
 	if l <= 1 {
-		err := errors.New("search request needs an expression")
-		out.ErrCont(err)
+		out.ErrCont(ErrSearch)
 		fmt.Println("A search expression can be a partial or complete filename,")
 		fmt.Println("or a partial or complete directory.")
 		out.Example("\ndupers search <search expression> [optional, directories to search]")
@@ -396,7 +405,7 @@ func taskExpErr(l int) {
 	}
 }
 
-func taskSearchErr(term string, err error) {
+func taskSearchErr(err error) {
 	if errors.As(err, &database.ErrNoBucket) {
 		out.ErrCont(err)
 		fmt.Println("\nTo add this directory to the database, run:")
