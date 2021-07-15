@@ -71,8 +71,9 @@ func main() {
 		help()
 	}
 	flag.Parse()
-	if *q {
+	if *q || *quiet {
 		*quiet = true
+		c.Quiet = true
 	}
 	options(ver, v)
 
@@ -83,9 +84,6 @@ func main() {
 	case "dupe":
 		if *f {
 			*look = true
-		}
-		if *q || *quiet {
-			c.Quiet = true
 		}
 		taskScan(&c, *look, *quiet, *rmdupe, *sensen)
 	case "search":
