@@ -160,10 +160,18 @@ func (c *Config) PurgeSrc() {
 		if containsBin(path) {
 			continue
 		}
-		if err := os.RemoveAll(path); err != nil {
-			out.ErrCont(err)
-		}
+		err := os.RemoveAll(path)
+		printRM(path, err)
 	}
+}
+
+func printRM(path string, err error) {
+	if err != nil {
+		e := fmt.Errorf("could not remove: %w", err)
+		out.ErrCont(e)
+		return
+	}
+	fmt.Printf("%s: %s\n", color.Secondary.Sprint("removed"), path)
 }
 
 func containsBin(root string) bool {
@@ -257,12 +265,8 @@ func (c *Config) Remove() {
 		if l == "" {
 			continue
 		}
-		if err := os.Remove(path); err != nil {
-			e := fmt.Errorf("could not remove: %w", err)
-			out.ErrCont(e)
-			continue
-		}
-		fmt.Println("removed:", path)
+		err = os.Remove(path)
+		printRM(path, err)
 	}
 }
 
@@ -416,10 +420,15 @@ func skipDir(d fs.DirEntry, hidden bool) error {
 	// skip directories
 	switch strings.ToLower(d.Name()) {
 	// the SkipDir return tells WalkDir to skip all files in these directories
-	case ".git", ".cache", ".config", ".local", "node_modules", "__macosx":
+	case ".git", ".cache", ".config", ".local", "node_modules", "__macosx", "appdata":
 		return filepath.SkipDir
 	default:
+		// Unix style hidden directories
 		if hidden && strings.HasPrefix(d.Name(), ".") {
+			return filepath.SkipDir
+		}
+		// Windows system directories
+		if hidden && runtime.GOOS == winOS && strings.HasPrefix(d.Name(), "$") {
 			return filepath.SkipDir
 		}
 		return nil
@@ -431,7 +440,7 @@ func skipFile(d fs.DirEntry) bool {
 	case ".ds_store", ".trashes":
 		// macOS
 		return true
-	case "desktop.ini", "thumbs.db":
+	case "desktop.ini", "hiberfil.sys", "ntuser.dat", "pagefile.sys", "swapfile.sys", "thumbs.db":
 		// Windows
 		return true
 	}
