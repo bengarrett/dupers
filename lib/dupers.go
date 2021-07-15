@@ -27,21 +27,21 @@ import (
 // Config options for duper.
 type Config struct {
 	Timer   time.Time
-	Buckets []string
+	Buckets []string // buckets to lookup
 	Source  string   // directory or file to compare
-	NoWalk  bool     // todo
-	Quiet   bool     // todo
-	test    bool     // todo
-	files   int      // total files or database items read
+	Quiet   bool     // reduce the feedback sent to stdout
 	db      *bolt.DB // interal Bolt database
 	compare hash     // hashes fetched from the database or file system
-	sources []string // files paths to compare
+	files   int      // total files or database items read
+	sources []string // files paths to check
+	test    bool     // internal unit test mode
 }
 
 type hash map[[32]byte]string
 
 const (
-	winOS = "windows"
+	modFmt = "02 Jan 2006 15:04"
+	winOS  = "windows"
 )
 
 var (
@@ -55,8 +55,7 @@ func Print(term string, quiet bool, m *database.Matches) {
 		return
 	}
 	// collect the bucket names which will be used to sort the results
-	buckets := []string{}
-	bucket := ""
+	buckets, bucket := []string{}, ""
 	for _, bucket := range *m {
 		if !contains(buckets, bucket) {
 			buckets = append(buckets, bucket)
@@ -135,7 +134,7 @@ func (c *Config) PurgeSrc() {
 
 	_, err = os.Stat(root)
 	if errors.Is(err, os.ErrNotExist) {
-		e := fmt.Errorf("path does not exist: %s", root)
+		e := fmt.Errorf("%w: %s", ErrNoPath, root)
 		out.ErrFatal(e)
 	} else if err != nil {
 		out.ErrFatal(err)
@@ -144,13 +143,11 @@ func (c *Config) PurgeSrc() {
 	if len(c.sources) == 0 {
 		return
 	}
-	fmt.Println()
 
 	files, err := os.ReadDir(root)
 	if err != nil {
 		out.ErrCont(err)
 	}
-
 	for _, item := range files {
 		if !item.IsDir() {
 			continue
@@ -159,7 +156,6 @@ func (c *Config) PurgeSrc() {
 		if containsBin(path) {
 			continue
 		}
-		fmt.Println("remove all:", path)
 		if err := os.RemoveAll(path); err != nil {
 			out.ErrCont(err)
 		}
@@ -236,7 +232,7 @@ func matchItem(match string) string {
 		return s
 	}
 	s += "\n    " +
-		fmt.Sprintf("%s, ", stat.ModTime().Format("02 Jan 2006 15:04")) +
+		fmt.Sprintf("%s, ", stat.ModTime().Format(modFmt)) +
 		humanize.Bytes(uint64(stat.Size()))
 	return s
 }
@@ -244,7 +240,7 @@ func matchItem(match string) string {
 // Remove all duplicate files from the source directory.
 func (c *Config) Remove() {
 	if len(c.sources) == 0 || len(c.compare) == 0 {
-		fmt.Println("no duplicate files to remove")
+		fmt.Println("No duplicate files to remove.")
 		return
 	}
 	fmt.Println()
@@ -270,7 +266,6 @@ func (c *Config) Remove() {
 func (c *Config) Seek() {
 	c.init()
 	var finds []string
-
 	for _, path := range c.sources {
 		h, err := read(path)
 		if err != nil {
@@ -348,7 +343,7 @@ func (c *Config) WalkDir(root string) error {
 			return err
 		}
 		// skip directories
-		if err1 := skipDir(d); err1 != nil {
+		if err1 := skipDir(d, true); err1 != nil {
 			return err1
 		}
 		// skip files
@@ -357,10 +352,6 @@ func (c *Config) WalkDir(root string) error {
 		}
 		// skip non-files such as symlinks
 		if !d.Type().IsRegular() {
-			return nil
-		}
-		// user flag, skip recursive directories
-		if c.NoWalk && filepath.Dir(path) != filepath.Dir(root) {
 			return nil
 		}
 		// skip self file matches
@@ -380,12 +371,8 @@ func (c *Config) WalkDir(root string) error {
 		wg.Add(1)
 		go c.update(path, root, &wg)
 		wg.Wait()
-
 		return err
 	})
-	if !c.Quiet {
-		fmt.Println()
-	}
 	return err
 }
 
@@ -407,7 +394,7 @@ func printWalk(lookup bool, c *Config) {
 	}
 }
 
-func skipDir(d fs.DirEntry) error {
+func skipDir(d fs.DirEntry, hidden bool) error {
 	if !d.IsDir() {
 		return nil
 	}
@@ -417,7 +404,7 @@ func skipDir(d fs.DirEntry) error {
 	case ".git", ".cache", ".config", ".local", "node_modules", "__macosx":
 		return filepath.SkipDir
 	default:
-		if strings.HasPrefix(d.Name(), ".") {
+		if hidden && strings.HasPrefix(d.Name(), ".") {
 			return filepath.SkipDir
 		}
 		return nil
@@ -480,7 +467,7 @@ func (c *Config) createBucket(root string) error {
 	}
 	return c.db.Update(func(tx *bolt.Tx) error {
 		if b := tx.Bucket([]byte(root)); b == nil {
-			fmt.Println("Creating a database bucket for", root)
+			fmt.Printf("New database bucket: '%s'\n", root)
 			_, err1 := tx.CreateBucket([]byte(root))
 			return err1
 		}
@@ -510,7 +497,7 @@ func (c *Config) WalkSource() {
 
 	if err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		// skip directories
-		if err := skipDir(d); err != nil {
+		if err := skipDir(d, true); err != nil {
 			return err
 		}
 		// skip non-files such as symlinks

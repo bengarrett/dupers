@@ -18,6 +18,7 @@ import (
 
 	"github.com/bengarrett/dupers/lib/out"
 	"github.com/dustin/go-humanize"
+	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -27,13 +28,15 @@ type (
 )
 
 const (
-	FileMode fs.FileMode = 0600
-	dbName               = "dupers.db"
-	dbPath               = "dupers"
+	FileMode   fs.FileMode = 0600
+	backupTime             = "20060102-150405"
+	dbName                 = "dupers.db"
+	dbPath                 = "dupers"
 )
 
 var (
 	ErrNoBucket  = errors.New("bucket does not exist")
+	ErrDB        = errors.New("database does not exist")
 	ErrDBClean   = errors.New("database had nothing to clean")
 	ErrDBCompact = errors.New("database compression has not reduced the size")
 )
@@ -59,7 +62,7 @@ func Backup() (name string, written int64, err error) {
 }
 
 func backupName() string {
-	now, ext := time.Now().Format("20060102-150405"), filepath.Ext(dbName)
+	now, ext := time.Now().Format(backupTime), filepath.Ext(dbName)
 	return fmt.Sprintf("%s-backup-%s%s", strings.TrimSuffix(dbName, ext), now, ext)
 }
 
@@ -174,12 +177,12 @@ func Compact() error {
 	// make a temporary database
 	tmp := filepath.Join(os.TempDir(), backupName())
 	// open both databases
-	srcDB, err := bolt.Open(src, 0600, nil)
+	srcDB, err := bolt.Open(src, FileMode, nil)
 	if err != nil {
 		return err
 	}
 	defer srcDB.Close()
-	tmpDB, err := bolt.Open(tmp, 0600, nil)
+	tmpDB, err := bolt.Open(tmp, FileMode, nil)
 	if err != nil {
 		return err
 	}
@@ -336,17 +339,24 @@ func Info() (string, error) {
 	w.Init(&b, 0, 8, 0, '\t', 0)
 	fmt.Fprintf(w, "\tLocation:\t%s\n", path)
 	s, err := os.Stat(path)
-	if err != nil {
-		// TODO: check error
-		fmt.Fprintln(w, "\t\tThe database doesn't exist, but one will be created during the next scan")
+	if os.IsNotExist(err) {
+		fmt.Fprintln(w, "\nThis is okay, one will be created during the next dupe or bucket scan.")
 		w.Flush()
-		return b.String(), nil
+		return b.String(), ErrDB
+	} else if err != nil {
+		w.Flush()
+		return b.String(), err
 	}
 	fmt.Fprintf(w, "\tFile size:\t%s\n", humanize.Bytes(uint64(s.Size())))
 	w, err = info(path, w)
 	if err != nil {
 		fmt.Fprintln(w)
 		fmt.Fprintf(w, "\tDatabase error:\t%s\n", err.Error())
+	}
+	const hundredMB = 100_000_000
+	if s.Size() > hundredMB {
+		fmt.Fprintln(w, color.Notice.Sprint("\nTo reduce the size of the database:"))
+		fmt.Fprintln(w, color.Debug.Sprint("duper backup && duper clean"))
 	}
 	w.Flush()
 	return b.String(), nil
@@ -358,7 +368,11 @@ func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, error) {
 		return w, err
 	}
 	defer db.Close()
-	fmt.Fprintf(w, "\tRead only mode:\t%v\n", db.IsReadOnly())
+	ro := color.Green.Sprint("OK")
+	if !db.IsReadOnly() {
+		ro = color.Danger.Sprint("NO")
+	}
+	fmt.Fprintf(w, "\tRead only mode:\t%s\n", ro)
 	err = db.View(func(tx *bolt.Tx) error {
 		cnt := 0
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {

@@ -223,7 +223,7 @@ func taskDatabase(c dupers.Config, quiet bool, args ...string) {
 	case "db", "database":
 		s, err := database.Info()
 		if err != nil {
-			out.ErrFatal(err)
+			out.ErrCont(err)
 		}
 		fmt.Println(s)
 		return
