@@ -7,7 +7,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -17,6 +16,7 @@ import (
 
 	dupers "github.com/bengarrett/dupers/lib"
 	"github.com/bengarrett/dupers/lib/database"
+	"github.com/bengarrett/dupers/lib/out"
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
 )
@@ -27,6 +27,12 @@ var (
 	date    = "unset" // nolint: gochecknoglobals
 )
 
+var (
+	ErrCmd    = errors.New("command is unknown")
+	ErrNoArgs = errors.New("request is missing arguments")
+	ErrNoDB   = errors.New("database has no bucket name")
+)
+
 const winOS = "windows"
 
 // --deep-scan (open archives and hash binary files)
@@ -34,13 +40,13 @@ const winOS = "windows"
 func main() {
 	var c dupers.Config
 	c.Timer = time.Now()
-	alert := color.Danger.Sprint("use at your own risk")
+	alert := "\n\t\tthere are no prompts, " + color.Danger.Sprint("use this flag at your own risk")
 	// dupe options
 	look := flag.Bool("fast", false, "query the database for a much faster match,"+
 		"\n\t\tthe results maybe stale as it does not look for any file changes on your system")
 	f := flag.Bool("f", false, "alias for fast")
 	rmdupe := flag.Bool("delete", false, "delete the duplicate files found in the <directory or file to check>")
-	sensen := flag.Bool("sensen", false, "purges everything other than unique .exe and .com programs in the <directory to check> "+alert)
+	sensen := flag.Bool("sensen", false, "purges everything other than unique .exe and .com programs in the <directory to check>"+alert)
 	// search options
 	exact := flag.Bool("exact", false, "match case")
 	ex := flag.Bool("e", false, "alias for exact")
@@ -81,6 +87,11 @@ func main() {
 			filename = fn
 		}
 		taskSearch(exact, filename, quiet)
+	default:
+		out.ErrCont(ErrCmd)
+		fmt.Printf("Command: '%s'\n\nSee the help for the available commands and options:\n", selection)
+		out.Example("dupers --help")
+		out.ErrFatal(nil)
 	}
 }
 
@@ -106,7 +117,7 @@ func help() {
 	f = flag.Lookup("delete")
 	fmt.Fprintf(w, "        -%v\t\t%v\n", f.Name, f.Usage)
 	f = flag.Lookup("sensen")
-	fmt.Fprintf(w, "        -%v\t\t%v\n", f.Name, f.Usage)
+	fmt.Fprintf(w, "\n        -%v\t\t%v\n", f.Name, f.Usage)
 	exampleDupe(w)
 	fmt.Fprintf(w, "\n%s\n  Lookup a file or a directory name in the database.\n",
 		color.Primary.Sprint("Search:"))
@@ -144,7 +155,7 @@ func windowsNotice(w *tabwriter.Writer) *tabwriter.Writer {
 	}
 	empty, err := database.IsEmpty()
 	if err != nil {
-		log.Println(err)
+		out.ErrCont(err)
 	}
 	if empty {
 		fmt.Fprintf(w, "\n%s\n", color.Danger.Sprint("To greatly improve performance,"+
@@ -191,70 +202,74 @@ func taskDatabase(c dupers.Config, quiet bool, args ...string) {
 	case "backup":
 		n, w, err := database.Backup()
 		if err != nil {
-			log.Fatalln(err)
+			out.ErrFatal(err)
 		}
-		if !quiet {
-			fmt.Printf("A new copy of the database (%s) is at: %s\n", humanize.Bytes(uint64(w)), n)
-		}
+		s := fmt.Sprintf("A new copy of the database (%s) is at: %s", humanize.Bytes(uint64(w)), n)
+		out.Response(s, quiet)
 		return
 	case "clean":
 		if err := database.Clean(quiet); err != nil {
 			if b := errors.Is(err, database.ErrDBClean); !b {
-				log.Fatalln(err)
+				out.ErrFatal(err)
 			}
-			fmt.Printf("The %s\n", err.Error())
+			out.ErrCont(err)
 		}
 		if err := database.Compact(); err != nil {
 			if b := errors.Is(err, database.ErrDBCompact); !b {
-				log.Fatalln(err)
+				out.ErrFatal(err)
 			}
 		}
 		return
 	case "db", "database":
-		fmt.Println(database.Info())
+		s, err := database.Info()
+		if err != nil {
+			out.ErrFatal(err)
+		}
+		fmt.Println(s)
 		return
 	case "rm":
 		if l == minArgs {
-			color.Warn.Println("Cannot remove a bucket from the database as no bucket name was provided")
-			fmt.Println("\ndupers database rm <bucket name>")
-			fmt.Println()
-			os.Exit(1)
+			out.ErrCont(ErrNoDB)
+			fmt.Println("Cannot remove a bucket from the database as no bucket name was provided.")
+			out.Example("\ndupers database rm <bucket name>")
+			out.ErrFatal(nil)
 		}
 		name := args[1]
 		if err := database.RM(name); err != nil {
 			if errors.Is(err, database.ErrNoBucket) {
-				fmt.Printf("The bucket does not exist in the database: '%s'\n", name)
+				out.ErrCont(err)
+				fmt.Printf("Bucket to remove: '%s'\n", name)
 				buckets, err1 := database.Buckets()
 				if err1 != nil {
-					log.Fatalln(err1)
+					out.ErrFatal(err1)
 				}
 				fmt.Printf("Buckets in use: %s\n", strings.Join(buckets, "\n\t\t"))
-				os.Exit(1)
+				out.ErrFatal(nil)
 			}
-			log.Fatalln(err)
+			out.ErrFatal(err)
 		}
-		fmt.Printf("Removed bucket from the database: '%s'\n", name)
+		s := fmt.Sprintf("Removed bucket from the database: '%s'\n", name)
+		out.Response(s, quiet)
 		return
 	case "up":
 		if l == minArgs {
-			color.Warn.Println("Cannot add or update a bucket to the database as no bucket name was provided")
-			fmt.Println("\ndupers database up <bucket name>")
-			fmt.Println()
-			os.Exit(1)
+			out.ErrCont(database.ErrNoBucket)
+			fmt.Println("Cannot add or update a bucket to the database as no bucket name was provided.")
+			out.Example("\ndupers database up <bucket name>")
+			out.ErrFatal(nil)
 		}
 		if runtime.GOOS == winOS && !quiet {
 			fmt.Printf("To improve performance on Windows use the quiet flag: duper -quiet dupe %s %s\n", c.Source, strings.Join(c.Buckets, " "))
 		}
 		if err := c.WalkDir(flag.Args()[1]); err != nil {
-			color.Warn.Printf("This %s\n", err)
-			os.Exit(1)
+			out.ErrFatal(err)
 		}
 		if runtime.GOOS == winOS || !c.Quiet {
 			fmt.Println(c.Status())
 		}
 		return
 	default:
-		color.Warn.Printf("This database command is not valid: '%s'\n", args[0])
+		out.ErrFatal(ErrCmd)
 	}
 }
 
@@ -262,11 +277,11 @@ func taskScan(c *dupers.Config, lookup, quiet, rm, sensen bool) {
 	l := len(flag.Args())
 	b, err := database.Buckets()
 	if err != nil {
-		log.Fatalln(err)
+		out.ErrFatal(err)
 	}
 	const minArgs = 3
-	if l < minArgs && len(b) == 0 {
-		tsPrintErr(l, len(b))
+	if l < minArgs || len(b) == 0 {
+		taskScanErr(l, len(b))
 	}
 	// directory or a file to match
 	c.Source = flag.Args()[1]
@@ -281,7 +296,7 @@ func taskScan(c *dupers.Config, lookup, quiet, rm, sensen bool) {
 	// walk, scan and save file paths and hashes to the database
 	if !lookup {
 		if err := database.Clean(true); err != nil {
-			log.Println(err)
+			out.ErrCont(err)
 		}
 		c.WalkDirs()
 	} else {
@@ -302,17 +317,18 @@ func taskScan(c *dupers.Config, lookup, quiet, rm, sensen bool) {
 	}
 }
 
-func tsPrintErr(args, buckets int) {
+func taskScanErr(args, buckets int) {
 	const minArgs = 2
 	if args < minArgs {
-		color.Warn.Println("the dupe request requires at both a source and target to run a check against")
-		fmt.Println("the source can be either a directory or file")
+		out.ErrCont(ErrNoArgs)
+		fmt.Println("\n'dupe' requires both a source and target.")
+		fmt.Println("The source can be either a directory or file.")
 		if runtime.GOOS == winOS {
-			fmt.Println("the target can be one or more directories or drive letters")
+			fmt.Println("The target can be one or more directories or drive letters.")
 		} else {
-			fmt.Println("the target can be one or more directories")
+			fmt.Println("The target can be one or more directories.")
 		}
-		fmt.Println("\ndupers dupe <source file or directory> <target one or more directories>")
+		out.Example("\ndupers dupe <source file or directory> <target one or more directories>")
 	}
 	if buckets == 0 && args == minArgs {
 		if runtime.GOOS == winOS {
@@ -320,25 +336,25 @@ func tsPrintErr(args, buckets int) {
 		} else {
 			color.Warn.Println("the dupe request requires at least one target directory")
 		}
-		fmt.Printf("\ndupers dupe %s <target one or more directories>\n", flag.Args()[1])
+		s := fmt.Sprintf("\ndupers dupe %s <target one or more directories>\n", flag.Args()[1])
+		out.Example(s)
 	}
-	fmt.Println("")
-	os.Exit(1)
+	out.ErrFatal(nil)
 }
 
 func taskSearch(exact, filename, quiet *bool) {
 	l := len(flag.Args())
-	tscrPrintErr(l)
+	taskExpErr(l)
 	term := flag.Args()[1]
-	var buckets = []string{}
+	var (
+		buckets = []string{}
+		m       *database.Matches
+		err     error
+	)
 	const minArgs = 2
 	if l > minArgs {
 		buckets = flag.Args()[2:]
 	}
-	var (
-		m   *database.Matches
-		err error
-	)
 	if *filename {
 		if !*exact {
 			if m, err = database.CompareBaseNoCase(term, buckets); err != nil {
@@ -365,37 +381,37 @@ func taskSearch(exact, filename, quiet *bool) {
 	}
 	dupers.Print(term, *quiet, m)
 	if !*quiet {
-		fmt.Println(compareResults(len(*m), term, exact, filename))
+		fmt.Println(searchSummary(len(*m), term, exact, filename))
+	}
+}
+
+func taskExpErr(l int) {
+	if l <= 1 {
+		err := errors.New("search request needs an expression")
+		out.ErrCont(err)
+		fmt.Println("A search expression can be a partial or complete filename,")
+		fmt.Println("or a partial or complete directory.")
+		out.Example("\ndupers search <search expression> [optional, directories to search]")
+		out.ErrFatal(nil)
 	}
 }
 
 func taskSearchErr(term string, err error) {
 	if errors.As(err, &database.ErrNoBucket) {
-		color.Warn.Printf("Could not search for '%s'\n", term)
-		fmt.Printf("The database %s\n\n", err)
-		fmt.Println("To manually add the directory to the database:")
+		out.ErrCont(err)
+		fmt.Println("\nTo add this directory to the database, run:")
 		dir := strings.ReplaceAll(err.Error(), errors.Unwrap(err).Error()+": ", "")
-		fmt.Printf("dupers up %s\n", dir)
-		os.Exit(1)
+		s := fmt.Sprintf("dupers up %s\n", dir)
+		out.Example(s)
+		out.ErrFatal(nil)
 	}
-	log.Fatalln(err)
+	out.ErrFatal(err)
 }
 
-func tscrPrintErr(l int) {
-	if l <= 1 {
-		color.Warn.Println("This search request needs an expression")
-		fmt.Println("A search expression can be a partial or complete filename,")
-		fmt.Println("or a partial or complete directory.")
-		fmt.Println("\ndupers search <search expression> [optional, directories to search]")
-		fmt.Println("")
-		os.Exit(1)
-	}
-}
-
-func compareResults(total int, term string, exact, filename *bool) string {
+func searchSummary(total int, term string, exact, filename *bool) string {
 	s, r := "", "results"
 	if total == 0 {
-		return fmt.Sprintf("No results exist for '%s'\n", term)
+		return fmt.Sprintf("No results exist for '%s'.\n", term)
 	}
 	if total == 1 {
 		r = "result"
@@ -448,8 +464,7 @@ func info() {
 	fmt.Printf("build: %s (%s)\n", commit, date)
 	exe, err := self()
 	if err != nil {
-		fmt.Printf("path: %s\n", err)
-		return
+		out.ErrFatal(err)
 	}
 	fmt.Printf("path: %s\n", exe)
 }
@@ -458,7 +473,7 @@ func home() string {
 	h, err := os.UserHomeDir()
 	if err != nil {
 		if h, err = os.Getwd(); err != nil {
-			log.Println(err)
+			out.ErrCont(err)
 		}
 	}
 	return h

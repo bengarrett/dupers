@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -17,6 +16,7 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/bengarrett/dupers/lib/out"
 	"github.com/dustin/go-humanize"
 	bolt "go.etcd.io/bbolt"
 )
@@ -116,7 +116,7 @@ func Clean(quiet bool) error {
 	}
 	path, err := DB()
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
 	db, err := bolt.Open(path, FileMode, nil)
 	if err != nil {
@@ -127,7 +127,7 @@ func Clean(quiet bool) error {
 	for _, bucket := range buckets {
 		abs, err := bucketAbs(bucket)
 		if err != nil {
-			log.Println(err)
+			out.ErrCont(err)
 		}
 		if err = db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket(abs)
@@ -147,11 +147,11 @@ func Clean(quiet bool) error {
 				return nil
 			})
 			if err != nil {
-				log.Println(err)
+				out.ErrCont(err)
 			}
 			return nil
 		}); err != nil {
-			log.Println(err)
+			out.ErrCont(err)
 		}
 	}
 	if quiet {
@@ -202,7 +202,7 @@ func Compact() error {
 	if tmpSt.Size() >= srcSt.Size() {
 		tmpDB.Close()
 		if err = os.Remove(tmp); err != nil {
-			log.Println(err)
+			out.ErrCont(err)
 		}
 		return ErrDBCompact
 	}
@@ -246,7 +246,7 @@ func bucketAbs(name string) ([]byte, error) {
 func compare(term []byte, buckets []string, noCase, base bool) (*Matches, error) {
 	path, err := DB()
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
 	db, err := bolt.Open(path, FileMode, &bolt.Options{ReadOnly: true})
 	if err != nil {
@@ -265,7 +265,7 @@ func compare(term []byte, buckets []string, noCase, base bool) (*Matches, error)
 	for _, bucket := range buckets {
 		abs, err := bucketAbs(bucket)
 		if err != nil {
-			log.Println(err)
+			out.ErrCont(err)
 		}
 
 		if err = db.View(func(tx *bolt.Tx) error {
@@ -326,10 +326,10 @@ func DB() (string, error) {
 }
 
 // Info returns a printout of the buckets and their statistics.
-func Info() string {
+func Info() (string, error) {
 	path, err := DB()
 	if err != nil {
-		log.Fatalln(err)
+		return "", err
 	}
 	var b bytes.Buffer
 	w := new(tabwriter.Writer)
@@ -337,9 +337,10 @@ func Info() string {
 	fmt.Fprintf(w, "\tLocation:\t%s\n", path)
 	s, err := os.Stat(path)
 	if err != nil {
+		// TODO: check error
 		fmt.Fprintln(w, "\t\tThe database doesn't exist, but one will be created during the next scan")
 		w.Flush()
-		return b.String()
+		return b.String(), nil
 	}
 	fmt.Fprintf(w, "\tFile size:\t%s\n", humanize.Bytes(uint64(s.Size())))
 	w, err = info(path, w)
@@ -348,7 +349,7 @@ func Info() string {
 		fmt.Fprintf(w, "\tDatabase error:\t%s\n", err.Error())
 	}
 	w.Flush()
-	return b.String()
+	return b.String(), nil
 }
 
 func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, error) {
@@ -414,6 +415,10 @@ func RM(name string) error {
 	defer db.Close()
 
 	return db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(name))
+		if b == nil {
+			return ErrNoBucket
+		}
 		return tx.DeleteBucket([]byte(name))
 	})
 }
@@ -422,11 +427,11 @@ func RM(name string) error {
 func Seek(hash [32]byte, bucket string) (finds []string, records int, err error) {
 	path, err := DB()
 	if err != nil {
-		log.Fatalln(err)
+		return nil, 0, err
 	}
 	db, err := bolt.Open(path, FileMode, &bolt.Options{ReadOnly: true})
 	if err != nil {
-		return nil, records, err
+		return nil, 0, err
 	}
 	defer db.Close()
 	return finds, records, db.View(func(tx *bolt.Tx) error {

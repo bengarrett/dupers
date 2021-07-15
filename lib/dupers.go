@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -19,6 +18,7 @@ import (
 	"time"
 
 	"github.com/bengarrett/dupers/lib/database"
+	"github.com/bengarrett/dupers/lib/out"
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"
@@ -108,14 +108,14 @@ func (c *Config) init() {
 		var err error
 		c.Buckets, err = database.Buckets()
 		if err != nil {
-			log.Fatalln(err)
+			out.ErrFatal(err)
 		}
 	}
 	// normalise bucket names
 	for i, b := range c.Buckets {
 		abs, err := filepath.Abs(b)
 		if err != nil {
-			log.Println(err)
+			out.ErrCont(err)
 			c.Buckets[i] = ""
 			continue
 		}
@@ -130,14 +130,15 @@ func (c *Config) init() {
 func (c *Config) PurgeSrc() {
 	root, err := filepath.Abs(c.Source)
 	if err != nil {
-		log.Fatalln(err)
+		out.ErrFatal(err)
 	}
 
 	_, err = os.Stat(root)
 	if errors.Is(err, os.ErrNotExist) {
-		log.Fatalln("path does not exist:", root)
+		e := fmt.Errorf("path does not exist: %s", root)
+		out.ErrFatal(e)
 	} else if err != nil {
-		log.Fatalln(err)
+		out.ErrFatal(err)
 	}
 
 	if len(c.sources) == 0 {
@@ -147,7 +148,7 @@ func (c *Config) PurgeSrc() {
 
 	files, err := os.ReadDir(root)
 	if err != nil {
-		log.Println(err)
+		out.ErrCont(err)
 	}
 
 	for _, item := range files {
@@ -160,7 +161,7 @@ func (c *Config) PurgeSrc() {
 		}
 		fmt.Println("remove all:", path)
 		if err := os.RemoveAll(path); err != nil {
-			log.Print(err)
+			out.ErrCont(err)
 		}
 	}
 }
@@ -179,7 +180,7 @@ func containsBin(root string) bool {
 		}
 		return nil
 	}); err != nil {
-		log.Println(err)
+		out.ErrCont(err)
 	}
 	return bin
 }
@@ -198,7 +199,7 @@ func (c *Config) Print() {
 	for _, path := range c.sources {
 		h, err := read(path)
 		if err != nil {
-			log.Println(err)
+			out.ErrCont(err)
 		}
 		l := c.lookupOne(h)
 		if l == "" {
@@ -250,14 +251,15 @@ func (c *Config) Remove() {
 	for _, path := range c.sources {
 		h, err := read(path)
 		if err != nil {
-			log.Println(err)
+			out.ErrCont(err)
 		}
 		l := c.lookupOne(h)
 		if l == "" {
 			continue
 		}
 		if err := os.Remove(path); err != nil {
-			log.Printf("could not remove: %s", err)
+			e := fmt.Errorf("could not remove: %w", err)
+			out.ErrCont(e)
 			continue
 		}
 		fmt.Println("removed:", path)
@@ -272,13 +274,13 @@ func (c *Config) Seek() {
 	for _, path := range c.sources {
 		h, err := read(path)
 		if err != nil {
-			log.Println(err)
+			out.ErrCont(err)
 			return
 		}
 		for _, bucket := range c.Buckets {
 			finds, c.files, err = database.Seek(h, bucket)
 			if err != nil {
-				log.Println(err)
+				out.ErrCont(err)
 				continue
 			}
 		}
@@ -312,7 +314,7 @@ func (c *Config) WalkDirs() {
 	// walk through the directories provided
 	for _, bucket := range c.Buckets {
 		if err := c.WalkDir(bucket); err != nil {
-			c.Error(err)
+			out.ErrCont(err)
 		}
 	}
 }
@@ -325,10 +327,10 @@ func (c *Config) WalkDir(root string) error {
 	if c.db == nil {
 		name, err := database.DB()
 		if err != nil {
-			log.Fatalln(err)
+			out.ErrFatal(err)
 		}
 		if c.db, err = bolt.Open(name, database.FileMode, nil); err != nil {
-			log.Fatalln(err)
+			out.ErrFatal(err)
 		}
 		defer c.db.Close()
 	}
@@ -371,7 +373,7 @@ func (c *Config) WalkDir(root string) error {
 			if errors.Is(errD, ErrPathExist) {
 				return nil
 			}
-			log.Fatalln(errD)
+			out.ErrFatal(errD)
 		}
 		printWalk(false, c)
 		// hash the file
@@ -490,18 +492,18 @@ func (c *Config) createBucket(root string) error {
 func (c *Config) WalkSource() {
 	root, err := filepath.Abs(c.Source)
 	if err != nil {
-		log.Fatalln(err)
+		out.ErrFatal(err)
 	}
 
 	stat, err := os.Stat(root)
 	if errors.Is(err, os.ErrNotExist) {
-		log.Fatalln("path does not exist:", root)
+		e := fmt.Errorf("path does not exist: %s", root)
+		out.ErrFatal(e)
 	} else if err != nil {
-		log.Fatalln(err)
+		out.ErrFatal(err)
 	}
 
 	if !stat.IsDir() {
-		fmt.Println("walksource >>")
 		c.sources = append(c.sources, root)
 		return
 	}
@@ -522,7 +524,7 @@ func (c *Config) WalkSource() {
 		c.sources = append(c.sources, path)
 		return nil
 	}); err != nil {
-		log.Fatalln(err)
+		out.ErrFatal(err)
 	}
 }
 
@@ -545,7 +547,7 @@ func (c *Config) update(path, root string, wg *sync.WaitGroup) {
 		}
 		return nil
 	}); err != nil {
-		log.Println(err)
+		out.ErrCont(err)
 	}
 	c.compare[h] = path
 }
