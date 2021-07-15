@@ -19,7 +19,7 @@ builds:
     goarch: ['amd64', 'arm64']
   - id: Windows
     goos: ['windows']
-    goarch: ['amd64']
+    goarch: ['386', 'amd64']
 
 archives:
   - id: FreeBSD
@@ -57,6 +57,7 @@ archives:
     - none*
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
     replacements:
+      386: 32bit
       amd64: Intel
       windows: Windows
 
