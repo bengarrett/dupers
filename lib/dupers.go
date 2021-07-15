@@ -79,14 +79,18 @@ func Print(term string, quiet bool, m *database.Matches) {
 					if cnt > 1 {
 						fmt.Println()
 					}
-					fmt.Printf("Results from: '%s'\n", b)
+					fmt.Printf("%s: %s\n", color.Info.Sprint("Results from"), b)
 				}
 			}
 			if quiet {
 				fmt.Printf("%s\n", file)
 				continue
 			}
-			fmt.Printf("%d.\t%s\n", cnt, file)
+			if cnt == 1 {
+				fmt.Printf("%s%s\n", color.Success.Sprint("  ⤷\t"), file)
+				continue
+			}
+			fmt.Printf("  %s%s\t%s\n", color.Primary.Sprint(cnt), color.Secondary.Sprint("."), file)
 		}
 	}
 }

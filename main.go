@@ -437,19 +437,19 @@ func searchSummary(total int, term string, exact, filename *bool) string {
 		r = "result"
 	}
 
-	s = fmt.Sprintf("\n%d", total)
+	t := fmt.Sprintf("\n%s", color.Primary.Sprint(total))
 	if *exact && *filename {
-		s += fmt.Sprintf(" exact filename %s for '%s'", r, term)
+		s += fmt.Sprintf(" exact filename %s for", r)
 		return s
 	}
 	if *exact {
-		s += fmt.Sprintf(" exact %s for '%s'", r, term)
+		s += fmt.Sprintf(" exact %s for", r)
 	} else if *filename {
-		s += fmt.Sprintf(" filename %s for '%s'", r, term)
+		s += fmt.Sprintf(" filename %s for", r)
 	} else {
-		s += fmt.Sprintf(" %s for '%s'", r, term)
+		s += fmt.Sprintf(" %s for", r)
 	}
-	return s
+	return fmt.Sprintf("%s%s %s", t, color.Secondary.Sprint(s), color.Bold.Sprint(term))
 }
 
 func options(ver, v *bool) {
