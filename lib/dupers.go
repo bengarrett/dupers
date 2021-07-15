@@ -306,6 +306,17 @@ func (c *Config) Status() string {
 // WalkDirs walks the directories provided by the arguments for zip archives to extract any found comments.
 func (c *Config) WalkDirs() {
 	c.init()
+	// open database
+	if c.db == nil {
+		name, err := database.DB()
+		if err != nil {
+			out.ErrFatal(err)
+		}
+		if c.db, err = bolt.Open(name, database.FileMode, nil); err != nil {
+			out.ErrFatal(err)
+		}
+		defer c.db.Close()
+	}
 	// walk through the directories provided
 	for _, bucket := range c.Buckets {
 		if err := c.WalkDir(bucket); err != nil {

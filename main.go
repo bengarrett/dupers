@@ -298,13 +298,16 @@ func taskScan(c *dupers.Config, lookup, quiet, rm, sensen bool) {
 		out.ErrFatal(err)
 	}
 	const minArgs = 3
-	if l < minArgs || len(b) == 0 {
+	if l < minArgs && len(b) == 0 {
 		taskScanErr(l, len(b))
 	}
 	// directory or a file to match
 	c.Source = flag.Args()[1]
 	// directories and files to scan, a bucket is the name given to database tables
 	c.Buckets = flag.Args()[2:]
+	if l < minArgs {
+		c.Buckets = b
+	}
 	// files or directories to compare (these are not saved to database)
 	c.WalkSource()
 	// windows notice
@@ -339,7 +342,7 @@ func taskScanErr(args, buckets int) {
 	const minArgs = 2
 	if args < minArgs {
 		out.ErrCont(ErrNoArgs)
-		fmt.Println("\n'dupe' requires both a source and target.")
+		fmt.Println("\nThe dupe command requires both a source and target.")
 		fmt.Println("The source can be either a directory or file.")
 		if runtime.GOOS == winOS {
 			fmt.Println("The target can be one or more directories or drive letters.")
