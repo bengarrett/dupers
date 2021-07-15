@@ -34,7 +34,15 @@ var (
 	ErrSearch = errors.New("search request needs an expression")
 )
 
-const winOS = "windows"
+const (
+	winOS = "windows"
+	dbf   = "database"
+	dbs   = "db"
+	dbk   = "backup"
+	dcn   = "clean"
+	drm   = "rm"
+	dup   = "up"
+)
 
 // --deep-scan (open archives and hash binary files)
 
@@ -70,7 +78,7 @@ func main() {
 
 	selection := strings.ToLower(flag.Args()[0])
 	switch selection {
-	case "database", "db", "backup", "clean", "rm", "up":
+	case dbf, dbs, dbk, dcn, drm, dup:
 		taskDatabase(&c, *quiet, flag.Args()...)
 	case "dupe":
 		if *f {
@@ -135,11 +143,11 @@ func help() {
 	fmt.Fprintf(w, "\n%s\n  View information and run optional maintenance on the internal database.\n",
 		color.Primary.Sprint("Database:"))
 	fmt.Fprintln(w, "\n  Usage:")
-	fmt.Fprintln(w, "    dupers database\tdisplay statistics and bucket information")
-	fmt.Fprintf(w, "    dupers %s\t%s\n", "backup", "make a copy of the database to: "+home())
-	fmt.Fprintf(w, "    dupers %s\t%s\n", "clean", "compact and remove all items in the database that point to missing files")
-	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", "rm", "remove the bucket (a scanned directory) from the database")
-	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", "up", "add or update the bucket (a directory to scan) to the database")
+	fmt.Fprintf(w, "    dupers %s\tdisplay statistics and bucket information\n", dbf)
+	fmt.Fprintf(w, "    dupers %s\t%s\n", dbk, "make a copy of the database to: "+home())
+	fmt.Fprintf(w, "    dupers %s\t%s\n", dcn, "compact and remove all items in the database that point to missing files")
+	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", drm, "remove the bucket (a scanned directory) from the database")
+	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", dup, "add or update the bucket (a directory to scan) to the database")
 	fmt.Fprintln(w, "\nOptions:")
 	f = flag.Lookup("quiet")
 	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
@@ -199,7 +207,7 @@ func exampleSearch(w *tabwriter.Writer) *tabwriter.Writer {
 func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
 	l := len(args)
 	switch args[0] {
-	case "backup":
+	case dbk:
 		n, w, err := database.Backup()
 		if err != nil {
 			out.ErrFatal(err)
@@ -207,7 +215,7 @@ func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
 		s := fmt.Sprintf("A new copy of the database (%s) is at: %s", humanize.Bytes(uint64(w)), n)
 		out.Response(s, quiet)
 		return
-	case "clean":
+	case dcn:
 		if err := database.Clean(quiet); err != nil {
 			if b := errors.Is(err, database.ErrDBClean); !b {
 				out.ErrFatal(err)
@@ -220,17 +228,17 @@ func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
 			}
 		}
 		return
-	case "db", "database":
+	case dbs, dbf:
 		s, err := database.Info()
 		if err != nil {
 			out.ErrCont(err)
 		}
 		fmt.Println(s)
 		return
-	case "rm":
+	case drm:
 		taskDBRM(l, quiet, args)
 		return
-	case "up":
+	case dup:
 		taskDBUp(c, l)
 		return
 	default:

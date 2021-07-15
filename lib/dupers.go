@@ -484,7 +484,7 @@ func (c *Config) WalkSource() {
 
 	stat, err := os.Stat(root)
 	if errors.Is(err, os.ErrNotExist) {
-		e := fmt.Errorf("path does not exist: %s", root)
+		e := fmt.Errorf("%w: %s", ErrNoPath, root)
 		out.ErrFatal(e)
 	} else if err != nil {
 		out.ErrFatal(err)
@@ -529,10 +529,7 @@ func (c *Config) update(path, root string, wg *sync.WaitGroup) {
 	if err = c.db.Update(func(tx *bolt.Tx) error {
 		// directory bucket
 		b1 := tx.Bucket([]byte(root))
-		if err1 := b1.Put([]byte(path), h[:]); err1 != nil {
-			return err1
-		}
-		return nil
+		return b1.Put([]byte(path), h[:])
 	}); err != nil {
 		out.ErrCont(err)
 	}
