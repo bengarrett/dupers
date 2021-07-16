@@ -18,16 +18,14 @@ const (
 	fileSrc  = "../../test/files_to_check/ppFlTD6QQYlS"
 	fileDest = "../../test/tmp/ppFlTD6QQYlS"
 
-	match   = "test/files_to_check"
-	bucket  = "test/bucket1"
-	bucket2 = "test/bucket2"
-
-	key1 = "item1"
-	val1 = "some value 1"
+	bucket = "test/bucket1"
+	key1   = "item1"
+	val1   = "some value 1"
 )
 
 var (
 	ErrBucket = errors.New("bucket already exists")
+	ErrCreate = errors.New("create bucket")
 	ErrNoComp = errors.New("database compression has not reduced the size")
 )
 
@@ -56,7 +54,7 @@ func tmpDB() error {
 			if errors.As(err, &ErrBucket) {
 				return nil
 			}
-			return fmt.Errorf("create bucket: %s", err)
+			return fmt.Errorf("%w: %s", ErrCreate, err)
 		}
 		return b.Put([]byte(key1), []byte(val1))
 	})
@@ -300,24 +298,7 @@ func TestCompareBase(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestCompareBaseNoCase(t *testing.T) {
-	if err := tmpDB(); err != nil {
-		t.Error(err)
-	}
-	i, err := Info()
-	if err != nil {
-		t.Error(err)
-	}
-	fmt.Println(i)
-	type args struct {
-		s       string
-		buckets []string
-	}
-	empty, find := Matches{}, Matches{}
-	find[key1] = tmpBk()
-	tests := []struct {
+	tests = []struct {
 		name    string
 		args    args
 		want    *Matches
@@ -392,8 +373,8 @@ func TestIsEmpty(t *testing.T) {
 			t.Errorf("IsEmpty() = %v, want %v", got, want)
 		}
 		// test & use remove bucket, leaving the db empty
-		if err := RM(tmpBk()); err != nil {
-			t.Error(err)
+		if err1 := RM(tmpBk()); err1 != nil {
+			t.Error(err1)
 		}
 		// test empty db
 		wantErr, want = false, true

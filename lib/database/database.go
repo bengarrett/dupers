@@ -39,7 +39,7 @@ var (
 	ErrDBClean   = errors.New("database had nothing to clean")
 	ErrDBCompact = errors.New("database compression has not reduced the size")
 
-	testMode = false
+	testMode = false // nolint: gochecknoglobals
 )
 
 // Backup makes a copy of the database to the named location.
