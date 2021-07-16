@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	dupers "github.com/bengarrett/dupers/lib"
-	"github.com/bengarrett/dupers/lib/database"
 
 	"github.com/gookit/color"
 )
@@ -20,7 +19,7 @@ func BenchmarkRM(*testing.B) {
 	color.Enable = false
 	args := []string{"rm", bucket2}
 	c := dupers.Config{Quiet: true, Test: true}
-	database.Test = true
+	c.Test = true
 	taskDBUp(&c, args...)
 	taskDBRM(false, args...)
 }

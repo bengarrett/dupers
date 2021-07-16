@@ -40,8 +40,13 @@ var (
 	ErrDBClean   = errors.New("database had nothing to clean")
 	ErrDBCompact = errors.New("database compression has not reduced the size")
 
-	Test = false
+	testMode = false
 )
+
+func test() {
+	color.Enable = true
+	testMode = true
+}
 
 // Backup makes a copy of the database to the named location.
 func Backup() (name string, written int64, err error) {
@@ -55,6 +60,8 @@ func Backup() (name string, written int64, err error) {
 		return "", 0, err
 	}
 	name = filepath.Join(dir, backupName())
+
+	fmt.Println("name:", name)
 
 	written, err = copyFile(src, name)
 	if err != nil {
@@ -91,6 +98,7 @@ func Buckets() (names []string, err error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("path:", path)
 	db, err := bolt.Open(path, FileMode, &bolt.Options{ReadOnly: true})
 	if err != nil {
 		return nil, err
@@ -317,13 +325,10 @@ func DB() (string, error) {
 			return "", err
 		}
 	}
-	if Test {
-		dir, err = filepath.Abs("test")
-		if err != nil {
-			return "", err
-		}
-	}
 	dir = filepath.Join(dir, dbPath)
+	if testMode {
+		dir = filepath.Join(dir, "test")
+	}
 	if runtime.GOOS == "windows" {
 		_, err := os.Stat(dir)
 		if os.IsNotExist(err) {
