@@ -62,3 +62,13 @@ go build
 # target and build for OpenBSD
 env GOOS=openbsd GOARCH=amd64 go build
 ```
+
+## Troubleshoot
+
+- `Not enough memory resources are available to process this command.`
+
+In an administrator console or command prompt.
+
+```ps
+sfc /scannow
+```

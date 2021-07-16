@@ -30,11 +30,11 @@ type Config struct {
 	Buckets []string // buckets to lookup
 	Source  string   // directory or file to compare
 	Quiet   bool     // reduce the feedback sent to stdout
+	Test    bool     // internal unit test mode
 	db      *bolt.DB // interal Bolt database
 	compare hash     // hashes fetched from the database or file system
 	files   int      // total files or database items read
 	sources []string // files paths to check
-	test    bool     // internal unit test mode
 }
 
 type hash map[[32]byte]string
@@ -51,6 +51,9 @@ var (
 
 // Print the results of the database comparisons.
 func Print(term string, quiet bool, m *database.Matches) {
+	if m == nil {
+		return
+	}
 	if len(*m) == 0 {
 		return
 	}
@@ -301,7 +304,7 @@ func (c *Config) Status() string {
 	s := "\n"
 	s += color.Secondary.Sprint("Scanned ") +
 		color.Primary.Sprintf("%d files", c.files)
-	if !c.test {
+	if !c.Test {
 		s += color.Secondary.Sprint(", taking ") +
 			color.Primary.Sprintf("%s", time.Since(c.Timer))
 	}
@@ -396,7 +399,7 @@ func (c *Config) WalkDir(root string) error {
 }
 
 func printWalk(lookup bool, c *Config) {
-	if c.test || c.Quiet {
+	if c.Test || c.Quiet {
 		return
 	}
 	s := "Scanning"
@@ -458,7 +461,7 @@ func skipSelf(path string, skip []string) bool {
 
 func walkDir(root, path string, c *Config) error {
 	return c.db.View(func(tx *bolt.Tx) error {
-		if !c.test && !c.Quiet {
+		if !c.Test && !c.Quiet {
 			if runtime.GOOS == winOS {
 				// color output slows down large scans on Windows
 				fmt.Printf("\rLooking up %d files", c.files)

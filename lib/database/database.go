@@ -39,6 +39,8 @@ var (
 	ErrDB        = errors.New("database does not exist")
 	ErrDBClean   = errors.New("database had nothing to clean")
 	ErrDBCompact = errors.New("database compression has not reduced the size")
+
+	Test = false
 )
 
 // Backup makes a copy of the database to the named location.
@@ -263,7 +265,6 @@ func compare(term []byte, buckets []string, noCase, base bool) (*Matches, error)
 			return nil, err
 		}
 	}
-
 	finds := make(Matches)
 	for _, bucket := range buckets {
 		abs, err := bucketAbs(bucket)
@@ -312,6 +313,12 @@ func DB() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		dir, err = os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+	}
+	if Test {
+		dir, err = filepath.Abs("test")
 		if err != nil {
 			return "", err
 		}

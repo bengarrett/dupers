@@ -1,10 +1,67 @@
 package main
 
 import (
+	"fmt"
 	"testing"
+
+	dupers "github.com/bengarrett/dupers/lib"
+	"github.com/bengarrett/dupers/lib/database"
 
 	"github.com/gookit/color"
 )
+
+const (
+	match   = "test/files_to_check"
+	bucket  = "test/bucket1"
+	bucket2 = "test/bucket2"
+)
+
+func BenchmarkRM(*testing.B) {
+	color.Enable = false
+	args := []string{"rm", bucket2}
+	c := dupers.Config{Quiet: true, Test: true}
+	database.Test = true
+	taskDBUp(&c, args...)
+	taskDBRM(false, args...)
+}
+
+func BenchmarkScan1(*testing.B) {
+	color.Enable = false
+	args := []string{"dupe", match, bucket}
+	c := dupers.Config{Quiet: true, Test: true}
+	taskDBUp(&c, args[1:]...)
+	taskScan(&c, false, false, false, false, args...)
+}
+
+func BenchmarkScan2(*testing.B) {
+	color.Enable = false
+	args := []string{"dupe", match, bucket}
+	c := dupers.Config{Quiet: true, Test: true}
+	taskDBUp(&c, args[1:]...)
+	taskScan(&c, false, true, false, false, args...)
+}
+
+func BenchmarkSearch1(*testing.B) {
+	color.Enable = false
+	const term, bucket = "hello world", bucket
+	args := []string{"search", fmt.Sprintf("'%s'", term), bucket}
+	c := dupers.Config{Quiet: true, Test: true}
+	taskDBUp(&c, args[1:]...)
+	for i := 0; i <= 3; i++ {
+		taskSearch(false, false, false, args...)
+	}
+}
+
+func BenchmarkSearch2(*testing.B) {
+	color.Enable = false
+	const term, bucket = "TzgPJuhfPJlg", bucket
+	args := []string{"search", fmt.Sprintf("'%s'", term), bucket}
+	c := dupers.Config{Quiet: true, Test: true}
+	taskDBUp(&c, args[1:]...)
+	for i := 0; i <= 3; i++ {
+		taskSearch(false, false, false, args...)
+	}
+}
 
 func Test_self(t *testing.T) {
 	tests := []struct {

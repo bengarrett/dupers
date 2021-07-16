@@ -85,7 +85,7 @@ func main() {
 		if *f {
 			*look = true
 		}
-		taskScan(&c, *look, *quiet, *rmdupe, *sensen)
+		taskScan(&c, *look, *quiet, *rmdupe, *sensen, flag.Args()...)
 	case "search":
 		if *ex {
 			exact = ex
@@ -93,7 +93,7 @@ func main() {
 		if *fn {
 			filename = fn
 		}
-		taskSearch(exact, filename, quiet)
+		taskSearch(*exact, *filename, *quiet, flag.Args()...)
 	default:
 		out.ErrCont(ErrCmd)
 		fmt.Printf("Command: '%s'\n\nSee the help for the available commands and options:\n", selection)
@@ -203,7 +203,6 @@ func exampleSearch(w *tabwriter.Writer) *tabwriter.Writer {
 }
 
 func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
-	l := len(args)
 	switch args[0] {
 	case dbk:
 		n, w, err := database.Backup()
@@ -234,25 +233,29 @@ func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
 		fmt.Println(s)
 		return
 	case drm:
-		taskDBRM(l, quiet, args)
+		taskDBRM(quiet, args...)
 		return
 	case dup:
-		taskDBUp(c, l)
+		taskDBUp(c, args...)
 		return
 	default:
 		out.ErrFatal(ErrCmd)
 	}
 }
 
-func taskDBRM(l int, quiet bool, args []string) {
+func taskDBRM(quiet bool, args ...string) {
 	const minArgs = 1
+	l := len(args)
 	if l == minArgs {
 		out.ErrCont(ErrNoDB)
 		fmt.Println("Cannot remove a bucket from the database as no bucket name was provided.")
 		out.Example("\ndupers database rm <bucket name>")
 		out.ErrFatal(nil)
 	}
-	name := args[1]
+	name, err := filepath.Abs(args[1])
+	if err != nil {
+		out.ErrFatal(err)
+	}
 	if err := database.RM(name); err != nil {
 		if errors.Is(err, database.ErrNoBucket) {
 			out.ErrCont(err)
@@ -270,18 +273,23 @@ func taskDBRM(l int, quiet bool, args []string) {
 	out.Response(s, quiet)
 }
 
-func taskDBUp(c *dupers.Config, l int) {
+func taskDBUp(c *dupers.Config, args ...string) {
 	const minArgs = 1
+	l := len(args)
 	if l == minArgs {
 		out.ErrCont(database.ErrNoBucket)
 		fmt.Println("Cannot add or update a bucket to the database as no bucket name was provided.")
 		out.Example("\ndupers database up <bucket name>")
 		out.ErrFatal(nil)
 	}
+	path, err := filepath.Abs(args[1])
+	if err != nil {
+		out.ErrFatal(err)
+	}
 	if runtime.GOOS == winOS && !c.Quiet {
 		fmt.Printf("To improve performance on Windows use the quiet flag: duper -quiet dupe %s %s\n", c.Source, strings.Join(c.Buckets, " "))
 	}
-	if err := c.WalkDir(flag.Args()[1]); err != nil {
+	if err := c.WalkDir(path); err != nil {
 		out.ErrFatal(err)
 	}
 	if runtime.GOOS == winOS || !c.Quiet {
@@ -289,8 +297,8 @@ func taskDBUp(c *dupers.Config, l int) {
 	}
 }
 
-func taskScan(c *dupers.Config, lookup, quiet, rm, sensen bool) {
-	l := len(flag.Args())
+func taskScan(c *dupers.Config, lookup, quiet, rm, sensen bool, args ...string) {
+	l := len(args)
 	b, err := database.Buckets()
 	if err != nil {
 		out.ErrFatal(err)
@@ -300,9 +308,9 @@ func taskScan(c *dupers.Config, lookup, quiet, rm, sensen bool) {
 		taskScanErr(l, len(b))
 	}
 	// directory or a file to match
-	c.Source = flag.Args()[1]
+	c.Source = args[1]
 	// directories and files to scan, a bucket is the name given to database tables
-	c.Buckets = flag.Args()[2:]
+	c.Buckets = args[2:]
 	if l < minArgs {
 		c.Buckets = b
 	}
@@ -361,10 +369,10 @@ func taskScanErr(args, buckets int) {
 	out.ErrFatal(nil)
 }
 
-func taskSearch(exact, filename, quiet *bool) {
-	l := len(flag.Args())
+func taskSearch(exact, filename, quiet bool, args ...string) {
+	l := len(args)
 	taskExpErr(l)
-	term := flag.Args()[1]
+	term := args[1]
 	var (
 		buckets = []string{}
 		m       *database.Matches
@@ -372,35 +380,39 @@ func taskSearch(exact, filename, quiet *bool) {
 	)
 	const minArgs = 2
 	if l > minArgs {
-		buckets = flag.Args()[2:]
+		buckets = args[2:]
 	}
-	if *filename {
-		if !*exact {
+	if filename {
+		if !exact {
 			if m, err = database.CompareBaseNoCase(term, buckets); err != nil {
 				taskSearchErr(err)
 			}
 		}
-		if *exact {
+		if exact {
 			if m, err = database.CompareBase(term, buckets); err != nil {
 				taskSearchErr(err)
 			}
 		}
 	}
-	if !*filename {
-		if !*exact {
+	if !filename {
+		if !exact {
 			if m, err = database.CompareNoCase(term, buckets); err != nil {
 				taskSearchErr(err)
 			}
 		}
-		if *exact {
+		if exact {
 			if m, err = database.Compare(term, buckets); err != nil {
 				taskSearchErr(err)
 			}
 		}
 	}
-	dupers.Print(term, *quiet, m)
-	if !*quiet {
-		fmt.Println(searchSummary(len(*m), term, *exact, *filename))
+	dupers.Print(term, quiet, m)
+	if !quiet {
+		l := 0
+		if m != nil {
+			l = len(*m)
+		}
+		fmt.Println(searchSummary(l, term, exact, filename))
 	}
 }
 

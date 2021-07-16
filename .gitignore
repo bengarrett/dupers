@@ -15,4 +15,4 @@
 # vendor/
 
 # Test db
-my.db
+test/dupers
