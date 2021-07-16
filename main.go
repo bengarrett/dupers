@@ -400,7 +400,7 @@ func taskSearch(exact, filename, quiet *bool) {
 	}
 	dupers.Print(term, *quiet, m)
 	if !*quiet {
-		fmt.Println(searchSummary(len(*m), term, exact, filename))
+		fmt.Println(searchSummary(len(*m), term, *exact, *filename))
 	}
 }
 
@@ -426,28 +426,32 @@ func taskSearchErr(err error) {
 	out.ErrFatal(err)
 }
 
-func searchSummary(total int, term string, exact, filename *bool) string {
+func searchSummary(total int, term string, exact, filename bool) string {
+	str := func(t, s, term string) string {
+		return fmt.Sprintf("%s%s exist for '%s'.", t, color.Secondary.Sprint(s), color.Bold.Sprint(term))
+	}
 	s, r := "", "results"
 	if total == 0 {
-		return fmt.Sprintf("No results exist for '%s'.\n", term)
+		return fmt.Sprintf("No results exist for '%s'.", term)
 	}
 	if total == 1 {
 		r = "result"
 	}
-
-	t := fmt.Sprintf("\n%s", color.Primary.Sprint(total))
-	if *exact && *filename {
-		s += fmt.Sprintf(" exact filename %s for", r)
-		return s
+	t := color.Primary.Sprint(total)
+	if exact && filename {
+		s += fmt.Sprintf(" exact filename %s", r)
+		return str(t, s, term)
 	}
-	if *exact {
-		s += fmt.Sprintf(" exact %s for", r)
-	} else if *filename {
-		s += fmt.Sprintf(" filename %s for", r)
-	} else {
-		s += fmt.Sprintf(" %s for", r)
+	if exact {
+		s += fmt.Sprintf(" exact %s", r)
+		return str(t, s, term)
 	}
-	return fmt.Sprintf("%s%s %s", t, color.Secondary.Sprint(s), color.Bold.Sprint(term))
+	if filename {
+		s += fmt.Sprintf(" filename %s", r)
+		return str(t, s, term)
+	}
+	s += fmt.Sprintf(" %s", r)
+	return str(t, s, term)
 }
 
 func options(ver, v *bool) {
