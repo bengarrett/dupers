@@ -19,7 +19,6 @@ func BenchmarkRM(*testing.B) {
 	color.Enable = false
 	args := []string{"rm", bucket2}
 	c := dupers.Config{Quiet: true, Test: true}
-	c.Test = true
 	taskDBUp(&c, args...)
 	taskDBRM(false, args...)
 }

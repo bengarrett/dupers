@@ -11,7 +11,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -43,11 +42,6 @@ var (
 	testMode = false
 )
 
-func test() {
-	color.Enable = true
-	testMode = true
-}
-
 // Backup makes a copy of the database to the named location.
 func Backup() (name string, written int64, err error) {
 	src, err := DB()
@@ -60,8 +54,6 @@ func Backup() (name string, written int64, err error) {
 		return "", 0, err
 	}
 	name = filepath.Join(dir, backupName())
-
-	fmt.Println("name:", name)
 
 	written, err = copyFile(src, name)
 	if err != nil {
@@ -98,7 +90,6 @@ func Buckets() (names []string, err error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("path:", path)
 	db, err := bolt.Open(path, FileMode, &bolt.Options{ReadOnly: true})
 	if err != nil {
 		return nil, err
@@ -329,12 +320,10 @@ func DB() (string, error) {
 	if testMode {
 		dir = filepath.Join(dir, "test")
 	}
-	if runtime.GOOS == "windows" {
-		_, err := os.Stat(dir)
-		if os.IsNotExist(err) {
-			if err1 := os.MkdirAll(dir, 0700); err != nil {
-				return "", err1
-			}
+	_, err = os.Stat(dir)
+	if os.IsNotExist(err) {
+		if err1 := os.MkdirAll(dir, 0700); err != nil {
+			return "", err1
 		}
 	}
 	return filepath.Join(dir, dbName), nil
