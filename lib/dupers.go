@@ -180,6 +180,9 @@ func printRM(path string, err error) {
 func containsBin(root string) bool {
 	bin := false
 	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
 		if bin {
 			return nil
 		}
