@@ -2,24 +2,50 @@
 
 Dupers is the blazing-fast file duplicate checker and filename search.
 
-- TODO list features
+- Uses SHA-256 checksums in the fast and simple Bolt key/value database store.
+- Automate the deletion of duplicates.
+- Multithreaded file reads and scans.
+- Instant filename and directory path searches from the database.
+- Automated database maintenance with optional user tools.
 
 ## Downloads
 
 <small>dupers is a standalone (portable) terminal application and doesn't require installation.</small>
 
-- [Windows](https://github.com/bengarrett/dupers/releases/latest/download/dupers_Windows_Intel.zip)
+- [Windows](https://github.com/bengarrett/dupers/releases/latest/download/dupers_Windows_Intel.zip); [or legacy 32-bit](https://github.com/bengarrett/dupers/releases/latest/download/dupers_Windows_32bit.zip)
 - [macOS](https://github.com/bengarrett/dupers/releases/latest/download/dupers_macOS_Intel.tar.gz
-), [or for the Apple M chip](https://github.com/bengarrett/dupers/releases/latest/download/dupers_macOS_M-series.tar.gz
+); [or for the Apple M chip](https://github.com/bengarrett/dupers/releases/latest/download/dupers_macOS_M-series.tar.gz
 )
 - [FreeBSD](https://github.com/bengarrett/dupers/releases/latest/download/dupers_FreeBSD_Intel.tar.gz
 )
 - [Linux](https://github.com/bengarrett/dupers/releases/latest/download/dupers_Linux_Intel.tar.gz
 )
 
-### Packages
+#### Packages
 
-TODO
+##### [APK (Alpine package)](https://github.com/bengarrett/dupers/releases/latest/download/dupers.apk)
+```sh
+wget https://github.com/bengarrett/dupers/releases/latest/download/dupers.apk
+apk add dupers.apk
+```
+
+##### [DEB (Debian package)](https://github.com/bengarrett/dupers/releases/latest/download/dupers.deb)
+```sh
+wget https://github.com/bengarrett/dupers/releases/latest/download/dupers.deb
+dpkg -i dupers.deb
+```
+
+##### [RPM (Red Hat package)](https://github.com/bengarrett/dupers/releases/latest/download/dupers.rpm)
+```sh
+wget https://github.com/bengarrett/dupers/releases/latest/download/dupers.rpm
+rpm -i dupers.rpm
+```
+
+##### Windows [Scoop](https://scoop.sh/)
+```sh
+scoop bucket add dupers https://github.com/bengarrett/dupers.git
+scoop install dupers
+```
 
 ## Windows Performance
 
@@ -31,18 +57,36 @@ TODO screenshots
 
 ## Example usage
 #### Dupe check
+
+Run a check of the files in Downloads on the collection of textfiles.
+
 ```sh
-# todo
+# Windows
+duper dupe C:\Users\Me\Downloads D:\textfiles
+
+# Linux, macOS
+duper dupe ~/Downloads ~/textfiles
 ```
 
-#### Dupe check a second time
+#### Dupe check multiple locations
+
+Run a check of the files in Downloads on collections of textfiles and images.
+
 ```sh
-# todo, show the time taken difference
+# Windows
+duper dupe C:\Users\Me\Downloads D:\textfiles D:\photos
+
+# Linux, macOS
+duper dupe ~/Downloads ~/Textfiles ~/Pictures
 ```
 
 #### Search for a filename
 ```sh
-# todo
+# Search the database for ZIP files
+duper -name search .zip
+
+# Search the database for photos containing 2010 in their file or directory names
+duper search '2010' D:\photos
 ```
 
 ## Build
@@ -65,10 +109,14 @@ env GOOS=openbsd GOARCH=amd64 go build
 
 ## Troubleshoot
 
-- `Not enough memory resources are available to process this command.`
+#### Windows
 
-In an administrator console or command prompt.
+> `Not enough memory resources are available to process this command.`
+
+This is a misleading generic Windows error that occures when interacting with the database.
+There is no guaranteed fix but try rebooting or running this command:
 
 ```ps
+# In an administrator console or command prompt.
 sfc /scannow
 ```
