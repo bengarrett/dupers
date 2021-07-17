@@ -1,6 +1,5 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
 
-// dupers todo
 package dupers
 
 import (
