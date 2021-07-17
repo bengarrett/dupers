@@ -1,6 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
 
-// dupers todo
+// Dupers is the blazing-fast file duplicate checker and filename search.
 package main
 
 import (
