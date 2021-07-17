@@ -511,7 +511,6 @@ func (c *Config) WalkSource() {
 	if err != nil {
 		out.ErrFatal(err)
 	}
-
 	stat, err := os.Stat(root)
 	if errors.Is(err, os.ErrNotExist) {
 		e := fmt.Errorf("%w: %s", ErrNoPath, root)
@@ -519,13 +518,12 @@ func (c *Config) WalkSource() {
 	} else if err != nil {
 		out.ErrFatal(err)
 	}
-
 	if !stat.IsDir() {
 		c.sources = append(c.sources, root)
 		return
 	}
 
-	if err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		// skip directories
 		if err := skipDir(d, true); err != nil {
 			return err
