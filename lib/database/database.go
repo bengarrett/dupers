@@ -373,6 +373,7 @@ func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, error) {
 		ro = color.Danger.Sprint("NO")
 	}
 	fmt.Fprintf(w, "\tRead only mode:\t%s\n", ro)
+	fmt.Fprintln(w, "Buckets:")
 	err = db.View(func(tx *bolt.Tx) error {
 		cnt := 0
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
@@ -382,8 +383,13 @@ func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, error) {
 			}
 			cnt++
 			fmt.Fprintln(w)
-			fmt.Fprintf(w, "\tBucket #%002d\t'%s'\n", cnt, string(name))
-			fmt.Fprintf(w, "\t\titems: %d\tdata: %s\n", v.Stats().KeyN, humanize.Bytes(uint64(v.Stats().LeafInuse)))
+			fmt.Fprintf(w, "\t '%s'\n", string(name))
+			items := v.Stats().KeyN
+			if items == 0 {
+				fmt.Fprintf(w, "\t\t   ⤷ is empty")
+				return nil
+			}
+			fmt.Fprintf(w, "\t\t   ⤷ %d items, %s\n", items, humanize.Bytes(uint64(v.Stats().LeafInuse)))
 			return nil
 		})
 	})
