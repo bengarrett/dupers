@@ -3,8 +3,10 @@
 package out
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/gookit/color"
 )
@@ -35,4 +37,24 @@ func Response(s string, quiet bool) {
 		return
 	}
 	fmt.Println(s)
+}
+
+func YN(s string) bool {
+	fmt.Println()
+	r := bufio.NewReader(os.Stdin)
+	const no, yes = "n", "y"
+	for {
+		fmt.Printf("\r%s? [Y/N]: ", s)
+		b, err := r.ReadByte()
+		if err != nil {
+			ErrFatal(err)
+		}
+		input := strings.ToLower(string(b))
+		switch input {
+		case yes:
+			return true
+		case no:
+			return false
+		}
+	}
 }
