@@ -5,7 +5,6 @@ package dupers
 import (
 	"fmt"
 	"path/filepath"
-	"reflect"
 	"testing"
 )
 
@@ -66,6 +65,32 @@ func Test_containsBin(t *testing.T) {
 	}
 }
 
+// func Test_zread(t *testing.T) {
+// 	tests := []struct {
+// 		name     string
+// 		path     string
+// 		wantHash string
+// 		wantErr  bool
+// 	}{
+// 		{"empty", "", hash0, true},
+// 		{"file1", file1, hash1, false},
+// 		{"file2", file2, hash2, false},
+// 	}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			gotHash, err := read(tt.path)
+// 			if (err != nil) != tt.wantErr {
+// 				t.Errorf("read() error = %v, wantErr %v", err, tt.wantErr)
+// 				return
+// 			}
+// 			h := fmt.Sprintf("%x", gotHash)
+// 			if !reflect.DeepEqual(h, tt.wantHash) {
+// 				t.Errorf("read() = %v, want %v", h, tt.wantHash)
+// 			}
+// 		})
+// 	}
+// }
+
 func Test_read(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -85,8 +110,8 @@ func Test_read(t *testing.T) {
 				return
 			}
 			h := fmt.Sprintf("%x", gotHash)
-			if !reflect.DeepEqual(h, tt.wantHash) {
-				t.Errorf("read() = %v, want %v", h, tt.wantHash)
+			if h != tt.wantHash {
+				t.Errorf("read() got = %v, want %v", h, tt.wantHash)
 			}
 		})
 	}

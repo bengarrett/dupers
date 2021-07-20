@@ -11,6 +11,10 @@ import (
 	"github.com/gookit/color"
 )
 
+func Bug(s string) {
+	fmt.Printf("∙%s\n", s)
+}
+
 func ErrFatal(e error) {
 	if e != nil {
 		color.Error.Tips(" " + e.Error())

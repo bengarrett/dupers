@@ -4,6 +4,7 @@
 package dupers
 
 import (
+	"archive/zip"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -21,6 +22,8 @@ import (
 	"github.com/bengarrett/dupers/lib/out"
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
+	"github.com/h2non/filetype"
+	"github.com/karrick/godirwalk"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -29,6 +32,7 @@ type Config struct {
 	Timer   time.Time
 	Buckets []string // buckets to lookup
 	Source  string   // directory or file to compare
+	Debug   bool     // spam the feedback sent to stdout
 	Quiet   bool     // reduce the feedback sent to stdout
 	Test    bool     // internal unit test mode
 	db      *bolt.DB // interal Bolt database
@@ -132,8 +136,8 @@ func (c *Config) init() {
 	}
 }
 
-// PurgeSrc removes all files and directories from the source directory that are not unique MS-DOS or Windows programs.
-func (c *Config) PurgeSrc() {
+// RemoveAll removes all files and directories from the source directory that are not unique MS-DOS or Windows programs.
+func (c *Config) RemoveAll(clean bool) {
 	root, err := filepath.Abs(c.Source)
 	if err != nil {
 		out.ErrFatal(err)
@@ -155,6 +159,17 @@ func (c *Config) PurgeSrc() {
 	if err != nil {
 		out.ErrCont(err)
 	}
+
+	color.Info.Println("\nRemove ALL files, except for unique Windows/MS-DOS programs ?")
+	fmt.Printf("%s %s", color.Secondary.Sprint("target directory:"), root)
+	if input := out.YN("Please confirm"); !input {
+		os.Exit(0)
+	}
+	fmt.Println()
+	removeAll(root, files)
+}
+
+func removeAll(root string, files []fs.DirEntry) {
 	for _, item := range files {
 		if !item.IsDir() {
 			continue
@@ -255,6 +270,58 @@ func matchItem(match string) string {
 	return s
 }
 
+// Clean removes all empty directories from c.Source.
+// Directories containing hidden system directories are not considered empty.
+func (c *Config) Clean() {
+	if c.Source == "" {
+		return
+	}
+	var count int
+	if err := godirwalk.Walk(c.Source, &godirwalk.Options{
+		Unsorted: true,
+		Callback: func(_ string, _ *godirwalk.Dirent) error {
+			// no-op while diving in; all the fun happens in PostChildrenCallback
+			return nil
+		},
+		PostChildrenCallback: func(osPathname string, _ *godirwalk.Dirent) error {
+			s, err := godirwalk.NewScanner(osPathname)
+			if err != nil {
+				return err
+			}
+
+			// Attempt to read only the first directory entry. Remember that
+			// Scan skips both "." and ".." entries.
+			hasAtLeastOneChild := s.Scan()
+
+			// If error reading from directory, wrap up and return.
+			if err := s.Err(); err != nil {
+				return err
+			}
+
+			if hasAtLeastOneChild {
+				return nil // do not remove directory with at least one child
+			}
+			if osPathname == c.Source {
+				return nil // do not remove directory that was provided top-level directory
+			}
+
+			count++
+			err = os.Remove(osPathname)
+			if err == nil {
+				count++
+			}
+			return err
+		},
+	}); err != nil {
+		out.ErrFatal(err)
+	}
+	if count == 0 {
+		fmt.Println("Nothing required cleaning.")
+		return
+	}
+	fmt.Printf("Removed %d empty directories in: '%s'\n", count, c.Source)
+}
+
 // Remove all duplicate files from the source directory.
 func (c *Config) Remove() {
 	if len(c.sources) == 0 || len(c.compare) == 0 {
@@ -267,8 +334,7 @@ func (c *Config) Remove() {
 		if err != nil {
 			out.ErrCont(err)
 		}
-		l := c.lookupOne(h)
-		if l == "" {
+		if l := c.lookupOne(h); l == "" {
 			continue
 		}
 		err = os.Remove(path)
@@ -333,6 +399,9 @@ func (c *Config) WalkDirs() {
 	}
 	// walk through the directories provided
 	for _, bucket := range c.Buckets {
+		if c.Debug {
+			out.Bug("bucket: " + bucket)
+		}
 		if err := c.WalkDir(bucket); err != nil {
 			out.ErrCont(err)
 		}
@@ -360,7 +429,13 @@ func (c *Config) WalkDir(root string) error {
 	}
 	// walk the root directory
 	var wg sync.WaitGroup
+	if c.Debug {
+		out.Bug("walk directory: " + root)
+	}
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if c.Debug {
+			out.Bug("walk file: " + path)
+		}
 		if err != nil {
 			if errors.Is(err, fs.ErrPermission) {
 				return nil
@@ -402,7 +477,7 @@ func (c *Config) WalkDir(root string) error {
 }
 
 func printWalk(lookup bool, c *Config) {
-	if c.Test || c.Quiet {
+	if c.Test || c.Quiet || c.Debug {
 		return
 	}
 	s := "Scanning"
@@ -464,7 +539,7 @@ func skipSelf(path string, skip []string) bool {
 
 func walkDir(root, path string, c *Config) error {
 	return c.db.View(func(tx *bolt.Tx) error {
-		if !c.Test && !c.Quiet {
+		if !c.Test && !c.Quiet && !c.Debug {
 			if runtime.GOOS == winOS {
 				// color output slows down large scans on Windows
 				fmt.Printf("\rLooking up %d files", c.files)
@@ -522,8 +597,13 @@ func (c *Config) WalkSource() {
 		c.sources = append(c.sources, root)
 		return
 	}
-
+	if c.Debug {
+		out.Bug("walksource: " + root)
+	}
 	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if c.Debug {
+			out.Bug(path)
+		}
 		// skip directories
 		if err := skipDir(d, true); err != nil {
 			return err
@@ -545,6 +625,11 @@ func (c *Config) WalkSource() {
 
 func (c *Config) update(path, root string, wg *sync.WaitGroup) {
 	defer wg.Done()
+	if c.Debug {
+		out.Bug("update: " + path)
+	}
+
+	// read file, exit if it fails
 	h, err := read(path)
 	if err != nil {
 		fmt.Println(err)
@@ -553,6 +638,8 @@ func (c *Config) update(path, root string, wg *sync.WaitGroup) {
 	if h == [32]byte{} {
 		return
 	}
+
+	//fmt.Println("mime:", mime)
 
 	if err = c.db.Update(func(tx *bolt.Tx) error {
 		// directory bucket
@@ -564,24 +651,106 @@ func (c *Config) update(path, root string, wg *sync.WaitGroup) {
 	c.compare[h] = path
 }
 
+func deepScan(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	kind, _ := filetype.MatchReader(f)
+	switch kind.MIME.Value {
+	case "application/zip":
+		return kind.MIME.Value, nil
+	}
+	return "", nil
+}
+
 func (c *Config) skipFiles() (files []string) {
 	files = append(files, c.sources...)
 	return files
 }
 
-func read(path string) (hash [32]byte, err error) {
+func read(name string) (hash [32]byte, err error) {
 	const oneKb = 1024
 
-	f, err := os.Open(path)
+	f, err := os.Open(name)
 	if err != nil {
-		return hash, err
+		return [32]byte{}, err
 	}
 	defer f.Close()
 
 	buf, h := make([]byte, oneKb*oneKb), sha256.New()
 	if _, err := io.CopyBuffer(h, f, buf); err != nil {
-		return hash, err
+		return [32]byte{}, err
 	}
+
+	// mf, err := os.Open(name)
+	// if err != nil {
+	// 	return [32]byte{}, err
+	// }
+	// defer mf.Close()
+	// this must come before the copybuffer
+	// kind, _ := filetype.MatchReader(mf)
+	// switch kind.MIME.Value {
+	// case "application/zip":
+	// 	mime = kind.MIME.Value
+	// }
+
+	// switch kind.MIME.Value {
+	// case "application/zip":
+	// 	mime = kind.MIME.Value
+	// 	// fmt.Println("zip:", name)
+	// 	// go readInZip(name)
+	// }
+	// switch kind.MIME.Value {
+	// case "application/zip":
+	// 	fmt.Println(">", name, ">>", kind.MIME.Value)
+	// 	r, err := zip.OpenReader(name)
+	// 	if err != nil {
+	// 		out.ErrCont(err)
+	// 	}
+	// 	defer r.Close()
+	// 	for i, zf := range r.File {
+	// 		fmt.Println(i, ". ", filepath.Join(name, zf.Name), zf.CRC32)
+	// 		zr, err := zf.Open()
+	// 		if err != nil {
+	// 			out.ErrCont(err)
+	// 			continue
+	// 		}
+	// 		//zhash := [32]byte{}
+	// 		zbuf, zh := make([]byte, oneKb*oneKb), sha256.New()
+	// 		if _, err := io.CopyBuffer(zh, zr, zbuf); err != nil {
+	// 			out.ErrCont(err)
+	// 			continue
+	// 		}
+	// 		fmt.Printf(" -> %x %dbits\n", zh.Sum(nil), len(zh.Sum(nil)))
+	// 	}
+	// }
+	// var hash [32]byte
 	copy(hash[:], h.Sum(nil))
 	return hash, nil
+}
+
+func readInZip(path string) string {
+	r, err := zip.OpenReader(path)
+	if err != nil {
+		out.ErrCont(err)
+	}
+	defer r.Close()
+	const oneKb = 1024
+	for _, zf := range r.File {
+		reader, err := zf.Open()
+		if err != nil {
+			out.ErrCont(err)
+			continue
+		}
+		buf, hash := make([]byte, oneKb*oneKb), sha256.New()
+		if _, err := io.CopyBuffer(hash, reader, buf); err != nil {
+			out.ErrCont(err)
+			continue
+		}
+		fmt.Printf(">>> %x %d-bits\n", hash.Sum(nil), len(hash.Sum(nil)))
+	}
+	return ""
 }
