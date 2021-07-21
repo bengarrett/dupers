@@ -11,31 +11,36 @@ import (
 	"github.com/gookit/color"
 )
 
-func Bug(s string) {
-	fmt.Printf("∙%s\n", s)
+// Bug prints the string to a newline.
+func Bug(debug string) {
+	fmt.Printf("∙%s\n", debug)
 }
 
-func ErrFatal(e error) {
-	if e != nil {
-		color.Error.Tips(" " + e.Error())
+// ErrFatal prints the error and exits the program.
+func ErrFatal(err error) {
+	if err != nil {
+		color.Error.Tips(" " + err.Error())
 	}
 	os.Exit(1)
 }
 
-func ErrCont(e error) {
-	if e == nil {
+// ErrFatal prints the error.
+func ErrCont(err error) {
+	if err == nil {
 		return
 	}
-	color.Warn.Printf("The %s.\n", e.Error())
+	color.Warn.Printf("The %s.\n", err.Error())
 }
 
-func Example(s string) {
-	if s == "" {
+// Example is intended for help screens and prints the example command.
+func Example(cmd string) {
+	if cmd == "" {
 		return
 	}
-	color.Debug.Println(s)
+	color.Debug.Println(cmd)
 }
 
+// Response prints the string when quiet is false.
 func Response(s string, quiet bool) {
 	if quiet {
 		return
@@ -43,12 +48,14 @@ func Response(s string, quiet bool) {
 	fmt.Println(s)
 }
 
-func YN(s string) bool {
+// YN prints the question and prompts the user for a yes or no reply.
+// The prompt will loop unless a y or n value is given or Ctrl-C is pressed.
+func YN(question string) bool {
 	fmt.Println()
 	r := bufio.NewReader(os.Stdin)
 	const no, yes = "n", "y"
 	for {
-		fmt.Printf("\r%s? [Y/N]: ", s)
+		fmt.Printf("\r%s? [Y/N]: ", question)
 		b, err := r.ReadByte()
 		if err != nil {
 			ErrFatal(err)
