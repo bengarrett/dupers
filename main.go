@@ -40,6 +40,7 @@ const (
 	dbs   = "db"
 	dbk   = "backup"
 	dcn   = "clean"
+	dls   = "ls"
 	drm   = "rm"
 	dup   = "up"
 	dupp  = "up+"
@@ -99,7 +100,7 @@ func main() {
 
 	selection := strings.ToLower(flag.Args()[0])
 	switch selection {
-	case dbf, dbs, dbk, dcn, drm, dup, dupp:
+	case dbf, dbs, dbk, dcn, dls, drm, dup, dupp:
 		taskDatabase(&c, *t.quiet, flag.Args()...)
 	case "dupe":
 		if *f {
@@ -166,10 +167,12 @@ func help() {
 	fmt.Fprintf(w, "    dupers %s\tdisplay statistics and bucket information\n", dbf)
 	fmt.Fprintf(w, "    dupers %s\t%s\n", dbk, "make a copy of the database to: "+home())
 	fmt.Fprintf(w, "    dupers %s\t%s\n", dcn, "compact and remove all items in the database that point to missing files")
-	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", drm, "remove the bucket (a scanned directory) from the database")
-	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", dup, "add or update the bucket (a directory to scan) to the database")
-	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", dupp, "add or update the bucket using a deep scan (SLOW)"+
-		"\n\tdeep scan reads & saves all the files stored in archived files")
+	fmt.Fprintf(w, "    dupers %s  <bucket>\t%s\n", dls, "list the hashes and files in the bucket")
+	fmt.Fprintf(w, "    dupers %s  <bucket>\t%s\n", drm, "remove the bucket from the database")
+	fmt.Fprintf(w, "    dupers %s  <bucket>\t%s\n", dup, "add or update the bucket to the database")
+	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", dupp, "add or update the bucket using an archive scan "+
+		color.Danger.Sprint("(SLOW)")+
+		"\n\tthe scan reads all the files stored within file archives")
 
 	fmt.Fprintln(w, "\nOptions:")
 	f = flag.Lookup("quiet")
@@ -255,6 +258,8 @@ func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
 		}
 		fmt.Println(s)
 		return
+	case dls:
+		taskDBList(c, args...)
 	case drm:
 		taskDBRM(quiet, args...)
 		return
@@ -266,6 +271,20 @@ func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
 		return
 	default:
 		out.ErrFatal(ErrCmd)
+	}
+}
+
+func taskDBList(c *dupers.Config, args ...string) {
+	name, err := filepath.Abs(args[1])
+	if err != nil {
+		out.ErrFatal(err)
+	}
+	ls, err := database.List(name)
+	if err != nil {
+		out.ErrCont(err)
+	}
+	for name, hash := range ls {
+		fmt.Printf("%x: %s\n", hash, name)
 	}
 }
 

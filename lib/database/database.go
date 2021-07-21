@@ -22,6 +22,7 @@ import (
 
 type (
 	Filepath string
+	Lists    map[Filepath][32]byte
 	Matches  map[Filepath]string
 )
 
@@ -420,6 +421,36 @@ func IsEmpty() (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+// List returns the file paths and SHA256 hashes stored in the bucket.
+func List(bucket string) (ls Lists, err error) {
+	path, err := DB()
+	if err != nil {
+		return nil, err
+	}
+	db, err := bolt.Open(path, FileMode, &bolt.Options{ReadOnly: true})
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	ls = make(Lists)
+	if err = db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(bucket))
+		if b == nil {
+			return ErrNoBucket
+		}
+		h := [32]byte{}
+		err = b.ForEach(func(k, v []byte) error {
+			copy(h[:], v)
+			ls[Filepath(k)] = h
+			return nil
+		})
+		return err
+	}); err != nil {
+		return nil, err
+	}
+	return ls, nil
 }
 
 // RM removes the named bucket from the database.
