@@ -113,14 +113,24 @@ func Buckets() (names []string, err error) {
 
 // Clean the stale items from all database buckets.
 // Stale items are file pointers that no longer exist on the host file system.
-func Clean(quiet bool) error {
+func Clean(quiet, debug bool) error {
+	if debug {
+		out.Bug("running database clean")
+	}
 	buckets, err := Buckets()
 	if err != nil {
 		return err
 	}
+	if debug {
+		s := fmt.Sprintf("list of buckets:\n%s", strings.Join(buckets, "\n"))
+		out.Bug(s)
+	}
 	path, err := DB()
 	if err != nil {
 		return err
+	}
+	if debug {
+		out.Bug("database path: " + path)
 	}
 	db, err := bolt.Open(path, FileMode, nil)
 	if err != nil {
@@ -132,6 +142,8 @@ func Clean(quiet bool) error {
 		abs, err := BucketAbs(bucket)
 		if err != nil {
 			out.ErrCont(err)
+		} else if debug {
+			out.Bug("bucket: " + string(abs))
 		}
 		if err = db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket(abs)
@@ -140,6 +152,10 @@ func Clean(quiet bool) error {
 			}
 			err = b.ForEach(func(k, v []byte) error {
 				if _, err1 := os.Stat(string(k)); err1 != nil {
+					if debug {
+						s := fmt.Sprintf("%s: %s", k, err)
+						out.Bug(s)
+					}
 					if err2 := db.Update(func(tx *bolt.Tx) error {
 						return tx.Bucket(abs).Delete(k)
 					}); err2 != nil {
@@ -169,7 +185,10 @@ func Clean(quiet bool) error {
 }
 
 // Compact the database by reclaiming space.
-func Compact() error {
+func Compact(debug bool) error {
+	if debug {
+		out.Bug("running database compact")
+	}
 	// active database
 	src, err := DB()
 	if err != nil {
@@ -181,39 +200,46 @@ func Compact() error {
 	srcDB, err := bolt.Open(src, FileMode, nil)
 	if err != nil {
 		return err
+	} else if debug {
+		out.Bug("opened original database: " + src)
 	}
 	defer srcDB.Close()
 	tmpDB, err := bolt.Open(tmp, FileMode, nil)
 	if err != nil {
 		return err
+	} else if debug {
+		out.Bug("opened replacement database: " + tmp)
 	}
 	defer tmpDB.Close()
 	// compress and copy the results to the temporary database
+	if debug {
+		out.Bug("compress and copy databases")
+	}
 	if err1 := bolt.Compact(tmpDB, srcDB, 0); err1 != nil {
 		return err1
 	}
-	srcSt, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-	tmpSt, err := os.Stat(tmp)
-	if err != nil {
-		return err
-	}
-	// compare size of the two databases
-	// if the compacted temporary database is smaller,
-	// copy it to the active database
-	if tmpSt.Size() >= srcSt.Size() {
-		tmpDB.Close()
-		if err = os.Remove(tmp); err != nil {
-			out.ErrCont(err)
+	if debug {
+		sr, err := os.Stat(src)
+		if err != nil {
+			return err
 		}
-		return ErrDBCompact
+		tm, err := os.Stat(tmp)
+		if err != nil {
+			return err
+		}
+		s1 := fmt.Sprintf("original database: %d bytes, %s", sr.Size(), sr.Name())
+		out.Bug(s1)
+		s2 := fmt.Sprintf("new database:      %d bytes, %s", tm.Size(), tm.Name())
+		out.Bug(s2)
 	}
-	srcDB.Close()
-	_, err = copyFile(tmp, src)
-	if err != nil {
+	if err = srcDB.Close(); err != nil {
+		out.ErrFatal(err)
+	}
+	if cp, err := copyFile(tmp, src); err != nil {
 		return err
+	} else if debug {
+		s := fmt.Sprintf("copied %d bytes to: %s", cp, src)
+		out.Bug(s)
 	}
 	return nil
 }

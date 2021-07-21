@@ -239,13 +239,13 @@ func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
 		out.Response(s, quiet)
 		return
 	case dcn:
-		if err := database.Clean(quiet); err != nil {
+		if err := database.Clean(quiet, c.Debug); err != nil {
 			if b := errors.Is(err, database.ErrDBClean); !b {
 				out.ErrFatal(err)
 			}
 			out.ErrCont(err)
 		}
-		if err := database.Compact(); err != nil {
+		if err := database.Compact(c.Debug); err != nil {
 			if b := errors.Is(err, database.ErrDBCompact); !b {
 				out.ErrFatal(err)
 			}
@@ -311,16 +311,21 @@ func taskDBRM(quiet bool, args ...string) {
 	}
 	if err := database.RM(name); err != nil {
 		if errors.Is(err, database.ErrNoBucket) {
-			out.ErrCont(err)
-			fmt.Printf("Bucket to remove: '%s'\n", name)
-			buckets, err1 := database.Buckets()
-			if err1 != nil {
+			// retry with the original argument
+			if err1 := database.RM(args[1]); err1 != nil {
+				if errors.Is(err1, database.ErrNoBucket) {
+					out.ErrCont(err1)
+					fmt.Printf("Bucket to remove: '%s'\n", name)
+					buckets, err2 := database.Buckets()
+					if err2 != nil {
+						out.ErrFatal(err2)
+					}
+					fmt.Printf("Buckets in use: %s\n", strings.Join(buckets, "\n\t\t"))
+					out.ErrFatal(nil)
+				}
 				out.ErrFatal(err1)
 			}
-			fmt.Printf("Buckets in use: %s\n", strings.Join(buckets, "\n\t\t"))
-			out.ErrFatal(nil)
 		}
-		out.ErrFatal(err)
 	}
 	s := fmt.Sprintf("Removed bucket from the database: '%s'\n", name)
 	out.Response(s, quiet)
@@ -391,7 +396,7 @@ func taskScan(c *dupers.Config, t tasks, args ...string) {
 		if c.Debug {
 			out.Bug("database cleanup.")
 		}
-		if err := database.Clean(true); err != nil {
+		if err := database.Clean(true, c.Debug); err != nil {
 			out.ErrCont(err)
 		}
 		if c.Debug {
