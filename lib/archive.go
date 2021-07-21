@@ -164,12 +164,15 @@ func (c *Config) listItems(bucket string) error {
 	if c.Debug {
 		out.Bug("list bucket items: " + bucket)
 	}
-	abs, err := database.BucketAbs(bucket)
+	abs, err := database.Abs(bucket)
 	if err != nil {
 		out.ErrCont(err)
 	}
 	if err = c.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(abs)
+		if b == nil {
+			return nil
+		}
 		err = b.ForEach(func(key, _ []byte) error {
 			if bytes.Contains(key, []byte(bucket)) {
 				c.sources = append(c.sources, string(database.Filepath(key)))
