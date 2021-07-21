@@ -42,6 +42,7 @@ const (
 	dcn   = "clean"
 	drm   = "rm"
 	dup   = "up"
+	dupp  = "up+"
 )
 
 type tasks struct {
@@ -98,7 +99,7 @@ func main() {
 
 	selection := strings.ToLower(flag.Args()[0])
 	switch selection {
-	case dbf, dbs, dbk, dcn, drm, dup:
+	case dbf, dbs, dbk, dcn, drm, dup, dupp:
 		taskDatabase(&c, *t.quiet, flag.Args()...)
 	case "dupe":
 		if *f {
@@ -167,8 +168,8 @@ func help() {
 	fmt.Fprintf(w, "    dupers %s\t%s\n", dcn, "compact and remove all items in the database that point to missing files")
 	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", drm, "remove the bucket (a scanned directory) from the database")
 	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", dup, "add or update the bucket (a directory to scan) to the database")
-	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", "deep", "add or update the bucket using a deep scan (SLOW)"+
-		"\n\tdeep scan reads & saves all the files stored in archived files (zip,...)")
+	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", dupp, "add or update the bucket using a deep scan (SLOW)"+
+		"\n\tdeep scan reads & saves all the files stored in archived files")
 
 	fmt.Fprintln(w, "\nOptions:")
 	f = flag.Lookup("quiet")
@@ -260,6 +261,9 @@ func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
 	case dup:
 		taskDBUp(c, args...)
 		return
+	case dupp:
+		taskDBUpPlus(c, args...)
+		return
 	default:
 		out.ErrFatal(ErrCmd)
 	}
@@ -316,6 +320,16 @@ func taskDBUp(c *dupers.Config, args ...string) {
 	}
 	if runtime.GOOS == winOS || !c.Quiet {
 		fmt.Println(c.Status())
+	}
+}
+
+func taskDBUpPlus(c *dupers.Config, args ...string) {
+	path, err := filepath.Abs(args[1])
+	if err != nil {
+		out.ErrFatal(err)
+	}
+	if err := c.WalkArchiver(path); err != nil {
+		out.ErrFatal(err)
 	}
 }
 

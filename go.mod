@@ -3,6 +3,7 @@ module github.com/bengarrett/dupers
 go 1.16
 
 require (
+	github.com/bodgit/sevenzip v1.1.0
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/dustin/go-humanize v1.0.0
 	github.com/frankban/quicktest v1.13.0 // indirect

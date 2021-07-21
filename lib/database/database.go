@@ -128,7 +128,7 @@ func Clean(quiet bool) error {
 	defer db.Close()
 	cnt := 0
 	for _, bucket := range buckets {
-		abs, err := bucketAbs(bucket)
+		abs, err := BucketAbs(bucket)
 		if err != nil {
 			out.ErrCont(err)
 		}
@@ -238,7 +238,7 @@ func CompareNoCase(s string, buckets []string) (*Matches, error) {
 	return compare([]byte(s), buckets, true, false)
 }
 
-func bucketAbs(name string) ([]byte, error) {
+func BucketAbs(name string) ([]byte, error) {
 	s, err := filepath.Abs(name)
 	if err != nil {
 		return nil, err
@@ -265,7 +265,7 @@ func compare(term []byte, buckets []string, noCase, base bool) (*Matches, error)
 	}
 	finds := make(Matches)
 	for _, bucket := range buckets {
-		abs, err := bucketAbs(bucket)
+		abs, err := BucketAbs(bucket)
 		if err != nil {
 			out.ErrCont(err)
 		}

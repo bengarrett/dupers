@@ -4,7 +4,6 @@
 package dupers
 
 import (
-	"archive/zip"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -22,23 +21,23 @@ import (
 	"github.com/bengarrett/dupers/lib/out"
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
-	"github.com/h2non/filetype"
 	"github.com/karrick/godirwalk"
 	bolt "go.etcd.io/bbolt"
 )
 
 // Config options for duper.
 type Config struct {
-	Timer   time.Time
-	Buckets []string // buckets to lookup
-	Source  string   // directory or file to compare
-	Debug   bool     // spam the feedback sent to stdout
-	Quiet   bool     // reduce the feedback sent to stdout
-	Test    bool     // internal unit test mode
-	db      *bolt.DB // interal Bolt database
-	compare hash     // hashes fetched from the database or file system
-	files   int      // total files or database items read
-	sources []string // files paths to check
+	Timer    time.Time
+	Buckets  []string // buckets to lookup
+	Source   string   // directory or file to compare
+	Debug    bool     // spam the feedback sent to stdout
+	DeepScan bool
+	Quiet    bool     // reduce the feedback sent to stdout
+	Test     bool     // internal unit test mode
+	db       *bolt.DB // interal Bolt database
+	compare  hash     // hashes fetched from the database or file system
+	files    int      // total files or database items read
+	sources  []string // files paths to check
 }
 
 type hash map[[32]byte]string
@@ -651,21 +650,6 @@ func (c *Config) update(path, root string, wg *sync.WaitGroup) {
 	c.compare[h] = path
 }
 
-func deepScan(path string) (string, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-
-	kind, _ := filetype.MatchReader(f)
-	switch kind.MIME.Value {
-	case "application/zip":
-		return kind.MIME.Value, nil
-	}
-	return "", nil
-}
-
 func (c *Config) skipFiles() (files []string) {
 	files = append(files, c.sources...)
 	return files
@@ -685,72 +669,6 @@ func read(name string) (hash [32]byte, err error) {
 		return [32]byte{}, err
 	}
 
-	// mf, err := os.Open(name)
-	// if err != nil {
-	// 	return [32]byte{}, err
-	// }
-	// defer mf.Close()
-	// this must come before the copybuffer
-	// kind, _ := filetype.MatchReader(mf)
-	// switch kind.MIME.Value {
-	// case "application/zip":
-	// 	mime = kind.MIME.Value
-	// }
-
-	// switch kind.MIME.Value {
-	// case "application/zip":
-	// 	mime = kind.MIME.Value
-	// 	// fmt.Println("zip:", name)
-	// 	// go readInZip(name)
-	// }
-	// switch kind.MIME.Value {
-	// case "application/zip":
-	// 	fmt.Println(">", name, ">>", kind.MIME.Value)
-	// 	r, err := zip.OpenReader(name)
-	// 	if err != nil {
-	// 		out.ErrCont(err)
-	// 	}
-	// 	defer r.Close()
-	// 	for i, zf := range r.File {
-	// 		fmt.Println(i, ". ", filepath.Join(name, zf.Name), zf.CRC32)
-	// 		zr, err := zf.Open()
-	// 		if err != nil {
-	// 			out.ErrCont(err)
-	// 			continue
-	// 		}
-	// 		//zhash := [32]byte{}
-	// 		zbuf, zh := make([]byte, oneKb*oneKb), sha256.New()
-	// 		if _, err := io.CopyBuffer(zh, zr, zbuf); err != nil {
-	// 			out.ErrCont(err)
-	// 			continue
-	// 		}
-	// 		fmt.Printf(" -> %x %dbits\n", zh.Sum(nil), len(zh.Sum(nil)))
-	// 	}
-	// }
-	// var hash [32]byte
 	copy(hash[:], h.Sum(nil))
 	return hash, nil
-}
-
-func readInZip(path string) string {
-	r, err := zip.OpenReader(path)
-	if err != nil {
-		out.ErrCont(err)
-	}
-	defer r.Close()
-	const oneKb = 1024
-	for _, zf := range r.File {
-		reader, err := zf.Open()
-		if err != nil {
-			out.ErrCont(err)
-			continue
-		}
-		buf, hash := make([]byte, oneKb*oneKb), sha256.New()
-		if _, err := io.CopyBuffer(hash, reader, buf); err != nil {
-			out.ErrCont(err)
-			continue
-		}
-		fmt.Printf(">>> %x %d-bits\n", hash.Sum(nil), len(hash.Sum(nil)))
-	}
-	return ""
 }
