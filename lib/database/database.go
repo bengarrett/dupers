@@ -84,6 +84,15 @@ func copyFile(src, dest string) (int64, error) {
 	return io.Copy(bu, f)
 }
 
+// Abs returns an absolute representation of the named bucket.
+func Abs(bucket string) ([]byte, error) {
+	s, err := filepath.Abs(bucket)
+	if err != nil {
+		return nil, err
+	}
+	return []byte(s), nil
+}
+
 // Buckets lists all the stored bucket names in the database.
 func Buckets() (names []string, err error) {
 	path, err := DB()
@@ -139,7 +148,7 @@ func Clean(quiet, debug bool) error {
 	defer db.Close()
 	cnt := 0
 	for _, bucket := range buckets {
-		abs, err := BucketAbs(bucket)
+		abs, err := Abs(bucket)
 		if err != nil {
 			out.ErrCont(err)
 		} else if debug {
@@ -265,14 +274,6 @@ func CompareNoCase(s string, buckets []string) (*Matches, error) {
 	return compare([]byte(s), buckets, true, false)
 }
 
-func BucketAbs(name string) ([]byte, error) {
-	s, err := filepath.Abs(name)
-	if err != nil {
-		return nil, err
-	}
-	return []byte(s), nil
-}
-
 func compare(term []byte, buckets []string, noCase, base bool) (*Matches, error) {
 	path, err := DB()
 	if err != nil {
@@ -292,7 +293,7 @@ func compare(term []byte, buckets []string, noCase, base bool) (*Matches, error)
 	}
 	finds := make(Matches)
 	for _, bucket := range buckets {
-		abs, err := BucketAbs(bucket)
+		abs, err := Abs(bucket)
 		if err != nil {
 			out.ErrCont(err)
 		}
