@@ -23,8 +23,10 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
+const x7z = "application/x-7z-compressed"
+
 // IsArchive returns true if the named file is compressed using a supported archive format.
-func IsArchive(name string) (bool, string, error) {
+func IsArchive(name string) (result bool, mime string, err error) {
 	f, err := os.Open(name)
 	if err != nil {
 		return false, "", err
@@ -38,7 +40,7 @@ func IsArchive(name string) (bool, string, error) {
 	case
 		"application/gzip",
 		"application/vnd.rar",
-		"application/x-7z-compressed",
+		x7z,
 		"application/x-tar",
 		"application/zip":
 		return true, kind.MIME.Value, nil
@@ -103,44 +105,48 @@ func (c *Config) WalkArchiver(bucket string) error {
 		if skipSelf(path, skip) {
 			return nil
 		}
-		// detect filetype
-		ok, aType, err := IsArchive(path)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			if c.Debug && aType != "" {
-				s := fmt.Sprintf("archive not supported: %s: %s", aType, path)
-				out.Bug(s)
-			}
-			return nil
-		}
 		// walk the directories
-		c.files++
-		if c.Debug {
-			s := fmt.Sprintf("walkDir #%d", c.files)
-			out.Bug(s)
-		}
-		if errD := walkDir(bucket, path, c); errD != nil {
-			if !errors.Is(errD, ErrPathExist) {
-				out.ErrFatal(errD)
-			}
-		}
-		// multithread archive reader
-		wg.Add(1)
-		go func() {
-			switch aType {
-			case "application/x-7z-compressed":
-				c.read7Zip(bucket, path)
-			default:
-				c.readArchiver(bucket, path)
-			}
-			wg.Done()
-		}()
-		wg.Wait()
-		return nil
+		return c.walkThread(bucket, path, &wg)
 	})
 	return err
+}
+
+func (c *Config) walkThread(bucket, path string, wg *sync.WaitGroup) error {
+	// detect filetype
+	ok, aType, err := IsArchive(path)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		if c.Debug && aType != "" {
+			s := fmt.Sprintf("archive not supported: %s: %s", aType, path)
+			out.Bug(s)
+		}
+		return nil
+	}
+	c.files++
+	if c.Debug {
+		s := fmt.Sprintf("walkDir #%d", c.files)
+		out.Bug(s)
+	}
+	if errD := walkDir(bucket, path, c); errD != nil {
+		if !errors.Is(errD, ErrPathExist) {
+			out.ErrFatal(errD)
+		}
+	}
+	// multithread archive reader
+	wg.Add(1)
+	go func() {
+		switch aType {
+		case x7z:
+			c.read7Zip(bucket, path)
+		default:
+			c.readArchiver(bucket, path)
+		}
+		wg.Done()
+	}()
+	wg.Wait()
+	return nil
 }
 
 // findItem returns true if the absolute file path is in c.sources.

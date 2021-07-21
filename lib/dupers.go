@@ -293,8 +293,8 @@ func (c *Config) Clean() {
 			hasAtLeastOneChild := s.Scan()
 
 			// If error reading from directory, wrap up and return.
-			if err := s.Err(); err != nil {
-				return err
+			if err1 := s.Err(); err1 != nil {
+				return err1
 			}
 
 			if hasAtLeastOneChild {
@@ -637,8 +637,6 @@ func (c *Config) update(path, root string, wg *sync.WaitGroup) {
 	if h == [32]byte{} {
 		return
 	}
-
-	//fmt.Println("mime:", mime)
 
 	if err = c.db.Update(func(tx *bolt.Tx) error {
 		// directory bucket

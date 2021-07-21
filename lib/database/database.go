@@ -435,7 +435,7 @@ func List(bucket string) (ls Lists, err error) {
 	}
 	defer db.Close()
 	ls = make(Lists)
-	if err = db.View(func(tx *bolt.Tx) error {
+	if err1 := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
 		if b == nil {
 			return ErrNoBucket
@@ -447,8 +447,8 @@ func List(bucket string) (ls Lists, err error) {
 			return nil
 		})
 		return err
-	}); err != nil {
-		return nil, err
+	}); err1 != nil {
+		return nil, err1
 	}
 	return ls, nil
 }
