@@ -27,17 +27,16 @@ import (
 
 // Config options for duper.
 type Config struct {
-	Timer    time.Time
-	Buckets  []string // buckets to lookup
-	Source   string   // directory or file to compare
-	Debug    bool     // spam the feedback sent to stdout
-	DeepScan bool
-	Quiet    bool     // reduce the feedback sent to stdout
-	Test     bool     // internal unit test mode
-	db       *bolt.DB // interal Bolt database
-	compare  hash     // hashes fetched from the database or file system
-	files    int      // total files or database items read
-	sources  []string // files paths to check
+	Timer   time.Time
+	Buckets []string // buckets to lookup
+	Source  string   // directory or file to compare
+	Debug   bool     // spam the feedback sent to stdout
+	Quiet   bool     // reduce the feedback sent to stdout
+	Test    bool     // internal unit test mode
+	db      *bolt.DB // interal Bolt database
+	compare hash     // hashes fetched from the database or file system
+	files   int      // total files or database items read
+	sources []string // files paths to check
 }
 
 type hash map[[32]byte]string
@@ -101,176 +100,8 @@ func Print(term string, quiet bool, m *database.Matches) {
 	}
 }
 
-func contains(s []string, find string) bool {
-	for _, item := range s {
-		if find == item {
-			return true
-		}
-	}
-	return false
-}
-
-// init initializes the Config maps and database.
-func (c *Config) init() {
-	// use all the buckets if no specific buckets are provided
-	if len(c.Buckets) == 0 {
-		var err error
-		c.Buckets, err = database.Buckets()
-		if err != nil {
-			out.ErrFatal(err)
-		}
-	}
-	// normalise bucket names
-	for i, b := range c.Buckets {
-		abs, err := filepath.Abs(b)
-		if err != nil {
-			out.ErrCont(err)
-			c.Buckets[i] = ""
-			continue
-		}
-		c.Buckets[i] = abs
-	}
-	if c.compare == nil {
-		c.compare = make(hash)
-	}
-}
-
-// RemoveAll removes all files and directories from the source directory that are not unique MS-DOS or Windows programs.
-func (c *Config) RemoveAll(clean bool) {
-	root, err := filepath.Abs(c.Source)
-	if err != nil {
-		out.ErrFatal(err)
-	}
-
-	_, err = os.Stat(root)
-	if errors.Is(err, os.ErrNotExist) {
-		e := fmt.Errorf("%w: %s", ErrNoPath, root)
-		out.ErrFatal(e)
-	} else if err != nil {
-		out.ErrFatal(err)
-	}
-
-	if len(c.sources) == 0 {
-		return
-	}
-
-	files, err := os.ReadDir(root)
-	if err != nil {
-		out.ErrCont(err)
-	}
-
-	color.Info.Println("\nRemove ALL files, except for unique Windows/MS-DOS programs ?")
-	fmt.Printf("%s %s", color.Secondary.Sprint("target directory:"), root)
-	if input := out.YN("Please confirm"); !input {
-		os.Exit(0)
-	}
-	fmt.Println()
-	removeAll(root, files)
-}
-
-func removeAll(root string, files []fs.DirEntry) {
-	for _, item := range files {
-		if !item.IsDir() {
-			continue
-		}
-		path := filepath.Join(root, item.Name())
-		if containsBin(path) {
-			continue
-		}
-		err := os.RemoveAll(path)
-		printRM(path, err)
-	}
-}
-
-func printRM(path string, err error) {
-	if err != nil {
-		e := fmt.Errorf("could not remove: %w", err)
-		out.ErrCont(e)
-		return
-	}
-	fmt.Printf("%s: %s\n", color.Secondary.Sprint("removed"), path)
-}
-
-func containsBin(root string) bool {
-	bin := false
-	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if bin {
-			return nil
-		}
-		if !d.IsDir() {
-			if isProgram(d.Name()) {
-				bin = true
-				return nil
-			}
-		}
-		return nil
-	}); err != nil {
-		out.ErrCont(err)
-	}
-	return bin
-}
-
-func isProgram(path string) bool {
-	switch strings.ToLower(filepath.Ext(path)) {
-	case ".com", ".exe":
-		return true
-	default:
-		return false
-	}
-}
-
-// Print the results of a dupe request.
-func (c *Config) Print() {
-	for _, path := range c.sources {
-		h, err := read(path)
-		if err != nil {
-			out.ErrCont(err)
-		}
-		l := c.lookupOne(h)
-		if l == "" {
-			continue
-		}
-		if l == path {
-			continue
-		}
-		fmt.Println(match(path, l))
-	}
-}
-
-func (c *Config) lookupOne(h [32]byte) string {
-	if f := c.compare[h]; f != "" {
-		return f
-	}
-	return ""
-}
-
-func match(path, match string) string {
-	s := "\n"
-	s += color.Info.Sprint("Found duplicate match") +
-		":" +
-		fmt.Sprintf("\t%s", path) +
-		matchItem(match)
-	return s
-}
-
-func matchItem(match string) string {
-	s := color.Success.Sprint("\n  ⤷ ") +
-		fmt.Sprint(match)
-	stat, err := os.Stat(match)
-	if err != nil {
-		return s
-	}
-	s += "\n    " +
-		fmt.Sprintf("%s, ", stat.ModTime().Format(modFmt)) +
-		humanize.Bytes(uint64(stat.Size()))
-	return s
-}
-
 // Clean removes all empty directories from c.Source.
-// Directories containing hidden system directories are not considered empty.
+// Directories containing hidden system directories or files are not considered empty.
 func (c *Config) Clean() {
 	if c.Source == "" {
 		return
@@ -321,6 +152,24 @@ func (c *Config) Clean() {
 	fmt.Printf("Removed %d empty directories in: '%s'\n", count, c.Source)
 }
 
+// Print the results of a dupe request.
+func (c *Config) Print() {
+	for _, path := range c.sources {
+		h, err := read(path)
+		if err != nil {
+			out.ErrCont(err)
+		}
+		l := c.lookupOne(h)
+		if l == "" {
+			continue
+		}
+		if l == path {
+			continue
+		}
+		fmt.Println(match(path, l))
+	}
+}
+
 // Remove all duplicate files from the source directory.
 func (c *Config) Remove() {
 	if len(c.sources) == 0 || len(c.compare) == 0 {
@@ -339,6 +188,39 @@ func (c *Config) Remove() {
 		err = os.Remove(path)
 		printRM(path, err)
 	}
+}
+
+// RemoveAll removes directories from the source directory that do not contain unique MS-DOS or Windows programs.
+func (c *Config) RemoveAll(clean bool) {
+	root, err := filepath.Abs(c.Source)
+	if err != nil {
+		out.ErrFatal(err)
+	}
+
+	_, err = os.Stat(root)
+	if errors.Is(err, os.ErrNotExist) {
+		e := fmt.Errorf("%w: %s", ErrNoPath, root)
+		out.ErrFatal(e)
+	} else if err != nil {
+		out.ErrFatal(err)
+	}
+
+	if len(c.sources) == 0 {
+		return
+	}
+
+	files, err := os.ReadDir(root)
+	if err != nil {
+		out.ErrCont(err)
+	}
+
+	color.Info.Println("\nRemove ALL files, except for unique Windows/MS-DOS programs ?")
+	fmt.Printf("%s %s", color.Secondary.Sprint("target directory:"), root)
+	if input := out.YN("Please confirm"); !input {
+		os.Exit(0)
+	}
+	fmt.Println()
+	removeAll(root, files)
 }
 
 // Seek sources from the database and print out the matches.
@@ -468,115 +350,14 @@ func (c *Config) WalkDir(root string) error {
 		printWalk(false, c)
 		// hash the file
 		wg.Add(1)
-		go c.update(path, root, &wg)
+		go func() {
+			c.update(path, root)
+			wg.Done()
+		}()
 		wg.Wait()
 		return err
 	})
 	return err
-}
-
-func printWalk(lookup bool, c *Config) {
-	if c.Test || c.Quiet || c.Debug {
-		return
-	}
-	s := "Scanning"
-	if lookup {
-		s = "Looking up"
-	}
-	if runtime.GOOS == winOS {
-		// color output slows down large scans on Windows
-		fmt.Printf("\r%s %d files  ", s, c.files)
-	} else {
-		fmt.Print("\u001b[2K")
-		fmt.Print("\r", color.Secondary.Sprintf("%s ", s),
-			color.Primary.Sprintf("%d files ", c.files))
-	}
-}
-
-func skipDir(d fs.DirEntry, hidden bool) error {
-	if !d.IsDir() {
-		return nil
-	}
-	// skip directories
-	switch strings.ToLower(d.Name()) {
-	// the SkipDir return tells WalkDir to skip all files in these directories
-	case ".git", ".cache", ".config", ".local", "node_modules", "__macosx", "appdata":
-		return filepath.SkipDir
-	default:
-		// Unix style hidden directories
-		if hidden && strings.HasPrefix(d.Name(), ".") {
-			return filepath.SkipDir
-		}
-		// Windows system directories
-		if hidden && runtime.GOOS == winOS && strings.HasPrefix(d.Name(), "$") {
-			return filepath.SkipDir
-		}
-		return nil
-	}
-}
-
-func skipFile(d fs.DirEntry) bool {
-	switch strings.ToLower(d.Name()) {
-	case ".ds_store", ".trashes":
-		// macOS
-		return true
-	case "desktop.ini", "hiberfil.sys", "ntuser.dat", "pagefile.sys", "swapfile.sys", "thumbs.db":
-		// Windows
-		return true
-	}
-	return false
-}
-
-func skipSelf(path string, skip []string) bool {
-	for _, n := range skip {
-		if path == n {
-			return true
-		}
-	}
-	return false
-}
-
-func walkDir(root, path string, c *Config) error {
-	return c.db.View(func(tx *bolt.Tx) error {
-		if !c.Test && !c.Quiet && !c.Debug {
-			if runtime.GOOS == winOS {
-				// color output slows down large scans on Windows
-				fmt.Printf("\rLooking up %d files", c.files)
-			} else {
-				fmt.Print("\u001b[2K\r", color.Secondary.Sprint("Looking up "),
-					color.Primary.Sprintf("%d files", c.files))
-			}
-		}
-		b := tx.Bucket([]byte(root))
-		if b == nil {
-			return nil
-		}
-		h := b.Get([]byte(path))
-		if len(h) > 0 {
-			var hash [32]byte
-			copy(hash[:], h)
-			c.compare[hash] = path
-			return ErrPathExist
-		}
-		return nil
-	})
-}
-
-func (c *Config) createBucket(root string) error {
-	_, err := os.Stat(root)
-	if errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("%w: %s", ErrNoPath, root)
-	} else if err != nil {
-		return err
-	}
-	return c.db.Update(func(tx *bolt.Tx) error {
-		if b := tx.Bucket([]byte(root)); b == nil {
-			fmt.Printf("New database bucket: '%s'\n", root)
-			_, err1 := tx.CreateBucket([]byte(root))
-			return err1
-		}
-		return nil
-	})
 }
 
 // WalkSource walks the source directory or a file to collect its hashed content for future comparison.
@@ -622,14 +403,71 @@ func (c *Config) WalkSource() {
 	}
 }
 
-func (c *Config) update(path, root string, wg *sync.WaitGroup) {
-	defer wg.Done()
+// createBucket an empty bucket in the database.
+func (c *Config) createBucket(name string) error {
+	_, err := os.Stat(name)
+	if errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("%w: %s", ErrNoPath, name)
+	} else if err != nil {
+		return err
+	}
+	return c.db.Update(func(tx *bolt.Tx) error {
+		if b := tx.Bucket([]byte(name)); b == nil {
+			fmt.Printf("New database bucket: '%s'\n", name)
+			_, err1 := tx.CreateBucket([]byte(name))
+			return err1
+		}
+		return nil
+	})
+}
+
+// init initializes the Config maps and database.
+func (c *Config) init() {
+	// use all the buckets if no specific buckets are provided
+	if len(c.Buckets) == 0 {
+		var err error
+		c.Buckets, err = database.Buckets()
+		if err != nil {
+			out.ErrFatal(err)
+		}
+	}
+	// normalise bucket names
+	for i, b := range c.Buckets {
+		abs, err := filepath.Abs(b)
+		if err != nil {
+			out.ErrCont(err)
+			c.Buckets[i] = ""
+			continue
+		}
+		c.Buckets[i] = abs
+	}
+	if c.compare == nil {
+		c.compare = make(hash)
+	}
+}
+
+// lookup the hash value in c.compare and return the file path.
+func (c *Config) lookupOne(h [32]byte) string {
+	if f := c.compare[h]; f != "" {
+		return f
+	}
+	return ""
+}
+
+// skipFiles returns c.sources as strings.
+func (c *Config) skipFiles() (files []string) {
+	files = append(files, c.sources...)
+	return files
+}
+
+// update gets the hash of the named file and saves it to the bucket.
+func (c *Config) update(name, bucket string) {
 	if c.Debug {
-		out.Bug("update: " + path)
+		out.Bug("update: " + name)
 	}
 
 	// read file, exit if it fails
-	h, err := read(path)
+	h, err := read(name)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -640,19 +478,111 @@ func (c *Config) update(path, root string, wg *sync.WaitGroup) {
 
 	if err = c.db.Update(func(tx *bolt.Tx) error {
 		// directory bucket
-		b1 := tx.Bucket([]byte(root))
-		return b1.Put([]byte(path), h[:])
+		b1 := tx.Bucket([]byte(bucket))
+		return b1.Put([]byte(name), h[:])
 	}); err != nil {
 		out.ErrCont(err)
 	}
-	c.compare[h] = path
+	c.compare[h] = name
 }
 
-func (c *Config) skipFiles() (files []string) {
-	files = append(files, c.sources...)
-	return files
+// contains returns true if find exists in s.
+func contains(s []string, find string) bool {
+	for _, item := range s {
+		if find == item {
+			return true
+		}
+	}
+	return false
 }
 
+// containsBin returns true if the root directory contains an MS-DOS or Windows program file.
+func containsBin(root string) bool {
+	bin := false
+	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if bin {
+			return nil
+		}
+		if !d.IsDir() {
+			if isProgram(d.Name()) {
+				bin = true
+				return nil
+			}
+		}
+		return nil
+	}); err != nil {
+		out.ErrCont(err)
+	}
+	return bin
+}
+
+// containsBin returns true if the path to a file contains an MS-DOS or Windows program file extension.
+func isProgram(path string) bool {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".com", ".exe":
+		return true
+	default:
+		return false
+	}
+}
+
+// match prints 'Found duplicate match'.
+func match(path, match string) string {
+	s := "\n"
+	s += color.Info.Sprint("Found duplicate match") +
+		":" +
+		fmt.Sprintf("\t%s", path) +
+		matchItem(match)
+	return s
+}
+
+// matchItem prints 'Found duplicate match' along with file stat info.
+func matchItem(match string) string {
+	s := color.Success.Sprint("\n  ⤷ ") +
+		fmt.Sprint(match)
+	stat, err := os.Stat(match)
+	if err != nil {
+		return s
+	}
+	s += "\n    " +
+		fmt.Sprintf("%s, ", stat.ModTime().Format(modFmt)) +
+		humanize.Bytes(uint64(stat.Size()))
+	return s
+}
+
+// printRM prints "could not remove:".
+func printRM(path string, err error) {
+	if err != nil {
+		e := fmt.Errorf("could not remove: %w", err)
+		out.ErrCont(e)
+		return
+	}
+	fmt.Printf("%s: %s\n", color.Secondary.Sprint("removed"), path)
+}
+
+// printWalk prints "Scanning/Looking up".
+func printWalk(lookup bool, c *Config) {
+	if c.Test || c.Quiet || c.Debug {
+		return
+	}
+	s := "Scanning"
+	if lookup {
+		s = "Looking up"
+	}
+	if runtime.GOOS == winOS {
+		// color output slows down large scans on Windows
+		fmt.Printf("\r%s %d files  ", s, c.files)
+	} else {
+		fmt.Print("\u001b[2K")
+		fmt.Print("\r", color.Secondary.Sprintf("%s ", s),
+			color.Primary.Sprintf("%d files ", c.files))
+	}
+}
+
+// read opens the named file and returns a SHA256 sum value.
 func read(name string) (hash [32]byte, err error) {
 	const oneKb = 1024
 
@@ -669,4 +599,92 @@ func read(name string) (hash [32]byte, err error) {
 
 	copy(hash[:], h.Sum(nil))
 	return hash, nil
+}
+
+// removeAll removes directories that do not contain MS-DOS or Windows programs.
+func removeAll(root string, files []fs.DirEntry) {
+	for _, item := range files {
+		if !item.IsDir() {
+			continue
+		}
+		path := filepath.Join(root, item.Name())
+		if containsBin(path) {
+			continue
+		}
+		err := os.RemoveAll(path)
+		printRM(path, err)
+	}
+}
+
+// skipDir tells WalkDir to ignore specific system and hidden directories.
+func skipDir(d fs.DirEntry, hidden bool) error {
+	if !d.IsDir() {
+		return nil
+	}
+	// skip directories
+	switch strings.ToLower(d.Name()) {
+	// the SkipDir return tells WalkDir to skip all files in these directories
+	case ".git", ".cache", ".config", ".local", "node_modules", "__macosx", "appdata":
+		return filepath.SkipDir
+	default:
+		// Unix style hidden directories
+		if hidden && strings.HasPrefix(d.Name(), ".") {
+			return filepath.SkipDir
+		}
+		// Windows system directories
+		if hidden && runtime.GOOS == winOS && strings.HasPrefix(d.Name(), "$") {
+			return filepath.SkipDir
+		}
+		return nil
+	}
+}
+
+// skipFile returns true if the file matches a known Windows or macOS system file.
+func skipFile(d fs.DirEntry) bool {
+	switch strings.ToLower(d.Name()) {
+	case ".ds_store", ".trashes":
+		// macOS
+		return true
+	case "desktop.ini", "hiberfil.sys", "ntuser.dat", "pagefile.sys", "swapfile.sys", "thumbs.db":
+		// Windows
+		return true
+	}
+	return false
+}
+
+// skipSelf returns true if the path exists in skip.
+func skipSelf(path string, skip []string) bool {
+	for _, n := range skip {
+		if path == n {
+			return true
+		}
+	}
+	return false
+}
+
+// walkDir walks the root directory and adds the hash value of the files to c.compare.
+func walkDir(root, path string, c *Config) error {
+	return c.db.View(func(tx *bolt.Tx) error {
+		if !c.Test && !c.Quiet && !c.Debug {
+			if runtime.GOOS == winOS {
+				// color output slows down large scans on Windows
+				fmt.Printf("\rLooking up %d files", c.files)
+			} else {
+				fmt.Print("\u001b[2K\r", color.Secondary.Sprint("Looking up "),
+					color.Primary.Sprintf("%d files", c.files))
+			}
+		}
+		b := tx.Bucket([]byte(root))
+		if b == nil {
+			return nil
+		}
+		h := b.Get([]byte(path))
+		if len(h) > 0 {
+			var hash [32]byte
+			copy(hash[:], h)
+			c.compare[hash] = path
+			return ErrPathExist
+		}
+		return nil
+	})
 }
