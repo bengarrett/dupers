@@ -28,15 +28,29 @@ func BenchmarkScan1(*testing.B) {
 	args := []string{"dupe", match, bucket}
 	c := dupers.Config{Quiet: true, Test: true}
 	taskDBUp(&c, args[1:]...)
-	taskScan(&c, false, false, false, false, args...)
+	f := false
+	ts := tasks{
+		lookup: &f,
+		quiet:  &f,
+		rm:     &f,
+		sensen: &f,
+	}
+	taskScan(&c, ts, args...)
 }
 
 func BenchmarkScan2(*testing.B) {
 	color.Enable = false
 	args := []string{"dupe", match, bucket}
 	c := dupers.Config{Quiet: true, Test: true}
+	f, t := false, true
+	ts := tasks{
+		lookup: &f,
+		quiet:  &t,
+		rm:     &f,
+		sensen: &f,
+	}
 	taskDBUp(&c, args[1:]...)
-	taskScan(&c, false, true, false, false, args...)
+	taskScan(&c, ts, args...)
 }
 
 func BenchmarkSearch1(*testing.B) {
@@ -44,9 +58,15 @@ func BenchmarkSearch1(*testing.B) {
 	const term, bucket = "hello world", bucket
 	args := []string{"search", fmt.Sprintf("'%s'", term), bucket}
 	c := dupers.Config{Quiet: true, Test: true}
+	f := false
+	ts := tasks{
+		exact:    &f,
+		filename: &f,
+		quiet:    &f,
+	}
 	taskDBUp(&c, args[1:]...)
 	for i := 0; i <= 3; i++ {
-		taskSearch(false, false, false, args...)
+		taskSearch(ts, args...)
 	}
 }
 
@@ -55,9 +75,15 @@ func BenchmarkSearch2(*testing.B) {
 	const term, bucket = "TzgPJuhfPJlg", bucket
 	args := []string{"search", fmt.Sprintf("'%s'", term), bucket}
 	c := dupers.Config{Quiet: true, Test: true}
+	f := false
+	ts := tasks{
+		exact:    &f,
+		filename: &f,
+		quiet:    &f,
+	}
 	taskDBUp(&c, args[1:]...)
 	for i := 0; i <= 3; i++ {
-		taskSearch(false, false, false, args...)
+		taskSearch(ts, args...)
 	}
 }
 
