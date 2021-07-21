@@ -161,8 +161,14 @@ func Clean(quiet, debug bool) error {
 			}
 			err = b.ForEach(func(k, v []byte) error {
 				if _, err1 := os.Stat(string(k)); err1 != nil {
+					f := string(k)
+					if st, err2 := os.Stat(filepath.Dir(f)); err2 == nil {
+						if !st.IsDir() && st.Size() > 0 {
+							return nil
+						}
+					}
 					if debug {
-						s := fmt.Sprintf("%s: %s", k, err)
+						s := fmt.Sprintf("%s: %s", k, err1)
 						out.Bug(s)
 					}
 					if err2 := db.Update(func(tx *bolt.Tx) error {
@@ -450,7 +456,7 @@ func IsEmpty() (bool, error) {
 	return false, nil
 }
 
-// List returns the file paths and SHA256 hashes stored in the bucket.
+// List returns the file paths and SHA256 checksums stored in the bucket.
 func List(bucket string) (ls Lists, err error) {
 	path, err := DB()
 	if err != nil {

@@ -582,7 +582,7 @@ func printWalk(lookup bool, c *Config) {
 	}
 }
 
-// read opens the named file and returns a SHA256 sum value.
+// read opens the named file and returns a SHA256 checksum of the data.
 func read(name string) (hash [32]byte, err error) {
 	const oneKb = 1024
 
