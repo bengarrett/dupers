@@ -275,6 +275,14 @@ func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
 }
 
 func taskDBList(c *dupers.Config, args ...string) {
+	const minArgs = 1
+	l := len(args)
+	if l == minArgs {
+		out.ErrCont(ErrNoDB)
+		fmt.Println("Cannot list the bucket as no bucket name was provided.")
+		out.Example("\ndupers database ls <bucket name>")
+		out.ErrFatal(nil)
+	}
 	name, err := filepath.Abs(args[1])
 	if err != nil {
 		out.ErrFatal(err)
