@@ -106,7 +106,11 @@ func (c *Config) WalkArchiver(bucket string) error {
 			return nil
 		}
 		// walk the directories
-		return c.walkThread(bucket, path, &wg)
+		err = c.walkThread(bucket, path, &wg)
+		if err != nil {
+			out.ErrCont(err)
+		}
+		return nil
 	})
 	return err
 }
