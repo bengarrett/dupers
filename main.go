@@ -259,7 +259,7 @@ func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
 		fmt.Println(s)
 		return
 	case dls:
-		taskDBList(c, args...)
+		taskDBList(args...)
 	case drm:
 		taskDBRM(quiet, args...)
 		return
@@ -274,7 +274,7 @@ func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
 	}
 }
 
-func taskDBList(c *dupers.Config, args ...string) {
+func taskDBList(args ...string) {
 	const minArgs = 1
 	l := len(args)
 	if l == minArgs {
@@ -404,12 +404,19 @@ func taskScan(c *dupers.Config, t tasks, args ...string) {
 		}
 		c.Seek()
 	}
-	// print the found dupes
+	// print the found dupes & remove files
+	taskScanClean(c, t)
+	// summaries
+	if runtime.GOOS == winOS || !c.Quiet {
+		fmt.Println(c.Status())
+	}
+}
+
+func taskScanClean(c *dupers.Config, t tasks) {
 	if c.Debug {
 		out.Bug("print duplicate results.")
 	}
 	c.Print()
-	// remove files
 	if *t.rm || *t.sensen {
 		if c.Debug {
 			out.Bug("remove duplicate files.")
@@ -426,10 +433,6 @@ func taskScan(c *dupers.Config, t tasks, args ...string) {
 			out.Bug("remove empty directories.")
 		}
 		c.Clean()
-	}
-	// summaries
-	if runtime.GOOS == winOS || !c.Quiet {
-		fmt.Println(c.Status())
 	}
 }
 
