@@ -259,7 +259,7 @@ func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
 		fmt.Println(s)
 		return
 	case dls:
-		taskDBList(args...)
+		taskDBList(quiet, args...)
 	case drm:
 		taskDBRM(quiet, args...)
 		return
@@ -274,10 +274,9 @@ func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
 	}
 }
 
-func taskDBList(args ...string) {
+func taskDBList(quiet bool, args ...string) {
 	const minArgs = 1
-	l := len(args)
-	if l == minArgs {
+	if l := len(args); l == minArgs {
 		out.ErrCont(ErrNoDB)
 		fmt.Println("Cannot list the bucket as no bucket name was provided.")
 		out.Example("\ndupers database ls <bucket name>")
@@ -292,7 +291,10 @@ func taskDBList(args ...string) {
 		out.ErrCont(err)
 	}
 	for name, hash := range ls {
-		fmt.Printf("%x: %s\n", hash, name)
+		fmt.Printf("%x %s\n", hash, name)
+	}
+	if cnt := len(ls); !quiet && cnt > 0 {
+		fmt.Printf("%d items listed. Checksums are 32 byte, SHA-256 (FIPS 180-4).\n", cnt)
 	}
 }
 
@@ -333,8 +335,7 @@ func taskDBRM(quiet bool, args ...string) {
 
 func taskDBUp(c *dupers.Config, args ...string) {
 	const minArgs = 1
-	l := len(args)
-	if l == minArgs {
+	if l := len(args); l == minArgs {
 		out.ErrCont(database.ErrNoBucket)
 		fmt.Println("Cannot add or update a bucket to the database as no bucket name was provided.")
 		out.Example("\ndupers database up <bucket name>")
@@ -356,12 +357,25 @@ func taskDBUp(c *dupers.Config, args ...string) {
 }
 
 func taskDBUpPlus(c *dupers.Config, args ...string) {
+	const minArgs = 1
+	if l := len(args); l == minArgs {
+		out.ErrCont(database.ErrNoBucket)
+		fmt.Println("Cannot add or update a bucket to the database as no bucket name was provided.")
+		out.Example("\ndupers database up+ <bucket name>")
+		out.ErrFatal(nil)
+	}
 	path, err := filepath.Abs(args[1])
 	if err != nil {
 		out.ErrFatal(err)
 	}
+	if runtime.GOOS == winOS && !c.Quiet {
+		fmt.Printf("To improve performance on Windows use the quiet flag: duper -quiet dupe %s %s\n", c.Source, strings.Join(c.Buckets, " "))
+	}
 	if err := c.WalkArchiver(path); err != nil {
 		out.ErrFatal(err)
+	}
+	if runtime.GOOS == winOS || !c.Quiet {
+		fmt.Println(c.Status())
 	}
 }
 
