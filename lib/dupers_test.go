@@ -10,7 +10,7 @@ import (
 
 const (
 	bucket = "../test/bucket1"
-	// hash values created from sha256sum <filename>.
+	// checksums created from sha256sum <filename>.
 	file1 = "../test/bucket1/0vlLaUEvzAWP"
 	hash1 = "1a1d76a3187ccee147e6c807277273afbad5d2680f5eadf1012310743e148f22"
 	file2 = "../test/bucket1/GwejJkMzs3yP"

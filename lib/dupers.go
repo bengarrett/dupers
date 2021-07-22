@@ -1,6 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
 
-// Dupers is the blazing-fast file duplicate checker and filename search.
+// Package dupers is the blazing-fast file duplicate checker and filename search.
 package dupers
 
 import (
@@ -25,26 +25,54 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-// Config options for duper.
-type Config struct {
-	Timer   time.Time
-	Buckets []string // buckets to lookup
-	Source  string   // directory or file to compare
-	Debug   bool     // spam the feedback sent to stdout
-	Quiet   bool     // reduce the feedback sent to stdout
-	Test    bool     // internal unit test mode
-	db      *bolt.DB // interal Bolt database
-	compare hash     // hashes fetched from the database or file system
-	files   int      // total files or database items read
-	sources []string // files paths to check
-}
-
-type hash map[[32]byte]string
+type (
+	checksum  [32]byte
+	checksums map[checksum]string
+)
 
 const (
 	modFmt = "02 Jan 2006 15:04"
 	winOS  = "windows"
 )
+
+// Config options for duper.
+type Config struct {
+	Buckets []string // buckets to lookup
+	Source  string   // directory or file to compare
+	Debug   bool     // spam the feedback sent to stdout
+	Quiet   bool     // reduce the feedback sent to stdout
+	Test    bool     // internal unit test mode
+	internal
+}
+
+type internal struct {
+	db      *bolt.DB  // Bolt database
+	compare checksums // hashes fetched from the database or file system
+	files   int       // total files or database items read
+	sources []string  // files paths to check
+	timer   time.Time
+}
+
+func (i *internal) OpenDB() {
+	if i.db != nil {
+		return
+	}
+	name, err := database.DB()
+	if err != nil {
+		out.ErrFatal(err)
+	}
+	if i.db, err = bolt.Open(name, database.FileMode, nil); err != nil {
+		out.ErrFatal(err)
+	}
+}
+
+func (i *internal) SetTimer() {
+	i.timer = time.Now()
+}
+
+func (i *internal) Timer() time.Duration {
+	return time.Since(i.timer)
+}
 
 var (
 	ErrNoPath    = errors.New("path does not exist")
@@ -256,7 +284,7 @@ func (c *Config) Status() string {
 		color.Primary.Sprintf("%d files", c.files)
 	if !c.Test {
 		s += color.Secondary.Sprint(", taking ") +
-			color.Primary.Sprintf("%s", time.Since(c.Timer))
+			color.Primary.Sprintf("%s", c.Timer())
 	}
 	if runtime.GOOS != winOS {
 		s += "\n"
@@ -267,17 +295,8 @@ func (c *Config) Status() string {
 // WalkDirs walks the directories provided by the arguments for zip archives to extract any found comments.
 func (c *Config) WalkDirs() {
 	c.init()
-	// open database
-	if c.db == nil {
-		name, err := database.DB()
-		if err != nil {
-			out.ErrFatal(err)
-		}
-		if c.db, err = bolt.Open(name, database.FileMode, nil); err != nil {
-			out.ErrFatal(err)
-		}
-		defer c.db.Close()
-	}
+	c.OpenDB()
+	defer c.db.Close()
 	// walk through the directories provided
 	for _, bucket := range c.Buckets {
 		if c.Debug {
@@ -294,16 +313,8 @@ func (c *Config) WalkDir(root string) error {
 	c.init()
 	skip := c.skipFiles()
 	// open database
-	if c.db == nil {
-		name, err := database.DB()
-		if err != nil {
-			out.ErrFatal(err)
-		}
-		if c.db, err = bolt.Open(name, database.FileMode, nil); err != nil {
-			out.ErrFatal(err)
-		}
-		defer c.db.Close()
-	}
+	c.OpenDB()
+	defer c.db.Close()
 	// create a new bucket if needed
 	if err := c.createBucket(root); err != nil {
 		return err
@@ -323,23 +334,18 @@ func (c *Config) WalkDir(root string) error {
 			}
 			return err
 		}
-		// skip directories
 		if err1 := skipDir(d, true); err1 != nil {
 			return err1
 		}
-		// skip files
 		if skipFile(d.Name()) {
 			return nil
 		}
-		// skip non-files such as symlinks
 		if !d.Type().IsRegular() {
 			return nil
 		}
-		// skip self file matches
 		if skipSelf(path, skip...) {
 			return nil
 		}
-		// walk the directories
 		c.files++
 		if errD := walkDir(root, path, c); errD != nil {
 			if errors.Is(errD, ErrPathExist) {
@@ -348,7 +354,6 @@ func (c *Config) WalkDir(root string) error {
 			out.ErrFatal(errD)
 		}
 		printWalk(false, c)
-		// hash the file
 		wg.Add(1)
 		go func() {
 			c.update(path, root)
@@ -442,13 +447,13 @@ func (c *Config) init() {
 		c.Buckets[i] = abs
 	}
 	if c.compare == nil {
-		c.compare = make(hash)
+		c.compare = make(checksums)
 	}
 }
 
-// lookup the hash value in c.compare and return the file path.
-func (c *Config) lookupOne(h [32]byte) string {
-	if f := c.compare[h]; f != "" {
+// lookup the checksum value in c.compare and return the file path.
+func (c *Config) lookupOne(sum checksum) string {
+	if f := c.compare[sum]; f != "" {
 		return f
 	}
 	return ""
@@ -460,30 +465,28 @@ func (c *Config) skipFiles() (files []string) {
 	return files
 }
 
-// update gets the hash of the named file and saves it to the bucket.
+// update gets the checksum of the named file and saves it to the bucket.
 func (c *Config) update(name, bucket string) {
 	if c.Debug {
 		out.Bug("update: " + name)
 	}
-
 	// read file, exit if it fails
-	h, err := read(name)
+	sum, err := read(name)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	if h == [32]byte{} {
+	if sum == [32]byte{} {
 		return
 	}
-
 	if err = c.db.Update(func(tx *bolt.Tx) error {
 		// directory bucket
 		b1 := tx.Bucket([]byte(bucket))
-		return b1.Put([]byte(name), h[:])
+		return b1.Put([]byte(name), sum[:])
 	}); err != nil {
 		out.ErrCont(err)
 	}
-	c.compare[h] = name
+	c.compare[sum] = name
 }
 
 // contains returns true if find exists in s.
@@ -583,22 +586,19 @@ func printWalk(lookup bool, c *Config) {
 }
 
 // read opens the named file and returns a SHA256 checksum of the data.
-func read(name string) (hash [32]byte, err error) {
-	const oneKb = 1024
-
+func read(name string) (sum checksum, err error) {
 	f, err := os.Open(name)
 	if err != nil {
-		return [32]byte{}, err
+		return checksum{}, err
 	}
 	defer f.Close()
 
-	buf, h := make([]byte, oneKb*oneKb), sha256.New()
+	buf, h := make([]byte, oneMb), sha256.New()
 	if _, err := io.CopyBuffer(h, f, buf); err != nil {
-		return [32]byte{}, err
+		return checksum{}, err
 	}
-
-	copy(hash[:], h.Sum(nil))
-	return hash, nil
+	copy(sum[:], h.Sum(nil))
+	return sum, nil
 }
 
 // removeAll removes directories that do not contain MS-DOS or Windows programs.
@@ -663,7 +663,7 @@ func skipSelf(path string, skip ...string) bool {
 	return false
 }
 
-// walkDir walks the root directory and adds the hash value of the files to c.compare.
+// walkDir walks the root directory and adds the checksums of the files to c.compare.
 func walkDir(root, path string, c *Config) error {
 	return c.db.View(func(tx *bolt.Tx) error {
 		if !c.Test && !c.Quiet && !c.Debug {
@@ -681,9 +681,9 @@ func walkDir(root, path string, c *Config) error {
 		}
 		h := b.Get([]byte(path))
 		if len(h) > 0 {
-			var hash [32]byte
-			copy(hash[:], h)
-			c.compare[hash] = path
+			var sum checksum
+			copy(sum[:], h)
+			c.compare[sum] = path
 			return ErrPathExist
 		}
 		return nil

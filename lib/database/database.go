@@ -513,8 +513,8 @@ func RM(name string) error {
 	})
 }
 
-// Seek searches a bucket for an exact SHA256 hash match.
-func Seek(hash [32]byte, bucket string) (finds []string, records int, err error) {
+// Seek searches a bucket for an exact SHA256 checksum match.
+func Seek(sum [32]byte, bucket string) (finds []string, records int, err error) {
 	path, err := DB()
 	if err != nil {
 		return nil, 0, err
@@ -529,7 +529,7 @@ func Seek(hash [32]byte, bucket string) (finds []string, records int, err error)
 		if b == nil {
 			return ErrNoBucket
 		}
-		h := hash[:]
+		h := sum[:]
 		err = b.ForEach(func(k, v []byte) error {
 			records++
 			if bytes.Equal(v, h) {

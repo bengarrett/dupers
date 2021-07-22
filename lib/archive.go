@@ -1,6 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
 
-// Dupers is the blazing-fast file duplicate checker and filename search.
+// Package dupers is the blazing-fast file duplicate checker and filename search.
 package dupers
 
 import (
@@ -129,23 +129,14 @@ func IsExtension(name string) (result bool, mime string) {
 	return false, ""
 }
 
-// WalkArchiver walks the bucket directory saving the hash values of new files to the database.
+// WalkArchiver walks the bucket directory saving the checksums of new files to the database.
 // Any archived files supported by archiver will also have its content hashed.
 // Archives within archives are currently left unwalked.
 func (c *Config) WalkArchiver(bucket string) error {
 	c.init()
 	skip := c.skipFiles()
-	// open database
-	if c.db == nil {
-		name, err := database.DB()
-		if err != nil {
-			out.ErrFatal(err)
-		}
-		if c.db, err = bolt.Open(name, database.FileMode, nil); err != nil {
-			out.ErrFatal(err)
-		}
-		defer c.db.Close()
-	}
+	c.OpenDB()
+	defer c.db.Close()
 	// create a new bucket if needed
 	if err := c.createBucket(bucket); err != nil {
 		return err
@@ -307,9 +298,9 @@ func (c *Config) read7Zip(bucket, name string) {
 			out.ErrCont(err)
 			continue
 		}
-		hash := [32]byte{}
-		copy(hash[:], h.Sum(nil))
-		if err := c.updateArchiver(fp, bucket, hash); err != nil {
+		var sum checksum
+		copy(sum[:], h.Sum(nil))
+		if err := c.updateArchiver(fp, bucket, sum); err != nil {
 			out.ErrCont(err)
 			continue
 		}
@@ -388,9 +379,9 @@ func (c *Config) readArchiver(bucket, archive, ext string) { // nolint: gocyclo
 				out.ErrCont(err)
 				return nil
 			}
-			hash := [32]byte{}
-			copy(hash[:], h.Sum(nil))
-			if err := c.updateArchiver(fp, bucket, hash); err != nil {
+			var sum checksum
+			copy(sum[:], h.Sum(nil))
+			if err := c.updateArchiver(fp, bucket, sum); err != nil {
 				out.ErrCont(err)
 			}
 			cnt++
@@ -408,17 +399,17 @@ func (c *Config) readArchiver(bucket, archive, ext string) { // nolint: gocyclo
 	}
 }
 
-// updateArchiver saves the hash and path values to the bucket.
-func (c *Config) updateArchiver(path, bucket string, hash [32]byte) error {
+// updateArchiver saves the checksum and path values to the bucket.
+func (c *Config) updateArchiver(path, bucket string, sum checksum) error {
 	if c.Debug {
 		out.Bug("update archiver: " + path)
 	}
 	if err := c.db.Update(func(tx *bolt.Tx) error {
 		b1 := tx.Bucket([]byte(bucket))
-		return b1.Put([]byte(path), hash[:])
+		return b1.Put([]byte(path), sum[:])
 	}); err != nil {
 		return err
 	}
-	c.compare[hash] = path
+	c.compare[sum] = path
 	return nil
 }

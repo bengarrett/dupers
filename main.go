@@ -13,7 +13,6 @@ import (
 	"sort"
 	"strings"
 	"text/tabwriter"
-	"time"
 
 	dupers "github.com/bengarrett/dupers/lib"
 	"github.com/bengarrett/dupers/lib/database"
@@ -58,14 +57,12 @@ type tasks struct {
 	sensen   *bool
 }
 
-// --deep-scan (open archives and hash binary files)
-
 func main() {
 	var (
 		c dupers.Config
 		t tasks
 	)
-	c.Timer = time.Now()
+	c.SetTimer()
 	// dupe options
 	t.lookup = flag.Bool("fast", false, "query the database for a much faster match,"+
 		"\n\t\tthe results maybe stale as it does not look for any file changes on your system")
