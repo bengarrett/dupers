@@ -436,7 +436,7 @@ func (c *Config) init() {
 	// use all the buckets if no specific buckets are provided
 	if len(c.Buckets) == 0 {
 		var err error
-		c.Buckets, err = database.Buckets()
+		c.Buckets, err = database.AllBuckets()
 		if err != nil {
 			out.ErrFatal(err)
 		}

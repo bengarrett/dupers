@@ -99,8 +99,8 @@ func Abs(bucket string) ([]byte, error) {
 	return []byte(s), nil
 }
 
-// Buckets lists all the stored bucket names in the database.
-func Buckets() (names []string, err error) {
+// AllBuckets lists all the stored bucket names in the database.
+func AllBuckets() (names []string, err error) {
 	path, err := DB()
 	if err != nil {
 		return nil, err
@@ -132,7 +132,7 @@ func Clean(quiet, debug bool) error { // nolint: gocyclo
 	if debug {
 		out.Bug("running database clean")
 	}
-	buckets, err := Buckets()
+	buckets, err := AllBuckets()
 	if err != nil {
 		return err
 	}
@@ -298,7 +298,7 @@ func compare(term []byte, noCase, base bool, buckets ...string) (*Matches, error
 	defer db.Close()
 
 	if len(buckets) == 0 {
-		buckets, err = Buckets()
+		buckets, err = AllBuckets()
 		if err != nil {
 			return nil, err
 		}

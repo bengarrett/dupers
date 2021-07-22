@@ -112,7 +112,7 @@ func Test_copyFile(t *testing.T) {
 	}
 }
 
-func TestBuckets(t *testing.T) {
+func TestAllBuckets(t *testing.T) {
 	color.Enable = false
 	testMode = true
 	tests := []struct {
@@ -127,13 +127,13 @@ func TestBuckets(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotNames, err := Buckets()
+			gotNames, err := AllBuckets()
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Buckets() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("AllBuckets() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(gotNames, tt.wantNames) {
-				t.Errorf("Buckets() = %v, want %v", gotNames, tt.wantNames)
+				t.Errorf("AllBuckets() = %v, want %v", gotNames, tt.wantNames)
 			}
 		})
 	}

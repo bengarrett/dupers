@@ -325,7 +325,7 @@ func taskDBRM(quiet bool, args [2]string) {
 				if errors.Is(err1, database.ErrNoBucket) {
 					out.ErrCont(err1)
 					fmt.Printf("Bucket to remove: '%s'\n", name)
-					buckets, err2 := database.Buckets()
+					buckets, err2 := database.AllBuckets()
 					if err2 != nil {
 						out.ErrFatal(err2)
 					}
@@ -372,7 +372,7 @@ func taskDBUp(c *dupers.Config, plus bool, args [2]string) {
 
 func taskScan(c *dupers.Config, t tasks, args ...string) {
 	l := len(args)
-	b, err := database.Buckets()
+	b, err := database.AllBuckets()
 	if err != nil {
 		out.ErrFatal(err)
 	}
