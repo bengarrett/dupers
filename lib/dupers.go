@@ -62,8 +62,8 @@ func Print(term string, quiet bool, m *database.Matches) {
 	// collect the bucket names which will be used to sort the results
 	buckets, bucket := []string{}, ""
 	for _, bucket := range *m {
-		if !contains(buckets, bucket) {
-			buckets = append(buckets, bucket)
+		if !contains(buckets, string(bucket)) {
+			buckets = append(buckets, string(bucket))
 		}
 	}
 	sort.Strings(buckets)
@@ -74,12 +74,12 @@ func Print(term string, quiet bool, m *database.Matches) {
 		}
 		// print the matches, the filenames are unsorted
 		for file, b := range *m {
-			if b != buck {
+			if string(b) != buck {
 				continue
 			}
 			cnt++
-			if b != bucket {
-				bucket = b
+			if string(b) != bucket {
+				bucket = string(b)
 				if !quiet {
 					if cnt > 1 {
 						fmt.Println()

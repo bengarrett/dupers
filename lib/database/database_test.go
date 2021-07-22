@@ -235,7 +235,7 @@ func TestCompare(t *testing.T) {
 		buckets []string
 	}
 	empty, find := Matches{}, Matches{}
-	find[key1] = tmpBk()
+	find[key1] = Bucket(tmpBk())
 	tests := []struct {
 		name    string
 		args    args
@@ -275,7 +275,7 @@ func TestCompareBase(t *testing.T) {
 		buckets []string
 	}
 	empty, find := Matches{}, Matches{}
-	find[key1] = tmpBk()
+	find[key1] = Bucket(tmpBk())
 	tests := []struct {
 		name    string
 		args    args
@@ -331,7 +331,7 @@ func TestCompareNoCase(t *testing.T) {
 		buckets []string
 	}
 	empty, find := Matches{}, Matches{}
-	find[key1] = tmpBk()
+	find[key1] = Bucket(tmpBk())
 	tests := []struct {
 		name    string
 		args    args

@@ -1,5 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
 
+// Package database interacts with Dupers bbolt database and buckets.
 package database
 
 import (
@@ -21,9 +22,14 @@ import (
 )
 
 type (
+	// Bucket is the absolute path to a directory that's used as the bucket name.
+	Bucket string
+	// Filepath is the absolute path to a file used as a map key.
 	Filepath string
-	Lists    map[Filepath][32]byte
-	Matches  map[Filepath]string
+	// Lists are a collection of fetched filepaths and their SHA256 checksums.
+	Lists map[Filepath][32]byte
+	// Matches are a collection of fetched filepaths and the bucket they were sourced from.
+	Matches map[Filepath]Bucket
 )
 
 const (
@@ -321,12 +327,12 @@ func compare(term []byte, buckets []string, noCase, base bool) (*Matches, error)
 				if base {
 					k = []byte(filepath.Base(string(k)))
 					if bytes.Contains(k, s) {
-						finds[Filepath(key)] = bucket
+						finds[Filepath(key)] = Bucket(bucket)
 					}
 					return nil
 				}
 				if bytes.Contains(k, s) {
-					finds[Filepath(key)] = bucket
+					finds[Filepath(key)] = Bucket(bucket)
 				}
 				return nil
 			})
