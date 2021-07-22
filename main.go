@@ -229,6 +229,7 @@ func exampleSearch(w *tabwriter.Writer) *tabwriter.Writer {
 }
 
 func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
+	var arr [2]string
 	switch args[0] {
 	case dbk:
 		n, w, err := database.Backup()
@@ -259,24 +260,27 @@ func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
 		fmt.Println(s)
 		return
 	case dls:
-		taskDBList(quiet, args...)
+		copy(arr[:], args)
+		taskDBList(quiet, arr)
 	case drm:
-		taskDBRM(quiet, args...)
+		copy(arr[:], args)
+		taskDBRM(quiet, arr)
 		return
 	case dup:
-		taskDBUp(c, false, args...)
+		copy(arr[:], args)
+		taskDBUp(c, false, arr)
 		return
 	case dupp:
-		taskDBUp(c, true, args...)
+		copy(arr[:], args)
+		taskDBUp(c, true, arr)
 		return
 	default:
 		out.ErrFatal(ErrCmd)
 	}
 }
 
-func taskDBList(quiet bool, args ...string) {
-	const minArgs = 1
-	if l := len(args); l == minArgs {
+func taskDBList(quiet bool, args [2]string) {
+	if args[1] == "" {
 		out.ErrCont(ErrNoDB)
 		fmt.Println("Cannot list the bucket as no bucket name was provided.")
 		out.Example("\ndupers database ls <bucket name>")
@@ -298,10 +302,8 @@ func taskDBList(quiet bool, args ...string) {
 	}
 }
 
-func taskDBRM(quiet bool, args ...string) {
-	const minArgs = 1
-	l := len(args)
-	if l == minArgs {
+func taskDBRM(quiet bool, args [2]string) {
+	if args[1] == "" {
 		out.ErrCont(ErrNoDB)
 		fmt.Println("Cannot remove a bucket from the database as no bucket name was provided.")
 		out.Example("\ndupers database rm <bucket name>")
@@ -333,9 +335,8 @@ func taskDBRM(quiet bool, args ...string) {
 	out.Response(s, quiet)
 }
 
-func taskDBUp(c *dupers.Config, plus bool, args ...string) {
-	const minArgs = 1
-	if l := len(args); l == minArgs {
+func taskDBUp(c *dupers.Config, plus bool, args [2]string) {
+	if args[1] == "" {
 		out.ErrCont(database.ErrNoBucket)
 		fmt.Println("Cannot add or update a bucket to the database as no bucket name was provided.")
 		if plus {
@@ -480,24 +481,24 @@ func taskSearch(t tasks, args ...string) {
 	}
 	if *t.filename {
 		if !*t.exact {
-			if m, err = database.CompareBaseNoCase(term, buckets); err != nil {
+			if m, err = database.CompareBaseNoCase(term, buckets...); err != nil {
 				taskSearchErr(err)
 			}
 		}
 		if *t.exact {
-			if m, err = database.CompareBase(term, buckets); err != nil {
+			if m, err = database.CompareBase(term, buckets...); err != nil {
 				taskSearchErr(err)
 			}
 		}
 	}
 	if !*t.filename {
 		if !*t.exact {
-			if m, err = database.CompareNoCase(term, buckets); err != nil {
+			if m, err = database.CompareNoCase(term, buckets...); err != nil {
 				taskSearchErr(err)
 			}
 		}
 		if *t.exact {
-			if m, err = database.Compare(term, buckets); err != nil {
+			if m, err = database.Compare(term, buckets...); err != nil {
 				taskSearchErr(err)
 			}
 		}

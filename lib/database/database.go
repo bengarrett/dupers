@@ -266,27 +266,27 @@ func Compact(debug bool) error {
 }
 
 // Compare finds exact matches of the string contained within the stored filenames and paths.
-func Compare(s string, buckets []string) (*Matches, error) {
-	return compare([]byte(s), buckets, false, false)
+func Compare(s string, buckets ...string) (*Matches, error) {
+	return compare([]byte(s), false, false, buckets...)
 }
 
 // CompareBase finds exact matches of the string contained within the stored filenames.
-func CompareBase(s string, buckets []string) (*Matches, error) {
-	return compare([]byte(s), buckets, false, true)
+func CompareBase(s string, buckets ...string) (*Matches, error) {
+	return compare([]byte(s), false, true, buckets...)
 }
 
 // CompareBaseNoCase finds case insensitive matches of the string contained within the stored filenames.
-func CompareBaseNoCase(s string, buckets []string) (*Matches, error) {
-	m, err := compare([]byte(s), buckets, true, true)
+func CompareBaseNoCase(s string, buckets ...string) (*Matches, error) {
+	m, err := compare([]byte(s), true, true, buckets...)
 	return m, err
 }
 
 // CompareNoCase finds case insensitive matches of the string contained within the stored filenames and paths.
-func CompareNoCase(s string, buckets []string) (*Matches, error) {
-	return compare([]byte(s), buckets, true, false)
+func CompareNoCase(s string, buckets ...string) (*Matches, error) {
+	return compare([]byte(s), true, false, buckets...)
 }
 
-func compare(term []byte, buckets []string, noCase, base bool) (*Matches, error) {
+func compare(term []byte, noCase, base bool, buckets ...string) (*Matches, error) {
 	path, err := DB()
 	if err != nil {
 		return nil, err

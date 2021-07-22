@@ -62,7 +62,7 @@ func Print(term string, quiet bool, m *database.Matches) {
 	// collect the bucket names which will be used to sort the results
 	buckets, bucket := []string{}, ""
 	for _, bucket := range *m {
-		if !contains(buckets, string(bucket)) {
+		if !contains(string(bucket), buckets...) {
 			buckets = append(buckets, string(bucket))
 		}
 	}
@@ -336,7 +336,7 @@ func (c *Config) WalkDir(root string) error {
 			return nil
 		}
 		// skip self file matches
-		if skipSelf(path, skip) {
+		if skipSelf(path, skip...) {
 			return nil
 		}
 		// walk the directories
@@ -487,7 +487,7 @@ func (c *Config) update(name, bucket string) {
 }
 
 // contains returns true if find exists in s.
-func contains(s []string, find string) bool {
+func contains(find string, s ...string) bool {
 	for _, item := range s {
 		if find == item {
 			return true
@@ -654,7 +654,7 @@ func skipFile(name string) bool {
 }
 
 // skipSelf returns true if the path exists in skip.
-func skipSelf(path string, skip []string) bool {
+func skipSelf(path string, skip ...string) bool {
 	for _, n := range skip {
 		if path == n {
 			return true

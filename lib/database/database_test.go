@@ -249,7 +249,7 @@ func TestCompare(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := Compare(tt.args.s, tt.args.buckets)
+			got, err := Compare(tt.args.s, tt.args.buckets...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Compare() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -288,7 +288,7 @@ func TestCompareBase(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := CompareBase(tt.args.s, tt.args.buckets)
+			got, err := CompareBase(tt.args.s, tt.args.buckets...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CompareBase() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -310,7 +310,7 @@ func TestCompareBase(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := CompareBaseNoCase(tt.args.s, tt.args.buckets)
+			got, err := CompareBaseNoCase(tt.args.s, tt.args.buckets...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CompareBaseNoCase() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -345,7 +345,7 @@ func TestCompareNoCase(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := CompareNoCase(tt.args.s, tt.args.buckets)
+			got, err := CompareNoCase(tt.args.s, tt.args.buckets...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CompareNoCase() error = %v, wantErr %v", err, tt.wantErr)
 				return

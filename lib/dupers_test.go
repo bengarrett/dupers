@@ -37,7 +37,7 @@ func Test_contains(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := contains(tt.args.s, tt.args.find); got != tt.want {
+			if got := contains(tt.args.find, tt.args.s...); got != tt.want {
 				t.Errorf("contains() = %v, want %v", got, tt.want)
 			}
 		})

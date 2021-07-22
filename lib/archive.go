@@ -174,7 +174,7 @@ func (c *Config) WalkArchiver(bucket string) error {
 		if !d.Type().IsRegular() {
 			return nil
 		}
-		if skipSelf(path, skip) {
+		if skipSelf(path, skip...) {
 			return nil
 		}
 		err = c.walkThread(bucket, path, &wg)
