@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -294,8 +295,15 @@ func taskDBList(quiet bool, args [2]string) {
 	if err != nil {
 		out.ErrCont(err)
 	}
-	for name, hash := range ls {
-		fmt.Printf("%x %s\n", hash, name)
+	// sort the filenames
+	var names []string
+	for name := range ls {
+		names = append(names, string(name))
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		sum := ls[database.Filepath(name)]
+		fmt.Printf("%x %s\n", sum, name)
 	}
 	if cnt := len(ls); !quiet && cnt > 0 {
 		fmt.Printf("%d items listed. Checksums are 32 byte, SHA-256 (FIPS 180-4).\n", cnt)
