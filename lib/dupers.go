@@ -328,7 +328,7 @@ func (c *Config) WalkDir(root string) error {
 			return err1
 		}
 		// skip files
-		if skipFile(d) {
+		if skipFile(d.Name()) {
 			return nil
 		}
 		// skip non-files such as symlinks
@@ -640,8 +640,8 @@ func skipDir(d fs.DirEntry, hidden bool) error {
 }
 
 // skipFile returns true if the file matches a known Windows or macOS system file.
-func skipFile(d fs.DirEntry) bool {
-	switch strings.ToLower(d.Name()) {
+func skipFile(name string) bool {
+	switch strings.ToLower(name) {
 	case ".ds_store", ".trashes":
 		// macOS
 		return true
@@ -649,7 +649,8 @@ func skipFile(d fs.DirEntry) bool {
 		// Windows
 		return true
 	}
-	return false
+	// macOS
+	return strings.HasPrefix(name, "._")
 }
 
 // skipSelf returns true if the path exists in skip.
