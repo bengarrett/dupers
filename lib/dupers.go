@@ -38,7 +38,6 @@ const (
 // Config options for duper.
 type Config struct {
 	Buckets []string // buckets to lookup
-	Source  string   // directory or file to compare
 	Debug   bool     // spam the feedback sent to stdout
 	Quiet   bool     // reduce the feedback sent to stdout
 	Test    bool     // internal unit test mode
@@ -50,7 +49,20 @@ type internal struct {
 	compare checksums // hashes fetched from the database or file system
 	files   int       // total files or database items read
 	sources []string  // files paths to check
+	source  string    // directory or file to compare
 	timer   time.Time
+}
+
+func (i *internal) SetToCheck(name string) {
+	n, err := filepath.Abs(name)
+	if err != nil {
+		out.ErrFatal(err)
+	}
+	i.source = n
+}
+
+func (i *internal) ToCheck() string {
+	return i.source
 }
 
 func (i *internal) OpenDB() {
@@ -131,11 +143,11 @@ func Print(term string, quiet bool, m *database.Matches) {
 // Clean removes all empty directories from c.Source.
 // Directories containing hidden system directories or files are not considered empty.
 func (c *Config) Clean() {
-	if c.Source == "" {
+	if c.ToCheck() == "" {
 		return
 	}
 	var count int
-	if err := godirwalk.Walk(c.Source, &godirwalk.Options{
+	if err := godirwalk.Walk(c.ToCheck(), &godirwalk.Options{
 		Unsorted: true,
 		Callback: func(_ string, _ *godirwalk.Dirent) error {
 			// no-op while diving in; all the fun happens in PostChildrenCallback
@@ -159,7 +171,7 @@ func (c *Config) Clean() {
 			if hasAtLeastOneChild {
 				return nil // do not remove directory with at least one child
 			}
-			if osPathname == c.Source {
+			if osPathname == c.ToCheck() {
 				return nil // do not remove directory that was provided top-level directory
 			}
 
@@ -177,7 +189,7 @@ func (c *Config) Clean() {
 		fmt.Println("Nothing required cleaning.")
 		return
 	}
-	fmt.Printf("Removed %d empty directories in: '%s'\n", count, c.Source)
+	fmt.Printf("Removed %d empty directories in: '%s'\n", count, c.ToCheck())
 }
 
 // Print the results of a dupe request.
@@ -220,12 +232,8 @@ func (c *Config) Remove() {
 
 // RemoveAll removes directories from the source directory that do not contain unique MS-DOS or Windows programs.
 func (c *Config) RemoveAll(clean bool) {
-	root, err := filepath.Abs(c.Source)
-	if err != nil {
-		out.ErrFatal(err)
-	}
-
-	_, err = os.Stat(root)
+	root := c.ToCheck()
+	_, err := os.Stat(root)
 	if errors.Is(err, os.ErrNotExist) {
 		e := fmt.Errorf("%w: %s", ErrNoPath, root)
 		out.ErrFatal(e)
@@ -367,10 +375,7 @@ func (c *Config) WalkDir(root string) error {
 
 // WalkSource walks the source directory or a file to collect its hashed content for future comparison.
 func (c *Config) WalkSource() {
-	root, err := filepath.Abs(c.Source)
-	if err != nil {
-		out.ErrFatal(err)
-	}
+	root := c.ToCheck()
 	stat, err := os.Stat(root)
 	if errors.Is(err, os.ErrNotExist) {
 		e := fmt.Errorf("%w: %s", ErrNoPath, root)
