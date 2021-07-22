@@ -189,7 +189,7 @@ func TestClean(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := Clean(tt.args.quiet); (err != nil) != tt.wantErr {
+			if err := Clean(tt.args.quiet, false); (err != nil) != tt.wantErr {
 				t.Errorf("Clean() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -208,7 +208,7 @@ func TestCompact(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := Compact(); (err != nil) != tt.wantErr {
+			if err := Compact(false); (err != nil) != tt.wantErr {
 				if errors.As(err, &ErrNoComp) {
 					return
 				}
