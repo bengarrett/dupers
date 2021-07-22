@@ -12,6 +12,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/bengarrett/dupers/lib/database"
@@ -23,9 +24,65 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-const x7z = "application/x-7z-compressed"
+const (
+	app7z  = "application/x-7z-compressed"
+	appBZ2 = "application/x-bzip2"
+	appGZ  = "application/gzip"
+	appRAR = "application/vnd.rar"
+	appTar = "application/x-tar"
+	appXZ  = "application/x-xz"
+	appZip = "application/zip"
+	ext7z  = ".7z"
+	oneKb  = 1024
+)
 
-// IsArchive returns true if the named file is compressed using a supported archive format.
+// extension finds either a compressed file extension or mime type and returns its match.
+func extension(find string) string {
+	// mime types refer to data types and do not contain encoding information
+	// * mime not detected by h2non/filetype
+	ext := map[string]string{
+		ext7z:      app7z,
+		".bz2":     appBZ2,
+		".gz":      appGZ,
+		".rar":     appRAR,
+		".tar":     appTar,
+		".zip":     appZip,
+		".lz4":     "application/x-lz4",           // LZ4*
+		".sz":      "application/x-snappy-framed", // Snappy*
+		".xz":      appXZ,                         // XZ Utils
+		".zst":     "application/zstd",            // Zstandard (zstd)*
+		".tar.br":  appTar,                        // tar + Brotli compression
+		".tbr":     appTar,                        //
+		".tar.gz":  appTar,                        // tar + gzip compression
+		".tgz":     appTar,                        //
+		".tar.bz2": appTar,                        // tar + bzip2 compression
+		".tbz2":    appTar,                        //
+		".tar.xz":  appTar,                        // tar + XZ compression
+		".txz":     appTar,                        //
+		".tar.lz4": appTar,                        // tar + LZ4 compression
+		".tlz4":    appTar,                        //
+		".tar.sz":  appTar,                        // tar + snappy compression
+		".tsz":     appTar,                        //
+		".tar.zst": appTar,                        // tar + Zstandard compression
+	}
+	f := strings.ToLower(find)
+	for k, v := range ext {
+		if k == f {
+			return v
+		}
+		if v == f {
+			return k
+		}
+		if !strings.HasPrefix(find, ".") {
+			if k == fmt.Sprintf(".%s", f) {
+				return k
+			}
+		}
+	}
+	return ""
+}
+
+// IsArchive returns true if the read named file is compressed using a supported archive format.
 func IsArchive(name string) (result bool, mime string, err error) {
 	f, err := os.Open(name)
 	if err != nil {
@@ -38,22 +95,37 @@ func IsArchive(name string) (result bool, mime string, err error) {
 	}
 	switch kind.MIME.Value {
 	case
-		"application/gzip",
-		"application/vnd.rar",
-		x7z,
-		"application/x-tar",
-		"application/zip":
+		app7z,
+		appBZ2,
+		appGZ,
+		appRAR,
+		appTar,
+		appZip:
+		// supported archives
 		return true, kind.MIME.Value, nil
 	case
-		"application/x-bzip2",
-		"application/x-xz",
+		appXZ, // not supported in archiver v3.5.0
 		"application/vnd.ms-cab-compressed",
-		"application/x-unix-archive",
 		"application/x-compress",
-		"application/x-lzip":
+		"application/x-lzip",
+		"application/x-unix-archive":
+		// unsupported archives
 		return false, kind.MIME.Value, nil
 	}
+	// non-archives
 	return false, "", nil
+}
+
+// IsExtension returns true if the named file extension matches a supported archive format.
+func IsExtension(name string) (result bool, mime string) {
+	ext := filepath.Ext(name)
+	if ext == "" {
+		return false, ""
+	}
+	if find := extension(ext); find != "" {
+		return true, find
+	}
+	return false, ""
 }
 
 // WalkArchiver walks the bucket directory saving the hash values of new files to the database.
@@ -73,6 +145,10 @@ func (c *Config) WalkArchiver(bucket string) error {
 		}
 		defer c.db.Close()
 	}
+	// create a new bucket if needed
+	if err := c.createBucket(bucket); err != nil {
+		return err
+	}
 	// get a list of all the bucket filenames
 	if err := c.listItems(bucket); err != nil {
 		out.ErrCont(err)
@@ -89,23 +165,18 @@ func (c *Config) WalkArchiver(bucket string) error {
 			}
 			return err
 		}
-		// skip directories
 		if err1 := skipDir(d, true); err1 != nil {
 			return err1
 		}
-		// skip files
-		if skipFile(d) {
+		if skipFile(d.Name()) {
 			return nil
 		}
-		// skip non-files such as symlinks
 		if !d.Type().IsRegular() {
 			return nil
 		}
-		// skip self file matches
 		if skipSelf(path, skip) {
 			return nil
 		}
-		// walk the directories
 		err = c.walkThread(bucket, path, &wg)
 		if err != nil {
 			out.ErrCont(err)
@@ -116,17 +187,26 @@ func (c *Config) WalkArchiver(bucket string) error {
 }
 
 func (c *Config) walkThread(bucket, path string, wg *sync.WaitGroup) error {
-	// detect filetype
-	ok, aType, err := IsArchive(path)
-	if err != nil {
-		return err
+	// detect archive type by file extension
+	ext := filepath.Ext(path)
+	ok, _ := IsExtension(path)
+	if c.Debug {
+		out.Bug(fmt.Sprintf("is known extension: %v, %s", ok, ext))
 	}
 	if !ok {
-		if c.Debug && aType != "" {
-			s := fmt.Sprintf("archive not supported: %s: %s", aType, path)
-			out.Bug(s)
+		// detect archive type by mime type
+		ok, mime, err := IsArchive(path)
+		if err != nil {
+			return err
 		}
-		return nil
+		if !ok {
+			if c.Debug && mime != "" {
+				s := fmt.Sprintf("archive not supported: %s: %s", mime, path)
+				out.Bug(s)
+			}
+			return nil
+		}
+		ext = extension(mime)
 	}
 	c.files++
 	if c.Debug {
@@ -141,11 +221,13 @@ func (c *Config) walkThread(bucket, path string, wg *sync.WaitGroup) error {
 	// multithread archive reader
 	wg.Add(1)
 	go func() {
-		switch aType {
-		case x7z:
+		switch ext {
+		case "":
+			// not a supported archive, do nothing
+		case ext7z:
 			c.read7Zip(bucket, path)
 		default:
-			c.readArchiver(bucket, path)
+			c.readArchiver(bucket, path, ext)
 		}
 		wg.Done()
 	}()
@@ -219,7 +301,6 @@ func (c *Config) read7Zip(bucket, name string) {
 		}
 		defer rc.Close()
 		cnt++
-		const oneKb = 1024
 		buf, h := make([]byte, oneKb*oneKb), sha256.New()
 		if _, err := io.CopyBuffer(h, rc, buf); err != nil {
 			out.ErrCont(err)
@@ -239,8 +320,7 @@ func (c *Config) read7Zip(bucket, name string) {
 }
 
 // readArchiver opens the named file archive, hashes its content and saves those to the bucket.
-func (c *Config) readArchiver(bucket, archive string) {
-	const oneKb = 1024
+func (c *Config) readArchiver(bucket, archive, ext string) {
 	if c.Debug {
 		out.Bug("read archiver: " + archive)
 	}
@@ -258,30 +338,68 @@ func (c *Config) readArchiver(bucket, archive string) {
 			}
 		}
 	}()
-	cnt := 0
-	if err := archiver.Walk(archive, func(f archiver.File) error {
-		if f.IsDir() {
-			return nil
-		}
-		fp := filepath.Join(archive, f.Name())
-		if c.findItem(fp) {
-			return nil
-		}
-		cnt++
-
-		buf, h := make([]byte, oneKb*oneKb), sha256.New()
-		if _, err := io.CopyBuffer(h, f, buf); err != nil {
-			out.ErrCont(err)
-			return nil
-		}
-		hash := [32]byte{}
-		copy(hash[:], h.Sum(nil))
-		if err := c.updateArchiver(fp, bucket, hash); err != nil {
-			out.ErrCont(err)
-		}
-		return nil
-	}); err != nil {
+	cnt, filename := 0, archive
+	// get the format by filename extension
+	if ext != "" {
+		filename = ext
+	}
+	f, err := archiver.ByExtension(filename)
+	if err != nil {
 		out.ErrCont(err)
+		return
+	}
+	// commented archives not supported in archiver v3.5.0
+	switch f.(type) {
+	case
+		//*archiver.Brotli,
+		*archiver.Bz2,
+		*archiver.Gz,
+		*archiver.Lz4,
+		*archiver.Rar,
+		*archiver.Snappy,
+		*archiver.Tar,
+		//*archiver.TarBrotli,
+		*archiver.TarBz2,
+		*archiver.TarGz,
+		*archiver.TarLz4,
+		*archiver.TarSz,
+		*archiver.TarXz,
+		//*archiver.TarZstd,
+		*archiver.Xz,
+		*archiver.Zip:
+		w := f.(archiver.Walker)
+		if err := w.Walk(archive, func(f archiver.File) error {
+			if f.IsDir() {
+				return nil
+			}
+			if !f.FileInfo.Mode().IsRegular() {
+				return nil
+			}
+			if skipFile(f.Name()) {
+				return nil
+			}
+			fp := filepath.Join(archive, f.Name())
+			if c.findItem(fp) {
+				return nil
+			}
+			buf, h := make([]byte, oneKb*oneKb), sha256.New()
+			if _, err := io.CopyBuffer(h, f, buf); err != nil {
+				out.ErrCont(err)
+				return nil
+			}
+			hash := [32]byte{}
+			copy(hash[:], h.Sum(nil))
+			if err := c.updateArchiver(fp, bucket, hash); err != nil {
+				out.ErrCont(err)
+			}
+			cnt++
+			return nil
+		}); err != nil {
+			out.ErrCont(err)
+		}
+	default:
+		color.Warn.Printf("Unsupported archive: '%s'\n", archive)
+		return
 	}
 	if c.Debug && cnt > 0 {
 		s := fmt.Sprintf("read %d items within the archive", cnt)
