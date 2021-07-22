@@ -34,6 +34,7 @@ const (
 	appZip = "application/zip"
 	ext7z  = ".7z"
 	oneKb  = 1024
+	oneMb  = oneKb * oneKb
 )
 
 // extension finds either a compressed file extension or mime type and returns its match.
@@ -301,7 +302,7 @@ func (c *Config) read7Zip(bucket, name string) {
 		}
 		defer rc.Close()
 		cnt++
-		buf, h := make([]byte, oneKb*oneKb), sha256.New()
+		buf, h := make([]byte, oneMb), sha256.New()
 		if _, err := io.CopyBuffer(h, rc, buf); err != nil {
 			out.ErrCont(err)
 			continue
@@ -382,7 +383,7 @@ func (c *Config) readArchiver(bucket, archive, ext string) { // nolint: gocyclo
 			if c.findItem(fp) {
 				return nil
 			}
-			buf, h := make([]byte, oneKb*oneKb), sha256.New()
+			buf, h := make([]byte, oneMb), sha256.New()
 			if _, err := io.CopyBuffer(h, f, buf); err != nil {
 				out.ErrCont(err)
 				return nil
