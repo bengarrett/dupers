@@ -19,7 +19,7 @@ func BenchmarkRM(*testing.B) {
 	color.Enable = false
 	args := []string{"rm", bucket2}
 	c := dupers.Config{Quiet: true, Test: true}
-	taskDBUp(&c, args...)
+	taskDBUp(&c, false, args...)
 	taskDBRM(false, args...)
 }
 
@@ -27,7 +27,7 @@ func BenchmarkScan1(*testing.B) {
 	color.Enable = false
 	args := []string{"dupe", match, bucket}
 	c := dupers.Config{Quiet: true, Test: true}
-	taskDBUp(&c, args[1:]...)
+	taskDBUp(&c, false, args[1:]...)
 	f := false
 	ts := tasks{
 		lookup: &f,
@@ -49,7 +49,7 @@ func BenchmarkScan2(*testing.B) {
 		rm:     &f,
 		sensen: &f,
 	}
-	taskDBUp(&c, args[1:]...)
+	taskDBUp(&c, false, args[1:]...)
 	taskScan(&c, ts, args...)
 }
 
@@ -64,7 +64,7 @@ func BenchmarkSearch1(*testing.B) {
 		filename: &f,
 		quiet:    &f,
 	}
-	taskDBUp(&c, args[1:]...)
+	taskDBUp(&c, false, args[1:]...)
 	for i := 0; i <= 3; i++ {
 		taskSearch(ts, args...)
 	}
@@ -81,7 +81,7 @@ func BenchmarkSearch2(*testing.B) {
 		filename: &f,
 		quiet:    &f,
 	}
-	taskDBUp(&c, args[1:]...)
+	taskDBUp(&c, false, args[1:]...)
 	for i := 0; i <= 3; i++ {
 		taskSearch(ts, args...)
 	}

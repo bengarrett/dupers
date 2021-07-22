@@ -122,7 +122,7 @@ func Buckets() (names []string, err error) {
 
 // Clean the stale items from all database buckets.
 // Stale items are file pointers that no longer exist on the host file system.
-func Clean(quiet, debug bool) error {
+func Clean(quiet, debug bool) error { // nolint: gocyclo
 	if debug {
 		out.Bug("running database clean")
 	}
@@ -234,13 +234,13 @@ func Compact(debug bool) error {
 		return err1
 	}
 	if debug {
-		sr, err := os.Stat(src)
-		if err != nil {
-			return err
+		sr, errS := os.Stat(src)
+		if errS != nil {
+			return errS
 		}
-		tm, err := os.Stat(tmp)
-		if err != nil {
-			return err
+		tm, errT := os.Stat(tmp)
+		if errT != nil {
+			return errT
 		}
 		s1 := fmt.Sprintf("original database: %d bytes, %s", sr.Size(), sr.Name())
 		out.Bug(s1)

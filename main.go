@@ -264,10 +264,10 @@ func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
 		taskDBRM(quiet, args...)
 		return
 	case dup:
-		taskDBUp(c, args...)
+		taskDBUp(c, false, args...)
 		return
 	case dupp:
-		taskDBUpPlus(c, args...)
+		taskDBUp(c, true, args...)
 		return
 	default:
 		out.ErrFatal(ErrCmd)
@@ -333,11 +333,15 @@ func taskDBRM(quiet bool, args ...string) {
 	out.Response(s, quiet)
 }
 
-func taskDBUp(c *dupers.Config, args ...string) {
+func taskDBUp(c *dupers.Config, plus bool, args ...string) {
 	const minArgs = 1
 	if l := len(args); l == minArgs {
 		out.ErrCont(database.ErrNoBucket)
 		fmt.Println("Cannot add or update a bucket to the database as no bucket name was provided.")
+		if plus {
+			out.Example("\ndupers database up+ <bucket name>")
+			out.ErrFatal(nil)
+		}
 		out.Example("\ndupers database up <bucket name>")
 		out.ErrFatal(nil)
 	}
@@ -348,30 +352,11 @@ func taskDBUp(c *dupers.Config, args ...string) {
 	if runtime.GOOS == winOS && !c.Quiet {
 		fmt.Printf("To improve performance on Windows use the quiet flag: duper -quiet dupe %s %s\n", c.Source, strings.Join(c.Buckets, " "))
 	}
-	if err := c.WalkDir(path); err != nil {
-		out.ErrFatal(err)
-	}
-	if runtime.GOOS == winOS || !c.Quiet {
-		fmt.Println(c.Status())
-	}
-}
-
-func taskDBUpPlus(c *dupers.Config, args ...string) {
-	const minArgs = 1
-	if l := len(args); l == minArgs {
-		out.ErrCont(database.ErrNoBucket)
-		fmt.Println("Cannot add or update a bucket to the database as no bucket name was provided.")
-		out.Example("\ndupers database up+ <bucket name>")
-		out.ErrFatal(nil)
-	}
-	path, err := filepath.Abs(args[1])
-	if err != nil {
-		out.ErrFatal(err)
-	}
-	if runtime.GOOS == winOS && !c.Quiet {
-		fmt.Printf("To improve performance on Windows use the quiet flag: duper -quiet dupe %s %s\n", c.Source, strings.Join(c.Buckets, " "))
-	}
-	if err := c.WalkArchiver(path); err != nil {
+	if plus {
+		if err := c.WalkArchiver(path); err != nil {
+			out.ErrFatal(err)
+		}
+	} else if err := c.WalkDir(path); err != nil {
 		out.ErrFatal(err)
 	}
 	if runtime.GOOS == winOS || !c.Quiet {

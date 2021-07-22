@@ -320,7 +320,7 @@ func (c *Config) read7Zip(bucket, name string) {
 }
 
 // readArchiver opens the named file archive, hashes its content and saves those to the bucket.
-func (c *Config) readArchiver(bucket, archive, ext string) {
+func (c *Config) readArchiver(bucket, archive, ext string) { // nolint: gocyclo
 	if c.Debug {
 		out.Bug("read archiver: " + archive)
 	}
@@ -351,20 +351,20 @@ func (c *Config) readArchiver(bucket, archive, ext string) {
 	// commented archives not supported in archiver v3.5.0
 	switch f.(type) {
 	case
-		//*archiver.Brotli,
+		// *archiver.Brotli,
 		*archiver.Bz2,
 		*archiver.Gz,
 		*archiver.Lz4,
 		*archiver.Rar,
 		*archiver.Snappy,
 		*archiver.Tar,
-		//*archiver.TarBrotli,
+		// *archiver.TarBrotli,
 		*archiver.TarBz2,
 		*archiver.TarGz,
 		*archiver.TarLz4,
 		*archiver.TarSz,
 		*archiver.TarXz,
-		//*archiver.TarZstd,
+		// *archiver.TarZstd,
 		*archiver.Xz,
 		*archiver.Zip:
 		w := f.(archiver.Walker)
