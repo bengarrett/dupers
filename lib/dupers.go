@@ -26,6 +26,7 @@ import (
 )
 
 type (
+	bucket    string
 	checksum  [32]byte
 	checksums map[checksum]string
 )
@@ -37,20 +38,48 @@ const (
 
 // Config options for duper.
 type Config struct {
-	Buckets []string // buckets to lookup
-	Debug   bool     // spam the feedback sent to stdout
-	Quiet   bool     // reduce the feedback sent to stdout
-	Test    bool     // internal unit test mode
+	Debug bool // spam the feedback sent to stdout
+	Quiet bool // reduce the feedback sent to stdout
+	Test  bool // internal unit test mode
 	internal
 }
 
 type internal struct {
 	db      *bolt.DB  // Bolt database
+	buckets []bucket  // buckets to lookup
 	compare checksums // hashes fetched from the database or file system
 	files   int       // total files or database items read
 	sources []string  // files paths to check
 	source  string    // directory or file to compare
 	timer   time.Time
+}
+
+func (i *internal) SetBuckets(names ...string) {
+	for _, name := range names {
+		i.buckets = append(i.buckets, bucket(name))
+	}
+}
+
+func (i *internal) SetAllBuckets() {
+	names, err := database.AllBuckets()
+	if err != nil {
+		out.ErrFatal(err)
+	}
+	for _, name := range names {
+		i.buckets = append(i.buckets, bucket(name))
+	}
+}
+
+func (i *internal) Buckets() []bucket {
+	return i.buckets
+}
+
+func (i *internal) PrintBuckets() string {
+	var s []string
+	for _, b := range i.Buckets() {
+		s = append(s, string(b))
+	}
+	return strings.Join(s, " ")
 }
 
 func (i *internal) SetToCheck(name string) {
@@ -269,8 +298,8 @@ func (c *Config) Seek() {
 			out.ErrCont(err)
 			return
 		}
-		for _, bucket := range c.Buckets {
-			finds, c.files, err = database.Seek(h, bucket)
+		for _, bucket := range c.Buckets() {
+			finds, c.files, err = database.Seek(h, string(bucket))
 			if err != nil {
 				out.ErrCont(err)
 				continue
@@ -303,14 +332,16 @@ func (c *Config) Status() string {
 // WalkDirs walks the directories provided by the arguments for zip archives to extract any found comments.
 func (c *Config) WalkDirs() {
 	c.init()
-	c.OpenDB()
-	defer c.db.Close()
+	if c.db == nil {
+		c.OpenDB()
+		defer c.db.Close()
+	}
 	// walk through the directories provided
-	for _, bucket := range c.Buckets {
+	for _, bucket := range c.Buckets() {
 		if c.Debug {
-			out.Bug("bucket: " + bucket)
+			out.Bug("bucket: " + string(bucket))
 		}
-		if err := c.WalkDir(bucket); err != nil {
+		if err := c.WalkDir(string(bucket)); err != nil {
 			out.ErrCont(err)
 		}
 	}
@@ -321,8 +352,10 @@ func (c *Config) WalkDir(root string) error {
 	c.init()
 	skip := c.skipFiles()
 	// open database
-	c.OpenDB()
-	defer c.db.Close()
+	if c.db == nil {
+		c.OpenDB()
+		defer c.db.Close()
+	}
 	// create a new bucket if needed
 	if err := c.createBucket(root); err != nil {
 		return err
@@ -434,22 +467,18 @@ func (c *Config) createBucket(name string) error {
 // init initializes the Config maps and database.
 func (c *Config) init() {
 	// use all the buckets if no specific buckets are provided
-	if len(c.Buckets) == 0 {
-		var err error
-		c.Buckets, err = database.AllBuckets()
-		if err != nil {
-			out.ErrFatal(err)
-		}
+	if len(c.Buckets()) == 0 {
+		c.SetAllBuckets()
 	}
 	// normalise bucket names
-	for i, b := range c.Buckets {
-		abs, err := filepath.Abs(b)
+	for i, b := range c.Buckets() {
+		abs, err := filepath.Abs(string(b))
 		if err != nil {
 			out.ErrCont(err)
-			c.Buckets[i] = ""
+			c.Buckets()[i] = ""
 			continue
 		}
-		c.Buckets[i] = abs
+		c.Buckets()[i] = bucket(abs)
 	}
 	if c.compare == nil {
 		c.compare = make(checksums)

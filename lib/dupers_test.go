@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	bucket = "../test/bucket1"
+	bucket1 = "../test/bucket1"
 	// checksums created from sha256sum <filename>.
 	file1 = "../test/bucket1/0vlLaUEvzAWP"
 	hash1 = "1a1d76a3187ccee147e6c807277273afbad5d2680f5eadf1012310743e148f22"
@@ -45,7 +45,7 @@ func Test_contains(t *testing.T) {
 }
 
 func Test_containsBin(t *testing.T) {
-	d, err := filepath.Abs(bucket)
+	d, err := filepath.Abs(bucket1)
 	if err != nil {
 		t.Error(err)
 	}

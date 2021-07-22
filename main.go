@@ -356,7 +356,8 @@ func taskDBUp(c *dupers.Config, plus bool, args [2]string) {
 		out.ErrFatal(err)
 	}
 	if runtime.GOOS == winOS && !c.Quiet {
-		fmt.Printf("To improve performance on Windows use the quiet flag: duper -quiet dupe %s %s\n", c.ToCheck(), strings.Join(c.Buckets, " "))
+		fmt.Printf("To improve performance on Windows use the quiet flag: duper -quiet dupe %s %s\n",
+			c.ToCheck(), c.PrintBuckets())
 	}
 	if plus {
 		if err := c.WalkArchiver(path); err != nil {
@@ -383,9 +384,10 @@ func taskScan(c *dupers.Config, t tasks, args ...string) {
 	// directory or a file to match
 	c.SetToCheck(args[1])
 	// directories and files to scan, a bucket is the name given to database tables
-	c.Buckets = args[2:]
-	if l < minArgs {
-		c.Buckets = b
+	arr := args[2:]
+	c.SetBuckets(arr...)
+	if arr == nil {
+		c.SetAllBuckets()
 	}
 	// files or directories to compare (these are not saved to database)
 	c.WalkSource()
@@ -394,7 +396,8 @@ func taskScan(c *dupers.Config, t tasks, args ...string) {
 	}
 	// windows notice
 	if runtime.GOOS == winOS && !*t.quiet {
-		fmt.Printf("To improve performance on Windows use the quiet flag: duper -quiet dupe %s %s\n", c.ToCheck(), strings.Join(c.Buckets, " "))
+		fmt.Printf("To improve performance on Windows use the quiet flag: duper -quiet dupe %s %s\n",
+			c.ToCheck(), c.PrintBuckets())
 	}
 	// walk, scan and save file paths and hashes to the database
 	if !*t.lookup {
