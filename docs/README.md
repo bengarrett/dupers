@@ -89,6 +89,26 @@ duper -name search .zip
 duper search '2010' D:\photos
 ```
 
+## Limitations
+
+#### Identical files within a bucket or its subdirectories are not saved to the database.
+
+Dupers uses the SHA-256 file checksums as unique keys and each key's value only holds a single path location. This means both the `dupe` and `search` commands will not return all the possible locations of identical files in a bucket, as only the one unique file is ever stored.
+
+## Troubleshoot
+
+#### Windows
+
+> `Not enough memory resources are available to process this command.`
+
+This is a misleading generic Windows error that occures when interacting with the database.
+There is no guaranteed fix but try rebooting or running this command:
+
+```ps
+# In an administrator console or administrator command prompt.
+sfc /scannow
+```
+
 ## Build
 
 [Go](https://golang.org/doc/install) supports dozens of architectures and operating systems letting dupers to [be built for most platforms](https://golang.org/doc/install/source#environment).
@@ -105,18 +125,4 @@ go build
 
 # target and build for OpenBSD
 env GOOS=openbsd GOARCH=amd64 go build
-```
-
-## Troubleshoot
-
-#### Windows
-
-> `Not enough memory resources are available to process this command.`
-
-This is a misleading generic Windows error that occures when interacting with the database.
-There is no guaranteed fix but try rebooting or running this command:
-
-```ps
-# In an administrator console or command prompt.
-sfc /scannow
 ```
