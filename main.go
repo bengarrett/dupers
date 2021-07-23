@@ -284,7 +284,7 @@ func taskDBList(quiet bool, args [2]string) {
 	if args[1] == "" {
 		out.ErrCont(ErrNoDB)
 		fmt.Println("Cannot list the bucket as no bucket name was provided.")
-		out.Example("\ndupers database ls <bucket name>")
+		out.Example("\ndupers ls <bucket name>")
 		out.ErrFatal(nil)
 	}
 	name, err := filepath.Abs(args[1])
@@ -315,7 +315,7 @@ func taskDBRM(quiet bool, args [2]string) {
 	if args[1] == "" {
 		out.ErrCont(ErrNoDB)
 		fmt.Println("Cannot remove a bucket from the database as no bucket name was provided.")
-		out.Example("\ndupers database rm <bucket name>")
+		out.Example("\ndupers rm <bucket name>")
 		out.ErrFatal(nil)
 	}
 	name, err := filepath.Abs(args[1])
@@ -349,10 +349,10 @@ func taskDBUp(c *dupers.Config, plus bool, args [2]string) {
 		out.ErrCont(database.ErrNoBucket)
 		fmt.Println("Cannot add or update a bucket to the database as no bucket name was provided.")
 		if plus {
-			out.Example("\ndupers database up+ <bucket name>")
+			out.Example("\ndupers up+ <bucket name>")
 			out.ErrFatal(nil)
 		}
-		out.Example("\ndupers database up <bucket name>")
+		out.Example("\ndupers up <bucket name>")
 		out.ErrFatal(nil)
 	}
 	path, err := filepath.Abs(args[1])
@@ -440,7 +440,7 @@ func taskScan(c *dupers.Config, t tasks, args ...string) {
 
 func taskScanClean(c *dupers.Config, t tasks) {
 	c.Print()
-	if *t.rm || *t.sensen {
+	if *t.rm || *t.rmPlus {
 		if c.Debug {
 			out.Bug("remove duplicate files.")
 		}
@@ -451,6 +451,7 @@ func taskScanClean(c *dupers.Config, t tasks) {
 			out.Bug("remove all non unique Windows and MS-DOS files.")
 		}
 		c.RemoveAll(*t.rmPlus)
+		c.Remove()
 	} else if *t.rmPlus {
 		if c.Debug {
 			out.Bug("remove empty directories.")

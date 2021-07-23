@@ -270,12 +270,18 @@ func (c *Config) Remove() {
 	}
 	fmt.Println()
 	for _, path := range c.sources {
+		if c.Debug {
+			out.Bug("remove read: " + path)
+		}
 		h, err := read(path)
 		if err != nil {
 			out.ErrCont(err)
 		}
 		if l := c.lookupOne(h); l == "" {
 			continue
+		}
+		if c.Debug {
+			out.Bug("remove delete: " + path)
 		}
 		err = os.Remove(path)
 		printRM(path, err)

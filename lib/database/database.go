@@ -201,7 +201,7 @@ func Clean(quiet, debug bool) error { // nolint: gocyclo
 	if cnt == 0 {
 		return ErrDBClean
 	}
-	fmt.Printf("The database removed %d stale items", cnt)
+	fmt.Printf("The database removed %d stale items\n", cnt)
 	return nil
 }
 
