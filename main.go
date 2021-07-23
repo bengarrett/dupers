@@ -97,6 +97,9 @@ func main() {
 	options(ver, v)
 
 	selection := strings.ToLower(flag.Args()[0])
+	if c.Debug {
+		out.Bug("command selection: " + selection)
+	}
 	switch selection {
 	case dbf, dbs, dbk, dcn, dls, drm, dup, dupp:
 		taskDatabase(&c, *t.quiet, flag.Args()...)
@@ -303,7 +306,8 @@ func taskDBList(quiet bool, args [2]string) {
 		fmt.Printf("%x %s\n", sum, name)
 	}
 	if cnt := len(ls); !quiet && cnt > 0 {
-		fmt.Printf("%d items listed. Checksums are 32 byte, SHA-256 (FIPS 180-4).\n", cnt)
+		fmt.Printf("%s %s\n", color.Primary.Sprint(cnt),
+			color.Secondary.Sprint("items listed. Checksums are 32 byte, SHA-256 (FIPS 180-4)."))
 	}
 }
 
@@ -324,12 +328,12 @@ func taskDBRM(quiet bool, args [2]string) {
 			if err1 := database.RM(args[1]); err1 != nil {
 				if errors.Is(err1, database.ErrNoBucket) {
 					out.ErrCont(err1)
-					fmt.Printf("Bucket to remove: '%s'\n", name)
+					fmt.Printf("Bucket to remove: %s\n", color.Danger.Sprint(name))
 					buckets, err2 := database.AllBuckets()
 					if err2 != nil {
 						out.ErrFatal(err2)
 					}
-					fmt.Printf("Buckets in use: %s\n", strings.Join(buckets, "\n\t\t"))
+					fmt.Printf("Buckets in use:   %s\n", strings.Join(buckets, "\n\t\t  "))
 					out.ErrFatal(nil)
 				}
 				out.ErrFatal(err1)
@@ -355,15 +359,16 @@ func taskDBUp(c *dupers.Config, plus bool, args [2]string) {
 	if err != nil {
 		out.ErrFatal(err)
 	}
+	name := dupers.Bucket(path)
 	if runtime.GOOS == winOS && !c.Quiet {
 		fmt.Printf("To improve performance on Windows use the quiet flag: duper -quiet dupe %s %s\n",
 			c.ToCheck(), c.PrintBuckets())
 	}
 	if plus {
-		if err := c.WalkArchiver(path); err != nil {
+		if err := c.WalkArchiver(name); err != nil {
 			out.ErrFatal(err)
 		}
-	} else if err := c.WalkDir(path); err != nil {
+	} else if err := c.WalkDir(name); err != nil {
 		out.ErrFatal(err)
 	}
 	if runtime.GOOS == winOS || !c.Quiet {
@@ -372,6 +377,10 @@ func taskDBUp(c *dupers.Config, plus bool, args [2]string) {
 }
 
 func taskScan(c *dupers.Config, t tasks, args ...string) {
+	if c.Debug {
+		s := fmt.Sprintf("taskScan: %s", strings.Join(args, " "))
+		out.Bug(s)
+	}
 	l := len(args)
 	b, err := database.AllBuckets()
 	if err != nil {
@@ -388,6 +397,10 @@ func taskScan(c *dupers.Config, t tasks, args ...string) {
 	c.SetBuckets(arr...)
 	if arr == nil {
 		c.SetAllBuckets()
+	}
+	if c.Debug {
+		s := fmt.Sprintf("buckets: %s", c.PrintBuckets())
+		out.Bug(s)
 	}
 	// files or directories to compare (these are not saved to database)
 	c.WalkSource()
@@ -426,9 +439,6 @@ func taskScan(c *dupers.Config, t tasks, args ...string) {
 }
 
 func taskScanClean(c *dupers.Config, t tasks) {
-	if c.Debug {
-		out.Bug("print duplicate results.")
-	}
 	c.Print()
 	if *t.rm || *t.sensen {
 		if c.Debug {

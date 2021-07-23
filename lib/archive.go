@@ -132,22 +132,23 @@ func IsExtension(name string) (result bool, mime string) {
 // WalkArchiver walks the bucket directory saving the checksums of new files to the database.
 // Any archived files supported by archiver will also have its content hashed.
 // Archives within archives are currently left unwalked.
-func (c *Config) WalkArchiver(bucket string) error {
+func (c *Config) WalkArchiver(name Bucket) error {
+	root := string(name)
 	c.init()
 	skip := c.skipFiles()
 	c.OpenDB()
 	defer c.db.Close()
 	// create a new bucket if needed
-	if err := c.createBucket(bucket); err != nil {
+	if err := c.createBucket(name); err != nil {
 		return err
 	}
 	// get a list of all the bucket filenames
-	if err := c.listItems(bucket); err != nil {
+	if err := c.listItems(root); err != nil {
 		out.ErrCont(err)
 	}
 	// walk the root directory of the bucket
 	var wg sync.WaitGroup
-	err := filepath.WalkDir(bucket, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if c.Debug {
 			out.Bug("walk file: " + path)
 		}
@@ -169,7 +170,7 @@ func (c *Config) WalkArchiver(bucket string) error {
 		if skipSelf(path, skip...) {
 			return nil
 		}
-		err = c.walkThread(bucket, path, &wg)
+		err = c.walkThread(root, path, &wg)
 		if err != nil {
 			out.ErrCont(err)
 		}

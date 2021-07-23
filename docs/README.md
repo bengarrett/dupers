@@ -91,9 +91,9 @@ duper search '2010' D:\photos
 
 ## Limitations
 
-#### Identical files within a bucket or its subdirectories are not saved to the database.
+#### Identical files within a bucket are not saved to the database.
 
-Dupers uses the SHA-256 file checksums as unique keys and each key's value only holds a single path location. This means both the `dupe` and `search` commands will not return all the possible locations of identical files in a bucket, as only the one unique file is ever stored.
+Dupers uses the SHA-256 file checksums as unique keys and each key's value only holds a single path location. This means both the `dupe` and `search` commands will not return all the possible locations of identical files in a bucket, as only one unique file is ever stored.
 
 ## Troubleshoot
 

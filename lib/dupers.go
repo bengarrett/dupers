@@ -26,7 +26,7 @@ import (
 )
 
 type (
-	bucket    string
+	Bucket    string
 	checksum  [32]byte
 	checksums map[checksum]string
 )
@@ -46,7 +46,7 @@ type Config struct {
 
 type internal struct {
 	db      *bolt.DB  // Bolt database
-	buckets []bucket  // buckets to lookup
+	buckets []Bucket  // buckets to lookup
 	compare checksums // hashes fetched from the database or file system
 	files   int       // total files or database items read
 	sources []string  // files paths to check
@@ -54,9 +54,19 @@ type internal struct {
 	timer   time.Time
 }
 
+func (i *internal) SetCompares(name Bucket) {
+	ls, err := database.List(string(name))
+	if err != nil {
+		out.ErrCont(err)
+	}
+	for fp, sum := range ls {
+		i.compare[sum] = string(fp)
+	}
+}
+
 func (i *internal) SetBuckets(names ...string) {
 	for _, name := range names {
-		i.buckets = append(i.buckets, bucket(name))
+		i.buckets = append(i.buckets, Bucket(name))
 	}
 }
 
@@ -66,11 +76,11 @@ func (i *internal) SetAllBuckets() {
 		out.ErrFatal(err)
 	}
 	for _, name := range names {
-		i.buckets = append(i.buckets, bucket(name))
+		i.buckets = append(i.buckets, Bucket(name))
 	}
 }
 
-func (i *internal) Buckets() []bucket {
+func (i *internal) Buckets() []Bucket {
 	return i.buckets
 }
 
@@ -223,12 +233,15 @@ func (c *Config) Clean() {
 
 // Print the results of a dupe request.
 func (c *Config) Print() {
+	if c.Debug {
+		out.Bug("print duplicate results")
+	}
 	for _, path := range c.sources {
-		h, err := read(path)
+		sum, err := read(path)
 		if err != nil {
 			out.ErrCont(err)
 		}
-		l := c.lookupOne(h)
+		l := c.lookupOne(sum)
 		if l == "" {
 			continue
 		}
@@ -298,6 +311,10 @@ func (c *Config) Seek() {
 			out.ErrCont(err)
 			return
 		}
+		if c.Debug {
+			s := fmt.Sprintf("source: %x: %s", h, path)
+			out.Bug(s)
+		}
 		for _, bucket := range c.Buckets() {
 			finds, c.files, err = database.Seek(h, string(bucket))
 			if err != nil {
@@ -329,7 +346,7 @@ func (c *Config) Status() string {
 	return s
 }
 
-// WalkDirs walks the directories provided by the arguments for zip archives to extract any found comments.
+// WalkDirs walks the named bucket directories for any new files and saves their checksums to the database.
 func (c *Config) WalkDirs() {
 	c.init()
 	if c.db == nil {
@@ -339,16 +356,17 @@ func (c *Config) WalkDirs() {
 	// walk through the directories provided
 	for _, bucket := range c.Buckets() {
 		if c.Debug {
-			out.Bug("bucket: " + string(bucket))
+			out.Bug("walkdir bucket: " + string(bucket))
 		}
-		if err := c.WalkDir(string(bucket)); err != nil {
+		if err := c.WalkDir(bucket); err != nil {
 			out.ErrCont(err)
 		}
 	}
 }
 
-// WalkDir walks the root directory for zip archives and to extract any found comments.
-func (c *Config) WalkDir(root string) error {
+// WalkDir walks the named bucket directory for any new files and saves their checksums to the bucket.
+func (c *Config) WalkDir(name Bucket) error {
+	root := string(name)
 	c.init()
 	skip := c.skipFiles()
 	// open database
@@ -357,7 +375,7 @@ func (c *Config) WalkDir(root string) error {
 		defer c.db.Close()
 	}
 	// create a new bucket if needed
-	if err := c.createBucket(root); err != nil {
+	if err := c.createBucket(name); err != nil {
 		return err
 	}
 	// walk the root directory
@@ -388,11 +406,11 @@ func (c *Config) WalkDir(root string) error {
 			return nil
 		}
 		c.files++
-		if errD := walkDir(root, path, c); errD != nil {
-			if errors.Is(errD, ErrPathExist) {
+		if errW := walkDir(root, path, c); errW != nil {
+			if errors.Is(errW, ErrPathExist) {
 				return nil
 			}
-			out.ErrFatal(errD)
+			out.ErrFatal(errW)
 		}
 		printWalk(false, c)
 		wg.Add(1)
@@ -409,6 +427,9 @@ func (c *Config) WalkDir(root string) error {
 // WalkSource walks the source directory or a file to collect its hashed content for future comparison.
 func (c *Config) WalkSource() {
 	root := c.ToCheck()
+	if c.Debug {
+		out.Bug("walksource to check: " + root)
+	}
 	stat, err := os.Stat(root)
 	if errors.Is(err, os.ErrNotExist) {
 		e := fmt.Errorf("%w: %s", ErrNoPath, root)
@@ -418,10 +439,10 @@ func (c *Config) WalkSource() {
 	}
 	if !stat.IsDir() {
 		c.sources = append(c.sources, root)
+		if c.Debug {
+			out.Bug("items dupe check: " + strings.Join(c.sources, " "))
+		}
 		return
-	}
-	if c.Debug {
-		out.Bug("walksource: " + root)
 	}
 	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if c.Debug {
@@ -444,11 +465,14 @@ func (c *Config) WalkSource() {
 	}); err != nil {
 		out.ErrFatal(err)
 	}
+	if c.Debug {
+		out.Bug("directories dupe check: " + strings.Join(c.sources, " "))
+	}
 }
 
 // createBucket an empty bucket in the database.
-func (c *Config) createBucket(name string) error {
-	_, err := os.Stat(name)
+func (c *Config) createBucket(name Bucket) error {
+	_, err := os.Stat(string(name))
 	if errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("%w: %s", ErrNoPath, name)
 	} else if err != nil {
@@ -478,15 +502,27 @@ func (c *Config) init() {
 			c.Buckets()[i] = ""
 			continue
 		}
-		c.Buckets()[i] = bucket(abs)
+		c.Buckets()[i] = Bucket(abs)
 	}
+	//
 	if c.compare == nil {
 		c.compare = make(checksums)
+		for i, b := range c.Buckets() {
+			c.SetCompares(b)
+			if c.Debug {
+				s := fmt.Sprintf("init %d: %s", i, b)
+				out.Bug(s)
+			}
+		}
 	}
 }
 
 // lookup the checksum value in c.compare and return the file path.
 func (c *Config) lookupOne(sum checksum) string {
+	if c.Debug {
+		s := fmt.Sprintf("look up sum in compare (%d): %x", len(c.compare), sum)
+		out.Bug(s)
+	}
 	if f := c.compare[sum]; f != "" {
 		return f
 	}

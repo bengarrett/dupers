@@ -387,7 +387,8 @@ func Info() (string, error) {
 		w.Flush()
 		return b.String(), err
 	}
-	fmt.Fprintf(w, "\tFile size:\t%s\n", humanize.Bytes(uint64(s.Size())))
+	fmt.Fprintf(w, "\tFile size:\t%s\n",
+		color.Primary.Sprint(humanize.Bytes(uint64(s.Size()))))
 	w, err = info(path, w)
 	if err != nil {
 		fmt.Fprintln(w)
@@ -423,13 +424,14 @@ func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, error) {
 			}
 			cnt++
 			fmt.Fprintln(w)
-			fmt.Fprintf(w, "\t '%s'\n", string(name))
+			fmt.Fprintf(w, "\t%s\n", string(name))
 			items := v.Stats().KeyN
 			if items == 0 {
 				fmt.Fprintf(w, "\t\t   ⤷ is empty")
 				return nil
 			}
-			fmt.Fprintf(w, "\t\t   ⤷ %d items, %s\n", items, humanize.Bytes(uint64(v.Stats().LeafInuse)))
+			fmt.Fprintf(w, "\t\t %s %s %s %s\n", color.Secondary.Sprint("⤷"),
+				color.Primary.Sprint(items), color.Secondary.Sprint("items,"), color.Primary.Sprint(humanize.Bytes(uint64(v.Stats().LeafAlloc))))
 			return nil
 		})
 	})

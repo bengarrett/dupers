@@ -11,7 +11,7 @@ import (
 
 const (
 	match   = "test/files_to_check"
-	bucket  = "test/bucket1"
+	bucket1 = "test/bucket1"
 	bucket2 = "test/bucket2"
 )
 
@@ -25,7 +25,7 @@ func BenchmarkRM(*testing.B) {
 
 func BenchmarkScan1(*testing.B) {
 	color.Enable = false
-	args := []string{"dupe", match, bucket}
+	args := []string{"dupe", match, bucket1}
 	c := dupers.Config{Quiet: true, Test: true}
 	var arr [2]string
 	copy(arr[:], args)
@@ -42,7 +42,7 @@ func BenchmarkScan1(*testing.B) {
 
 func BenchmarkScan2(*testing.B) {
 	color.Enable = false
-	args := []string{"dupe", match, bucket}
+	args := []string{"dupe", match, bucket1}
 	c := dupers.Config{Quiet: true, Test: true}
 	f, t := false, true
 	ts := tasks{
@@ -59,7 +59,7 @@ func BenchmarkScan2(*testing.B) {
 
 func BenchmarkSearch1(*testing.B) {
 	color.Enable = false
-	const term, bucket = "hello world", bucket
+	const term, bucket = "hello world", bucket1
 	args := []string{"search", fmt.Sprintf("'%s'", term), bucket}
 	c := dupers.Config{Quiet: true, Test: true}
 	f := false
@@ -78,7 +78,7 @@ func BenchmarkSearch1(*testing.B) {
 
 func BenchmarkSearch2(*testing.B) {
 	color.Enable = false
-	const term, bucket = "TzgPJuhfPJlg", bucket
+	const term, bucket = "TzgPJuhfPJlg", bucket1
 	args := []string{"search", fmt.Sprintf("'%s'", term), bucket}
 	c := dupers.Config{Quiet: true, Test: true}
 	f := false
