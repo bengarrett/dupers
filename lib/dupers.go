@@ -54,22 +54,7 @@ type internal struct {
 	timer   time.Time
 }
 
-func (i *internal) SetCompares(name Bucket) {
-	ls, err := database.List(string(name))
-	if err != nil {
-		out.ErrCont(err)
-	}
-	for fp, sum := range ls {
-		i.compare[sum] = string(fp)
-	}
-}
-
-func (i *internal) SetBuckets(names ...string) {
-	for _, name := range names {
-		i.buckets = append(i.buckets, Bucket(name))
-	}
-}
-
+// SetAllBuckets sets all the database backets for use with the dupe or search.
 func (i *internal) SetAllBuckets() {
 	names, err := database.AllBuckets()
 	if err != nil {
@@ -80,18 +65,30 @@ func (i *internal) SetAllBuckets() {
 	}
 }
 
-func (i *internal) Buckets() []Bucket {
-	return i.buckets
-}
-
-func (i *internal) PrintBuckets() string {
-	var s []string
-	for _, b := range i.Buckets() {
-		s = append(s, string(b))
+// SetBuckets adds the bucket name to a list of buckets.
+func (i *internal) SetBuckets(names ...string) {
+	for _, name := range names {
+		i.buckets = append(i.buckets, Bucket(name))
 	}
-	return strings.Join(s, " ")
 }
 
+// SetCompares fetches items from the named bucket and sets them to c.compare.
+func (i *internal) SetCompares(name Bucket) {
+	ls, err := database.List(string(name))
+	if err != nil {
+		out.ErrCont(err)
+	}
+	for fp, sum := range ls {
+		i.compare[sum] = string(fp)
+	}
+}
+
+// SetTimer starts a process timer.
+func (i *internal) SetTimer() {
+	i.timer = time.Now()
+}
+
+// SetToCheck sets the named string as the directory or file to check.
 func (i *internal) SetToCheck(name string) {
 	n, err := filepath.Abs(name)
 	if err != nil {
@@ -100,10 +97,26 @@ func (i *internal) SetToCheck(name string) {
 	i.source = n
 }
 
+// Buckets returns a slice of Buckets.
+func (i *internal) Buckets() []Bucket {
+	return i.buckets
+}
+
+// PrintBuckets returns a list of buckets used by the database.
+func (i *internal) PrintBuckets() string {
+	var s []string
+	for _, b := range i.Buckets() {
+		s = append(s, string(b))
+	}
+	return strings.Join(s, " ")
+}
+
+// ToCheck returns the directory or file to check.
 func (i *internal) ToCheck() string {
 	return i.source
 }
 
+// OpenDB opens the Bold database.
 func (i *internal) OpenDB() {
 	if i.db != nil {
 		return
@@ -117,10 +130,7 @@ func (i *internal) OpenDB() {
 	}
 }
 
-func (i *internal) SetTimer() {
-	i.timer = time.Now()
-}
-
+// Timer returns the time taken since the process timer was instigated.
 func (i *internal) Timer() time.Duration {
 	return time.Since(i.timer)
 }
