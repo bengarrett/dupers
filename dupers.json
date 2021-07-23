@@ -1,12 +1,19 @@
 {
-    "version": "0.0.3",
+    "version": "0.0.5",
     "architecture": {
-        "64bit": {
-            "url": "https://github.com/bengarrett/dupers/releases/download/v0.0.3/dupers_Windows_Intel.zip",
+        "32bit": {
+            "url": "https://github.com/bengarrett/dupers/releases/download/v0.0.5/dupers_Windows_32bit.zip",
             "bin": [
                 "dupers.exe"
             ],
-            "hash": "10205b680602cba60cf91072d13496c4c13e6f4f9f9193bfb0d3ae8447e4d6a6"
+            "hash": "de68ae9024176dd5b395c701783c5ce42f03a8e6a78b78fe4a1683820bb6ee74"
+        },
+        "64bit": {
+            "url": "https://github.com/bengarrett/dupers/releases/download/v0.0.5/dupers_Windows_Intel.zip",
+            "bin": [
+                "dupers.exe"
+            ],
+            "hash": "c5ebecdd9efbe9aa39b0b4170366a0e2c2081405acaae156a2fd350747e4871a"
         }
     },
     "homepage": "https://github.com/bengarrett/dupers/",
