@@ -402,6 +402,15 @@ func taskScan(c *dupers.Config, t tasks, args ...string) {
 		s := fmt.Sprintf("buckets: %s", c.PrintBuckets())
 		out.Bug(s)
 	}
+	if ok, cc, bc := c.CheckPaths(); !ok {
+		fmt.Printf("Directory to check:                  %s (%s)\n", c.ToCheck(), color.Red.Sprintf("%d files", cc))
+		fmt.Printf("Buckets to lookup in for duplicates: %s (%d files)\n\n", c.PrintBuckets(), bc)
+		color.Notice.Println("Please confirm the directories are correct.")
+		color.Info.Println("The dictory to check is not stored to the database.")
+		if !out.YN("Is this what you want") {
+			os.Exit(0)
+		}
+	}
 	// files or directories to compare (these are not saved to database)
 	c.WalkSource()
 	if c.Debug {

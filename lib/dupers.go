@@ -140,6 +140,90 @@ var (
 	ErrPathExist = errors.New("path exists in the database bucket")
 )
 
+// CheckPaths counts the files in the directory to check and the buckets.
+func (c *Config) CheckPaths() (ok bool, checkCnt, bucketCnt int) {
+	if c.Debug {
+		out.Bug("count the files within the paths")
+	}
+	root := c.ToCheck()
+	if c.Debug {
+		out.Bug("directory to check: " + root)
+	}
+	stat, err := os.Stat(root)
+	if err != nil {
+		return ok, 0, 0
+	}
+	if !stat.IsDir() {
+		return ok, 0, 0
+	}
+	checkCnt, bucketCnt = 0, 0
+	check := func() bool {
+		return bucketCnt >= checkCnt/2
+	}
+	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if c.Debug {
+			out.Bug("counting: " + path)
+		}
+		if err != nil {
+			return err
+		}
+		if err := skipDir(d, true); err != nil {
+			return err
+		}
+		if !d.Type().IsRegular() {
+			return nil
+		}
+		if d.IsDir() {
+			return nil
+		}
+		checkCnt++
+		return nil
+	}); err != nil {
+		if c.Debug {
+			out.Bug(err.Error())
+		}
+		return
+	}
+	if c.Debug {
+		s := fmt.Sprintf("all buckets: %s", c.Buckets())
+		out.Bug(s)
+	}
+	for _, b := range c.Buckets() {
+		if err := filepath.WalkDir(string(b), func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				out.ErrFatal(err)
+				return nil
+			}
+			if c.Debug {
+				out.Bug("walking bucket item: " + path)
+			}
+			if err := skipDir(d, true); err != nil {
+				return err
+			}
+			if !d.Type().IsRegular() {
+				return nil
+			}
+			if d.IsDir() {
+				return nil
+			}
+			bucketCnt++
+			if check() {
+				return io.EOF
+			}
+			return nil
+		}); err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			if c.Debug {
+				out.Bug(err.Error())
+			}
+			return
+		}
+	}
+	return check(), checkCnt, bucketCnt
+}
+
 // Print the results of the database comparisons.
 func Print(term string, quiet bool, m *database.Matches) {
 	if m == nil {
@@ -463,6 +547,9 @@ func (c *Config) WalkSource() {
 	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if c.Debug {
 			out.Bug(path)
+		}
+		if err != nil {
+			return err
 		}
 		// skip directories
 		if err := skipDir(d, true); err != nil {
