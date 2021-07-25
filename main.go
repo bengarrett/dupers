@@ -202,9 +202,9 @@ func windowsNotice(w *tabwriter.Writer) *tabwriter.Writer {
 
 func exampleDupe(w *tabwriter.Writer) *tabwriter.Writer {
 	fmt.Fprintln(w, "\n  Examples:")
-	fmt.Fprint(w, color.Secondary.Sprint("    # find identical copies of file.zip in the Downloads directory\n"))
+	fmt.Fprint(w, color.Secondary.Sprint("    # find identical copies of file.txt in the Downloads directory\n"))
 	fmt.Fprint(w, color.Info.Sprintf("    dupers dupe '%s' '%s'",
-		filepath.Join(home(), "file.zip"), filepath.Join(home(), "Downloads")))
+		filepath.Join(home(), "file.txt"), filepath.Join(home(), "Downloads")))
 
 	if runtime.GOOS == winOS {
 		fmt.Fprint(w, color.Secondary.Sprint("\n    # search for files in Documents that also exist on drives D: and E:\n"))
