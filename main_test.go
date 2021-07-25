@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	dupers "github.com/bengarrett/dupers/lib"
-
 	"github.com/gookit/color"
 )
 
@@ -141,4 +140,20 @@ func Test_searchSummary(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_info(t *testing.T) {
+	t.Run("info", func(t *testing.T) {
+		if info() == "" {
+			t.Error("info() = \"\", want strings")
+		}
+	})
+}
+
+func Test_home(t *testing.T) {
+	t.Run("home", func(t *testing.T) {
+		if home() == "" {
+			t.Error("home() = \"\", want a directory path")
+		}
+	})
 }

@@ -4,6 +4,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
@@ -94,7 +95,10 @@ func main() {
 	if *t.debug {
 		c.Debug = true
 	}
-	options(ver, v)
+	if s := options(ver, v); s != "" {
+		fmt.Print(s)
+		os.Exit(0)
+	}
 
 	selection := strings.ToLower(flag.Args()[0])
 	if c.Debug {
@@ -125,9 +129,11 @@ func main() {
 }
 
 // Help, usage and examples.
-func help() {
+func help() string {
 	var f *flag.Flag
-	w := tabwriter.NewWriter(os.Stderr, 0, 0, 4, ' ', 0)
+	var b bytes.Buffer
+	w := tabwriter.NewWriter(&b, 0, 0, 4, ' ', 0)
+	defer w.Flush()
 	fmt.Fprintf(w, "Dupers is the blazing-fast file duplicate checker and filename search.\n")
 	windowsNotice(w)
 	fmt.Fprintf(w, "\n%s\n  Scan for duplicate files, matching files that share the identical content.\n",
@@ -182,7 +188,7 @@ func help() {
 	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
 	fmt.Fprintln(w, "    -h, -help\tshow this list of options")
 	fmt.Fprintln(w)
-	w.Flush()
+	return b.String()
 }
 
 func windowsNotice(w *tabwriter.Writer) *tabwriter.Writer {
@@ -591,41 +597,40 @@ func searchSummary(total int, term string, exact, filename bool) string {
 	return str(t, s, term)
 }
 
-func options(ver, v *bool) {
+func options(ver, v *bool) string {
 	// convenience for when a help or version flag is passed as an argument
 	for _, arg := range flag.Args() {
 		switch strings.ToLower(arg) {
 		case "-h", "-help", "--help":
-			help()
-			os.Exit(0)
+			return help()
 		case "-v", "-version", "--version":
-			info()
-			os.Exit(0)
+			return info()
 		}
 	}
 	// print version information
 	if *ver || *v {
-		info()
-		os.Exit(0)
+		return info()
 	}
 	// print help if no arguments are given
 	if len(flag.Args()) == 0 {
-		help()
-		os.Exit(0)
+		return help()
 	}
+	return ""
 }
 
 // Info prints out the program information and version.
-func info() {
+func info() string {
 	const copyright = "\u00A9"
-	fmt.Printf("dupers v%s\n%s 2021 Ben Garrett\n", version, copyright)
-	fmt.Printf("https://github.com/bengarrett/dupers\n\n")
-	fmt.Printf("build: %s (%s)\n", commit, date)
+	var w = new(bytes.Buffer)
+	fmt.Fprintf(w, "dupers v%s\n%s 2021 Ben Garrett\n", version, copyright)
+	fmt.Fprintf(w, "https://github.com/bengarrett/dupers\n\n")
+	fmt.Fprintf(w, "build: %s (%s)\n", commit, date)
 	exe, err := self()
 	if err != nil {
 		out.ErrFatal(err)
 	}
-	fmt.Printf("path: %s\n", exe)
+	fmt.Fprintf(w, "path: %s\n", exe)
+	return w.String()
 }
 
 func home() string {
