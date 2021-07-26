@@ -18,7 +18,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bengarrett/dupers/lib/database"
+	"github.com/bengarrett/dupers/database"
 	"github.com/bengarrett/dupers/out"
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"

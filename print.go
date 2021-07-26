@@ -14,8 +14,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/bengarrett/dupers/database"
 	dupers "github.com/bengarrett/dupers/lib"
-	"github.com/bengarrett/dupers/lib/database"
 	"github.com/bengarrett/dupers/out"
 	"github.com/gookit/color"
 )

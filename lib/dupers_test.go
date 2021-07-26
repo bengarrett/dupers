@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/bengarrett/dupers/lib/database"
+	"github.com/bengarrett/dupers/database"
 	"github.com/bengarrett/dupers/mock"
 )
 
