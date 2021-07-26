@@ -1,6 +1,7 @@
 package database
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"log"
@@ -56,7 +57,8 @@ func tmpDB() error {
 			}
 			return fmt.Errorf("%w: %s", ErrCreate, err)
 		}
-		return b.Put([]byte(key1), []byte(val1))
+		sum256 := sha256.Sum256([]byte(val1))
+		return b.Put([]byte(key1), sum256[:])
 	})
 }
 
@@ -391,4 +393,76 @@ func TestIsEmpty(t *testing.T) {
 			log.Fatal(err)
 		}
 	})
+}
+
+func TestList(t *testing.T) {
+	if err := tmpDB(); err != nil {
+		t.Error(err)
+	}
+	tests := []struct {
+		name    string
+		bucket  string
+		wantLs  bool
+		wantErr bool
+	}{
+		{"empty", "", false, true},
+		{"invalid", "foo bucket", false, true},
+		{"backet", tmpBk(), true, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotLs, err := List(tt.bucket)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("List() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if l := len(gotLs) > 0; l != tt.wantLs {
+				t.Errorf("List() = %v, want %v", l, tt.wantLs)
+			}
+		})
+	}
+	// delete modified db
+	if err := tmpRM(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func TestSeek(t *testing.T) {
+	sum0, sum1 := [32]byte{}, sha256.Sum256([]byte(val1))
+	type args struct {
+		sum    [32]byte
+		bucket string
+	}
+	tests := []struct {
+		name        string
+		args        args
+		wantFinds   []string
+		wantRecords int
+		wantErr     bool
+	}{
+		{"empty", args{sum0, ""}, nil, 0, true},
+		{"no find", args{sum0, tmpBk()}, nil, 1, false},
+		{"find", args{sum1, tmpBk()}, []string{key1}, 1, false},
+	}
+	if err := tmpDB(); err != nil {
+		t.Error(err)
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotFinds, gotRecords, err := Seek(tt.args.sum, tt.args.bucket)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Seek() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(gotFinds, tt.wantFinds) {
+				t.Errorf("Seek() gotFinds = %v, want %v", gotFinds, tt.wantFinds)
+			}
+			if gotRecords != tt.wantRecords {
+				t.Errorf("Seek() gotRecords = %v, want %v", gotRecords, tt.wantRecords)
+			}
+		})
+	}
+	if err := tmpRM(); err != nil {
+		log.Fatal(err)
+	}
 }
