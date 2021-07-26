@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/bengarrett/dupers/lib/database"
-	"github.com/bengarrett/dupers/lib/out"
+	"github.com/bengarrett/dupers/out"
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
 	"github.com/karrick/godirwalk"

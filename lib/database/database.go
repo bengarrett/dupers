@@ -16,7 +16,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/bengarrett/dupers/lib/out"
+	"github.com/bengarrett/dupers/out"
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"

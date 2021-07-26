@@ -16,7 +16,7 @@ import (
 
 	dupers "github.com/bengarrett/dupers/lib"
 	"github.com/bengarrett/dupers/lib/database"
-	"github.com/bengarrett/dupers/lib/out"
+	"github.com/bengarrett/dupers/out"
 	"github.com/gookit/color"
 )
 
