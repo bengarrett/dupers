@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	fileSrc  = "../../test/files_to_check/ppFlTD6QQYlS"
-	fileDest = "../../test/tmp/ppFlTD6QQYlS"
+	fileSrc  = "../test/files_to_check/ppFlTD6QQYlS"
+	fileDest = "../test/tmp/ppFlTD6QQYlS"
 
 	bucket = "test/bucket1"
 	key1   = "item1"

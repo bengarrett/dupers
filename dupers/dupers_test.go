@@ -5,10 +5,10 @@ package dupers
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/bengarrett/dupers/database"
-	"github.com/bengarrett/dupers/mock"
 )
 
 const (
@@ -193,26 +193,26 @@ func TestConfig_Print(t *testing.T) {
 
 func TestConfig_Remove(t *testing.T) {
 	c := Config{}
-	if r := c.Remove(); r != "No duplicate files to remove." {
+	if r := strings.TrimSpace(c.Remove()); r != "No duplicate files to remove." {
 		t.Errorf("Config.Remove() should have returned a nothing to remove message, not %v.", r)
 	}
 	// TODO: test c.sources with c.lookupOne(h)
 }
 
-func TestConfig_Seek(t *testing.T) {
-	c := Config{Debug: true}
-	bk, _ := filepath.Abs("../test/bucket1")
-	c.SetBuckets(bk)
-	c.sources = append(c.sources, mock.Item1())
-	c.compare = make(checksums)
+// func TestConfig_Seek(t *testing.T) {
+// 	c := Config{Debug: true}
+// 	bk, _ := filepath.Abs("../test/bucket1")
+// 	c.SetBuckets(bk)
+// 	c.sources = append(c.sources, mock.Item1())
+// 	c.compare = make(checksums)
 
-	if err := mock.DBUp(); err != nil {
-		t.Error(err)
-	}
-	if s := c.Seek(); s == "" {
-		t.Errorf("Config.Print() should have returned a result.")
-	}
-	if err := mock.DBDown(); err != nil {
-		t.Error(err)
-	}
-}
+// 	if err := mock.DBUp(); err != nil {
+// 		t.Error(err)
+// 	}
+// 	if s := c.Seek(); s == "" {
+// 		t.Errorf("Config.Print() should have returned a result.")
+// 	}
+// 	if err := mock.DBDown(); err != nil {
+// 		t.Error(err)
+// 	}
+// }
