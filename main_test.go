@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	dupers "github.com/bengarrett/dupers/lib"
+	"github.com/bengarrett/dupers/dupers"
 	"github.com/gookit/color"
 )
 

@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"github.com/bengarrett/dupers/database"
-	dupers "github.com/bengarrett/dupers/lib"
+	"github.com/bengarrett/dupers/dupers"
 	"github.com/bengarrett/dupers/out"
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
