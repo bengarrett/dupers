@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -387,8 +388,12 @@ func Info() (string, error) {
 		w.Flush()
 		return b.String(), err
 	}
-	fmt.Fprintf(w, "\tFile size:\t%s\n",
+	fmt.Fprintf(w, "\tFile:\t%s",
 		color.Primary.Sprint(humanize.Bytes(uint64(s.Size()))))
+	if runtime.GOOS != "windows" {
+		fmt.Fprintf(w, " (%v)", s.Mode())
+	}
+	fmt.Fprintf(w, "\n")
 	w, err = info(path, w)
 	if err != nil {
 		fmt.Fprintln(w)
@@ -404,6 +409,13 @@ func Info() (string, error) {
 }
 
 func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, error) {
+	type (
+		vals struct {
+			items int
+			size  string
+		}
+		item map[string]vals
+	)
 	db, err := bolt.Open(name, FileMode, &bolt.Options{ReadOnly: true})
 	if err != nil {
 		return w, err
@@ -414,28 +426,30 @@ func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, error) {
 		ro = color.Danger.Sprint("NO")
 	}
 	fmt.Fprintf(w, "\tRead only mode:\t%s\n", ro)
-	fmt.Fprintln(w, "Buckets:")
-	err = db.View(func(tx *bolt.Tx) error {
-		cnt := 0
+	items, cnt := make(item), 0
+	if err = db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 			v := tx.Bucket(name)
 			if v == nil {
 				return fmt.Errorf("%w: %s", ErrNoBucket, string(name))
 			}
 			cnt++
-			fmt.Fprintln(w)
-			fmt.Fprintf(w, "\t%s\n", string(name))
-			items := v.Stats().KeyN
-			if items == 0 {
-				fmt.Fprintf(w, "\t\t   ⤷ is empty")
-				return nil
-			}
-			fmt.Fprintf(w, "\t\t %s %s %s %s\n", color.Secondary.Sprint("⤷"),
-				color.Primary.Sprint(items), color.Secondary.Sprint("items,"), color.Primary.Sprint(humanize.Bytes(uint64(v.Stats().LeafAlloc))))
+			items[string(name)] = vals{v.Stats().KeyN, humanize.Bytes(uint64(v.Stats().LeafAlloc))}
 			return nil
 		})
-	})
-	return w, err
+	}); err != nil {
+		return nil, err
+	}
+	fmt.Fprintf(w, "Buckets:        %s\n\n", color.Primary.Sprint(cnt))
+	tab := tabwriter.NewWriter(w, 0, 0, 4, ' ', tabwriter.AlignRight)
+	fmt.Fprintf(tab, "Items\tSize\t\tBucket %s\n", color.Secondary.Sprint("(absolute path)"))
+	for i, b := range items {
+		fmt.Fprintf(tab, "%d\t%s\t\t%v\n", b.items, b.size, i)
+	}
+	if err := tab.Flush(); err != nil {
+		return w, err
+	}
+	return w, nil
 }
 
 // IsEmpty returns true if the database has no buckets.
