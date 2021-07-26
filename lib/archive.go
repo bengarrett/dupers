@@ -405,8 +405,14 @@ func (c *Config) updateArchiver(path, bucket string, sum checksum) error {
 	if c.Debug {
 		out.Bug("update archiver: " + path)
 	}
+	if c.db == nil {
+		return bolt.ErrDatabaseNotOpen
+	}
 	if err := c.db.Update(func(tx *bolt.Tx) error {
 		b1 := tx.Bucket([]byte(bucket))
+		if b1 == nil {
+			return bolt.ErrBucketNotFound
+		}
 		return b1.Put([]byte(path), sum[:])
 	}); err != nil {
 		return err

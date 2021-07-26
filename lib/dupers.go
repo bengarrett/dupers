@@ -4,6 +4,7 @@
 package dupers
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -225,13 +226,14 @@ func (c *Config) CheckPaths() (ok bool, checkCnt, bucketCnt int) {
 }
 
 // Print the results of the database comparisons.
-func Print(term string, quiet bool, m *database.Matches) {
+func Print(quiet bool, m *database.Matches) string {
 	if m == nil {
-		return
+		return ""
 	}
 	if len(*m) == 0 {
-		return
+		return ""
 	}
+	w := new(bytes.Buffer)
 	// collect the bucket names which will be used to sort the results
 	buckets, bucket := []string{}, ""
 	for _, bucket := range *m {
@@ -243,7 +245,7 @@ func Print(term string, quiet bool, m *database.Matches) {
 	for i, buck := range buckets {
 		cnt := 0
 		if i > 0 {
-			fmt.Println()
+			fmt.Fprintln(w)
 		}
 		// print the matches, the filenames are unsorted
 		for file, b := range *m {
@@ -255,26 +257,28 @@ func Print(term string, quiet bool, m *database.Matches) {
 				bucket = string(b)
 				if !quiet {
 					if cnt > 1 {
-						fmt.Println()
+						fmt.Fprintln(w)
 					}
-					fmt.Printf("%s: %s\n", color.Info.Sprint("Results from"), b)
+					fmt.Fprintf(w, "%s: %s\n", color.Info.Sprint("Results from"), b)
 				}
 			}
 			if quiet {
-				fmt.Printf("%s\n", file)
+				fmt.Fprintf(w, "%s\n", file)
 				continue
 			}
 			if cnt == 1 {
-				fmt.Printf("%s%s\n", color.Success.Sprint("  ⤷\t"), file)
+				fmt.Fprintf(w, "%s%s\n", color.Success.Sprint("  ⤷\t"), file)
 				continue
 			}
-			fmt.Printf("  %s%s\t%s\n", color.Primary.Sprint(cnt), color.Secondary.Sprint("."), file)
+			fmt.Fprintf(w, "  %s%s\t%s\n", color.Primary.Sprint(cnt), color.Secondary.Sprint("."), file)
 		}
 	}
+	return w.String()
 }
 
 // Clean removes all empty directories from c.Source.
 // Directories containing hidden system directories or files are not considered empty.
+// TODO: cleanup var names and test
 func (c *Config) Clean() {
 	if c.ToCheck() == "" {
 		return
@@ -326,10 +330,11 @@ func (c *Config) Clean() {
 }
 
 // Print the results of a dupe request.
-func (c *Config) Print() {
+func (c *Config) Print() string {
 	if c.Debug {
 		out.Bug("print duplicate results")
 	}
+	w := new(bytes.Buffer)
 	for _, path := range c.sources {
 		sum, err := read(path)
 		if err != nil {
@@ -342,17 +347,19 @@ func (c *Config) Print() {
 		if l == path {
 			continue
 		}
-		fmt.Println(match(path, l))
+		fmt.Fprintln(w, match(path, l))
 	}
+	return w.String()
 }
 
 // Remove all duplicate files from the source directory.
-func (c *Config) Remove() {
+func (c *Config) Remove() string {
+	w := new(bytes.Buffer)
 	if len(c.sources) == 0 || len(c.compare) == 0 {
-		fmt.Println("No duplicate files to remove.")
-		return
+		fmt.Fprintln(w, "No duplicate files to remove.")
+		return w.String()
 	}
-	fmt.Println()
+	fmt.Fprintln(w)
 	for _, path := range c.sources {
 		if c.Debug {
 			out.Bug("remove read: " + path)
@@ -368,12 +375,13 @@ func (c *Config) Remove() {
 			out.Bug("remove delete: " + path)
 		}
 		err = os.Remove(path)
-		printRM(path, err)
+		fmt.Fprintln(w, printRM(path, err))
 	}
+	return w.String()
 }
 
 // RemoveAll removes directories from the source directory that do not contain unique MS-DOS or Windows programs.
-func (c *Config) RemoveAll(clean bool) {
+func (c *Config) RemoveAll(clean bool) string {
 	root := c.ToCheck()
 	_, err := os.Stat(root)
 	if errors.Is(err, os.ErrNotExist) {
@@ -382,9 +390,8 @@ func (c *Config) RemoveAll(clean bool) {
 	} else if err != nil {
 		out.ErrFatal(err)
 	}
-
 	if len(c.sources) == 0 {
-		return
+		return ""
 	}
 
 	files, err := os.ReadDir(root)
@@ -398,18 +405,21 @@ func (c *Config) RemoveAll(clean bool) {
 		os.Exit(0)
 	}
 	fmt.Println()
-	removeAll(root, files)
+	return removeAll(root, files)
 }
 
 // Seek sources from the database and print out the matches.
-func (c *Config) Seek() {
+func (c *Config) Seek() string {
 	c.init()
-	var finds []string
+	finds, w := []string{}, new(bytes.Buffer)
 	for _, path := range c.sources {
+		if c.Debug {
+			out.Bug("seeking source: " + path)
+		}
 		h, err := read(path)
 		if err != nil {
 			out.ErrCont(err)
-			return
+			return w.String()
 		}
 		if c.Debug {
 			s := fmt.Sprintf("source: %x: %s", h, path)
@@ -425,10 +435,11 @@ func (c *Config) Seek() {
 		if len(finds) > 0 {
 			for _, find := range finds {
 				c.compare[h] = path
-				fmt.Println(match(path, find))
+				fmt.Fprintln(w, match(path, find))
 			}
 		}
 	}
+	return w.String()
 }
 
 // Status summarizes the file total and time taken.
@@ -730,13 +741,13 @@ func matchItem(match string) string {
 }
 
 // printRM prints "could not remove:".
-func printRM(path string, err error) {
+func printRM(path string, err error) string {
 	if err != nil {
 		e := fmt.Errorf("could not remove: %w", err)
 		out.ErrCont(e)
-		return
+		return ""
 	}
-	fmt.Printf("%s: %s\n", color.Secondary.Sprint("removed"), path)
+	return fmt.Sprintf("%s: %s\n", color.Secondary.Sprint("removed"), path)
 }
 
 // printWalk prints "Scanning/Looking up".
@@ -775,7 +786,8 @@ func read(name string) (sum checksum, err error) {
 }
 
 // removeAll removes directories that do not contain MS-DOS or Windows programs.
-func removeAll(root string, files []fs.DirEntry) {
+func removeAll(root string, files []fs.DirEntry) string {
+	w := new(bytes.Buffer)
 	for _, item := range files {
 		if !item.IsDir() {
 			continue
@@ -785,8 +797,9 @@ func removeAll(root string, files []fs.DirEntry) {
 			continue
 		}
 		err := os.RemoveAll(path)
-		printRM(path, err)
+		fmt.Fprintln(w, printRM(path, err))
 	}
+	return w.String()
 }
 
 // skipDir tells WalkDir to ignore specific system and hidden directories.

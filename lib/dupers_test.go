@@ -6,17 +6,29 @@ import (
 	"fmt"
 	"path/filepath"
 	"testing"
+
+	"github.com/bengarrett/dupers/lib/database"
+	"github.com/bengarrett/dupers/mock"
 )
 
 const (
 	bucket1 = "../test/bucket1"
+	bucket2 = "../test/bucket2"
+	file1   = "../test/bucket1/0vlLaUEvzAWP"
+	file2   = "../test/bucket1/GwejJkMzs3yP"
 	// checksums created from sha256sum <filename>.
-	file1 = "../test/bucket1/0vlLaUEvzAWP"
-	hash1 = "1a1d76a3187ccee147e6c807277273afbad5d2680f5eadf1012310743e148f22"
-	file2 = "../test/bucket1/GwejJkMzs3yP"
-	hash2 = "4acc274c2e6dc2241029c735758f672b3dc1109ab76a91fe29aeb2bac6949eb7"
 	hash0 = "0000000000000000000000000000000000000000000000000000000000000000"
+	hash1 = "1a1d76a3187ccee147e6c807277273afbad5d2680f5eadf1012310743e148f22"
+	hash2 = "4acc274c2e6dc2241029c735758f672b3dc1109ab76a91fe29aeb2bac6949eb7"
 )
+
+func ExamplePrint() {
+	matches := database.Matches{}
+	matches[database.Filepath(file1)] = database.Bucket(bucket1)
+	s := Print(true, &matches)
+	fmt.Print(s)
+	// Output: ../test/bucket1/0vlLaUEvzAWP
+}
 
 func Test_contains(t *testing.T) {
 	type args struct {
@@ -88,5 +100,119 @@ func Test_read(t *testing.T) {
 				t.Errorf("read() got = %v, want %v", h, tt.wantHash)
 			}
 		})
+	}
+}
+
+func Test_SetBuckets(t *testing.T) {
+	const test = "test"
+	i := internal{}
+	i.SetBuckets(test)
+	t.Run("test set", func(t *testing.T) {
+		if l := len(i.buckets); l != 1 {
+			t.Errorf("SetBuckets() got = %v, want %v", l, 1)
+		}
+	})
+	t.Run("print", func(t *testing.T) {
+		if s := i.PrintBuckets(); s != test {
+			t.Errorf("SetBuckets() got = %v, want %v", s, test)
+		}
+	})
+}
+
+func Test_SetToCheck(t *testing.T) {
+	i := internal{}
+	i.SetToCheck(bucket1)
+	t.Run("test set", func(t *testing.T) {
+		if s := i.source; s == "" {
+			t.Errorf("SetToCheck() got = %v, want the absolute path of: %v", s, bucket1)
+		}
+	})
+}
+
+func TestConfig_CheckPaths(t *testing.T) {
+	type fields struct {
+		Debug    bool
+		Quiet    bool
+		Test     bool
+		internal internal
+	}
+	type args struct {
+		source  string
+		buckets []Bucket
+	}
+	f := fields{Test: true}
+	tests := []struct {
+		name          string
+		fields        fields
+		args          args
+		wantOk        bool
+		wantCheckCnt  int
+		wantBucketCnt int
+	}{
+		{"empty", f, args{}, false, 0, 0},
+		{"source", f, args{source: bucket2}, false, 2, 0},
+		{"okay", f, args{source: bucket2, buckets: []Bucket{bucket1}}, true, 2, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Config{
+				Debug:    tt.fields.Debug,
+				Quiet:    tt.fields.Quiet,
+				Test:     tt.fields.Test,
+				internal: tt.fields.internal,
+			}
+			c.source = tt.args.source
+			c.buckets = tt.args.buckets
+			gotOk, gotCheckCnt, gotBucketCnt := c.CheckPaths()
+			if gotOk != tt.wantOk {
+				t.Errorf("Config.CheckPaths() gotOk = %v, want %v", gotOk, tt.wantOk)
+			}
+			if gotCheckCnt != tt.wantCheckCnt {
+				t.Errorf("Config.CheckPaths() gotCheckCnt = %v, want %v", gotCheckCnt, tt.wantCheckCnt)
+			}
+			if gotBucketCnt != tt.wantBucketCnt {
+				t.Errorf("Config.CheckPaths() gotBucketCnt = %v, want %v", gotBucketCnt, tt.wantBucketCnt)
+			}
+		})
+	}
+}
+
+func TestConfig_Print(t *testing.T) {
+	b1, _ := filepath.Abs(file1)
+	b2, _ := filepath.Abs(file2)
+	c := Config{}
+	c.sources = []string{b1, b2}
+	sum, _ := read(b1)
+	c.compare = make(checksums)
+	c.compare[checksum(sum)] = file1
+
+	if s := c.Print(); s == "" {
+		t.Errorf("Config.Print() should have returned a result.")
+	}
+}
+
+func TestConfig_Remove(t *testing.T) {
+	c := Config{}
+	if r := c.Remove(); r != "No duplicate files to remove." {
+		t.Errorf("Config.Remove() should have returned a nothing to remove message, not %v.", r)
+	}
+	// TODO: test c.sources with c.lookupOne(h)
+}
+
+func TestConfig_Seek(t *testing.T) {
+	c := Config{Debug: true}
+	bk, _ := filepath.Abs("../test/bucket1")
+	c.SetBuckets(bk)
+	c.sources = append(c.sources, mock.Item1())
+	c.compare = make(checksums)
+
+	if err := mock.DBUp(); err != nil {
+		t.Error(err)
+	}
+	if s := c.Seek(); s == "" {
+		t.Errorf("Config.Print() should have returned a result.")
+	}
+	if err := mock.DBDown(); err != nil {
+		t.Error(err)
 	}
 }

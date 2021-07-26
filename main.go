@@ -336,24 +336,24 @@ func taskLookup(c *dupers.Config, t tasks) {
 		if c.Debug {
 			out.Bug("seek in buckets.")
 		}
-		c.Seek()
+		fmt.Print(c.Seek())
 	}
 }
 
 func taskScanClean(c *dupers.Config, t tasks) {
-	c.Print()
+	fmt.Print(c.Print())
 	if *t.rm || *t.rmPlus {
 		if c.Debug {
 			out.Bug("remove duplicate files.")
 		}
-		c.Remove()
+		fmt.Print(c.Remove())
 	}
 	if *t.sensen {
 		if c.Debug {
 			out.Bug("remove all non unique Windows and MS-DOS files.")
 		}
-		c.RemoveAll(*t.rmPlus)
-		c.Remove()
+		fmt.Print(c.RemoveAll(*t.rmPlus))
+		fmt.Print(c.Remove())
 	} else if *t.rmPlus {
 		if c.Debug {
 			out.Bug("remove empty directories.")
@@ -399,7 +399,7 @@ func taskSearch(t tasks, args ...string) {
 			}
 		}
 	}
-	dupers.Print(term, *t.quiet, m)
+	fmt.Print(dupers.Print(*t.quiet, m))
 	if !*t.quiet {
 		l := 0
 		if m != nil {
