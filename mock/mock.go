@@ -14,13 +14,15 @@ import (
 )
 
 const (
-	bucket = "../test/bucket1"
-	key1   = "item1"
-	val1   = "some value 1"
+	bucket1 = "../test/bucket1"
+	key1    = "item1"
+	val1    = "some value 1"
 
+	DirMode  fs.FileMode = 0700
 	FileMode fs.FileMode = 0600
-	SevenZip             = "../test/randomfiles.7z"
-	Source1              = "../test/bucket1/0vlLaUEvzAWP"
+
+	SevenZip = "../test/randomfiles.7z"
+	Source1  = "../test/bucket1/0vlLaUEvzAWP"
 
 	dbName = "dupers.db"
 	dbPath = "dupers"
@@ -35,7 +37,7 @@ var (
 )
 
 func Bucket1() string {
-	b, err := filepath.Abs(bucket)
+	b, err := filepath.Abs(bucket1)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -62,7 +64,7 @@ func Name() (string, error) {
 	dir = filepath.Join(dir, dbPath, "test")
 	_, err = os.Stat(dir)
 	if os.IsNotExist(err) {
-		if err1 := os.MkdirAll(dir, 0700); err != nil {
+		if err1 := os.MkdirAll(dir, DirMode); err != nil {
 			return "", err1
 		}
 	}
@@ -74,12 +76,14 @@ func DBUp() error {
 	if err != nil {
 		return err
 	}
+	fmt.Println(path)
 	db, err := bolt.Open(path, FileMode, nil)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 	return db.Update(func(tx *bolt.Tx) error {
+		fmt.Println(db.Path())
 		b, err := tx.CreateBucket([]byte(Bucket1()))
 		if err != nil {
 			if errors.As(err, &ErrBucket) {

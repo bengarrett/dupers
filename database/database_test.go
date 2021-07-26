@@ -1,9 +1,7 @@
 package database
 
 import (
-	"crypto/sha256"
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -11,71 +9,22 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bengarrett/dupers/mock"
 	"github.com/gookit/color"
-	bolt "go.etcd.io/bbolt"
 )
 
 const (
 	fileSrc  = "../test/files_to_check/ppFlTD6QQYlS"
 	fileDest = "../test/tmp/ppFlTD6QQYlS"
-
-	bucket = "test/bucket1"
-	key1   = "item1"
-	val1   = "some value 1"
 )
 
 var (
-	ErrBucket = errors.New("bucket already exists")
-	ErrCreate = errors.New("create bucket")
 	ErrNoComp = errors.New("database compression has not reduced the size")
 )
 
-func tmpBk() string {
-	b, err := filepath.Abs(bucket)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return b
-}
-
-func tmpDB() error {
+func init() {
+	color.Enable = false
 	testMode = true
-	path, err := DB()
-	if err != nil {
-		return err
-	}
-	db, err := bolt.Open(path, FileMode, nil)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-	return db.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucket([]byte(tmpBk()))
-		if err != nil {
-			if errors.As(err, &ErrBucket) {
-				return nil
-			}
-			return fmt.Errorf("%w: %s", ErrCreate, err)
-		}
-		sum256 := sha256.Sum256([]byte(val1))
-		return b.Put([]byte(key1), sum256[:])
-	})
-}
-
-func tmpRM() error {
-	testMode = true
-	path, err := DB()
-	if err != nil {
-		return err
-	}
-	err = os.Remove(path)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func Test_copyFile(t *testing.T) {
@@ -112,19 +61,19 @@ func Test_copyFile(t *testing.T) {
 			}
 		})
 	}
+	os.Remove(fileDest)
 }
 
 func TestAllBuckets(t *testing.T) {
 	color.Enable = false
-	testMode = true
 	tests := []struct {
 		name      string
 		wantNames []string
 		wantErr   bool
 	}{
-		{"test", []string{tmpBk()}, false},
+		{"test", []string{mock.Bucket1()}, false},
 	}
-	if err := tmpDB(); err != nil {
+	if err := mock.DBUp(); err != nil {
 		t.Error(err)
 	}
 	for _, tt := range tests {
@@ -143,14 +92,13 @@ func TestAllBuckets(t *testing.T) {
 
 func TestBackup(t *testing.T) {
 	color.Enable = false
-	testMode = true
 	tests := []struct {
 		name    string
 		wantErr bool
 	}{
 		{"backup", false},
 	}
-	if err := tmpDB(); err != nil {
+	if err := mock.DBUp(); err != nil {
 		t.Error(err)
 	}
 	for _, tt := range tests {
@@ -186,7 +134,7 @@ func TestClean(t *testing.T) {
 	}{
 		{"temp", args{quiet: true}, false},
 	}
-	if err := tmpDB(); err != nil {
+	if err := mock.DBUp(); err != nil {
 		t.Error(err)
 	}
 	for _, tt := range tests {
@@ -205,7 +153,7 @@ func TestCompact(t *testing.T) {
 	}{
 		{"temp", false},
 	}
-	if err := tmpDB(); err != nil {
+	if err := mock.DBUp(); err != nil {
 		t.Error(err)
 	}
 	for _, tt := range tests {
@@ -221,33 +169,30 @@ func TestCompact(t *testing.T) {
 }
 
 func TestCompare(t *testing.T) {
-	if err := tmpRM(); err != nil {
+	if err := mock.DBDown(); err != nil {
 		log.Fatal(err)
 	}
-	if err := tmpDB(); err != nil {
+	if err := mock.DBUp(); err != nil {
 		t.Error(err)
 	}
-	i, err := Info()
-	if err != nil {
-		t.Error(err)
-	}
-	fmt.Println(i)
 	type args struct {
 		s       string
 		buckets []string
 	}
 	empty, find := Matches{}, Matches{}
-	find[key1] = Bucket(tmpBk())
+	item := mock.Item1()
+	k := Filepath(item)
+	find[k] = Bucket(mock.Bucket1())
 	tests := []struct {
 		name    string
 		args    args
 		want    *Matches
 		wantErr bool
 	}{
-		{"match", args{"item", nil}, &find, false},
-		{"exact", args{key1, nil}, &find, false},
+		{"match all", args{"UEvz", nil}, &find, false},
+		{"exact", args{item, nil}, &find, false},
 		{"no match", args{"abcde", nil}, &empty, false},
-		{"upper", args{strings.ToUpper(key1), nil}, &empty, false},
+		{"upper", args{strings.ToUpper(item), nil}, &empty, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -264,28 +209,25 @@ func TestCompare(t *testing.T) {
 }
 
 func TestCompareBase(t *testing.T) {
-	if err := tmpDB(); err != nil {
+	if err := mock.DBUp(); err != nil {
 		t.Error(err)
 	}
-	i, err := Info()
-	if err != nil {
-		t.Error(err)
-	}
-	fmt.Println(i)
 	type args struct {
 		s       string
 		buckets []string
 	}
 	empty, find := Matches{}, Matches{}
-	find[key1] = Bucket(tmpBk())
+	item := mock.Item1()
+	s, k := filepath.Base(item), Filepath(item)
+	find[k] = Bucket(mock.Bucket1())
 	tests := []struct {
 		name    string
 		args    args
 		want    *Matches
 		wantErr bool
 	}{
-		{"match", args{key1, nil}, &find, false},
-		{"upper", args{strings.ToUpper(key1), nil}, &empty, false},
+		{"match", args{s, nil}, &find, false},
+		{"upper", args{strings.ToUpper(s), nil}, &empty, false},
 		{"no match", args{"abcde", nil}, &empty, false},
 	}
 	for _, tt := range tests {
@@ -306,8 +248,8 @@ func TestCompareBase(t *testing.T) {
 		want    *Matches
 		wantErr bool
 	}{
-		{"match", args{key1, nil}, &find, false},
-		{"upper", args{strings.ToUpper(key1), nil}, &find, false},
+		{"match", args{s, nil}, &find, false},
+		{"upper", args{strings.ToUpper(s), nil}, &find, false},
 		{"no match", args{"abcde", nil}, &empty, false},
 	}
 	for _, tt := range tests {
@@ -325,7 +267,7 @@ func TestCompareBase(t *testing.T) {
 }
 
 func TestCompareNoCase(t *testing.T) {
-	if err := tmpDB(); err != nil {
+	if err := mock.DBUp(); err != nil {
 		t.Error(err)
 	}
 	type args struct {
@@ -333,17 +275,19 @@ func TestCompareNoCase(t *testing.T) {
 		buckets []string
 	}
 	empty, find := Matches{}, Matches{}
-	find[key1] = Bucket(tmpBk())
+	item := mock.Item1()
+	s, k := filepath.Base(item), Filepath(item)
+	find[k] = Bucket(mock.Bucket1())
 	tests := []struct {
 		name    string
 		args    args
 		want    *Matches
 		wantErr bool
 	}{
-		{"match", args{"item", nil}, &find, false},
-		{"exact", args{key1, nil}, &find, false},
+		{"match", args{"vz", nil}, &find, false},
+		{"exact", args{s, nil}, &find, false},
 		{"no match", args{"abcde", nil}, &empty, false},
-		{"upper", args{strings.ToUpper(key1), nil}, &find, false},
+		{"upper", args{strings.ToUpper(s), nil}, &find, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -360,7 +304,7 @@ func TestCompareNoCase(t *testing.T) {
 }
 
 func TestIsEmpty(t *testing.T) {
-	if err := tmpDB(); err != nil {
+	if err := mock.DBUp(); err != nil {
 		t.Error(err)
 	}
 	t.Run("is empty", func(t *testing.T) {
@@ -375,7 +319,7 @@ func TestIsEmpty(t *testing.T) {
 			t.Errorf("IsEmpty() = %v, want %v", got, want)
 		}
 		// test & use remove bucket, leaving the db empty
-		if err1 := RM(tmpBk()); err1 != nil {
+		if err1 := RM(mock.Bucket1()); err1 != nil {
 			t.Error(err1)
 		}
 		// test empty db
@@ -389,14 +333,14 @@ func TestIsEmpty(t *testing.T) {
 			t.Errorf("IsEmpty() = %v, want %v", got, want)
 		}
 		// delete modified db
-		if err := tmpRM(); err != nil {
+		if err := mock.DBDown(); err != nil {
 			log.Fatal(err)
 		}
 	})
 }
 
 func TestList(t *testing.T) {
-	if err := tmpDB(); err != nil {
+	if err := mock.DBUp(); err != nil {
 		t.Error(err)
 	}
 	tests := []struct {
@@ -407,7 +351,7 @@ func TestList(t *testing.T) {
 	}{
 		{"empty", "", false, true},
 		{"invalid", "foo bucket", false, true},
-		{"backet", tmpBk(), true, false},
+		{"backet", mock.Bucket1(), true, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -422,13 +366,18 @@ func TestList(t *testing.T) {
 		})
 	}
 	// delete modified db
-	if err := tmpRM(); err != nil {
+	if err := mock.DBDown(); err != nil {
 		log.Fatal(err)
 	}
 }
 
 func TestSeek(t *testing.T) {
-	sum0, sum1 := [32]byte{}, sha256.Sum256([]byte(val1))
+	sum0 := [32]byte{}
+	sum1, err := mock.Read(mock.Item1())
+	if err != nil {
+		t.Error(err)
+	}
+
 	type args struct {
 		sum    [32]byte
 		bucket string
@@ -441,10 +390,10 @@ func TestSeek(t *testing.T) {
 		wantErr     bool
 	}{
 		{"empty", args{sum0, ""}, nil, 0, true},
-		{"no find", args{sum0, tmpBk()}, nil, 1, false},
-		{"find", args{sum1, tmpBk()}, []string{key1}, 1, false},
+		{"no find", args{sum0, mock.Bucket1()}, nil, 1, false},
+		{"find", args{sum1, mock.Bucket1()}, []string{mock.Item1()}, 1, false},
 	}
-	if err := tmpDB(); err != nil {
+	if err := mock.DBUp(); err != nil {
 		t.Error(err)
 	}
 	for _, tt := range tests {
@@ -462,7 +411,7 @@ func TestSeek(t *testing.T) {
 			}
 		})
 	}
-	if err := tmpRM(); err != nil {
+	if err := mock.DBDown(); err != nil {
 		log.Fatal(err)
 	}
 }
