@@ -14,30 +14,25 @@ import (
 )
 
 const (
-	bucket1 = "../test/bucket1"
-	key1    = "item1"
-	val1    = "some value 1"
-
 	DirMode  fs.FileMode = 0700
 	FileMode fs.FileMode = 0600
 
 	SevenZip = "../test/randomfiles.7z"
-	Source1  = "../test/bucket1/0vlLaUEvzAWP"
-
-	dbName = "dupers.db"
-	dbPath = "dupers"
-	oneKb  = 1024
-	oneMb  = oneKb * oneKb
+	Source1  = Test1 + "/0vlLaUEvzAWP"
+	Test1    = "../test/bucket1"
+	dbName   = "dupers.db"
+	dbPath   = "dupers"
+	oneKb    = 1024
+	oneMb    = oneKb * oneKb
 )
 
 var (
 	ErrBucket = errors.New("bucket already exists")
 	ErrCreate = errors.New("create bucket")
-	ErrNoComp = errors.New("database compression has not reduced the size")
 )
 
 func Bucket1() string {
-	b, err := filepath.Abs(bucket1)
+	b, err := filepath.Abs(Test1)
 	if err != nil {
 		log.Fatal(err)
 	}

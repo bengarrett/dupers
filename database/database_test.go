@@ -415,3 +415,20 @@ func TestSeek(t *testing.T) {
 		log.Fatal(err)
 	}
 }
+
+func TestInfo(t *testing.T) {
+	if err := mock.DBUp(); err != nil {
+		t.Error(err)
+	}
+	info, err := Info()
+	if err != nil {
+		t.Errorf("Info() returned an error = %v", err)
+	}
+	want := mock.Bucket1()
+	if !strings.Contains(info, want) {
+		t.Errorf("Info() should display the mock database path, %v\ngot:\n%v", want, info)
+	}
+	if err := mock.DBDown(); err != nil {
+		log.Fatal(err)
+	}
+}
