@@ -20,6 +20,7 @@ const (
 	SevenZip = "../test/randomfiles.7z"
 	Source1  = Test1 + "/0vlLaUEvzAWP"
 	Test1    = "../test/bucket1"
+	Test2    = "../test/bucket2"
 	dbName   = "dupers.db"
 	dbPath   = "dupers"
 	oneKb    = 1024
@@ -41,6 +42,14 @@ func Bucket1() string {
 
 func Item1() string {
 	b, err := filepath.Abs(Source1)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return b
+}
+
+func Source2() string {
+	b, err := filepath.Abs(Test2)
 	if err != nil {
 		log.Fatal(err)
 	}

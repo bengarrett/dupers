@@ -516,7 +516,7 @@ func (c *Config) WalkDir(name Bucket) error {
 			}
 			out.ErrFatal(errW)
 		}
-		printWalk(false, c)
+		fmt.Print(printWalk(false, c))
 		wg.Add(1)
 		go func() {
 			c.update(path, root)
@@ -529,24 +529,23 @@ func (c *Config) WalkDir(name Bucket) error {
 }
 
 // WalkSource walks the source directory or a file to collect its hashed content for future comparison.
-func (c *Config) WalkSource() {
+func (c *Config) WalkSource() error {
 	root := c.ToCheck()
 	if c.Debug {
 		out.Bug("walksource to check: " + root)
 	}
 	stat, err := os.Stat(root)
 	if errors.Is(err, os.ErrNotExist) {
-		e := fmt.Errorf("%w: %s", ErrNoPath, root)
-		out.ErrFatal(e)
+		return fmt.Errorf("%w: %s", ErrNoPath, root)
 	} else if err != nil {
-		out.ErrFatal(err)
+		return err
 	}
 	if !stat.IsDir() {
 		c.sources = append(c.sources, root)
 		if c.Debug {
 			out.Bug("items dupe check: " + strings.Join(c.sources, " "))
 		}
-		return
+		return nil
 	}
 	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if c.Debug {
@@ -570,11 +569,12 @@ func (c *Config) WalkSource() {
 		c.sources = append(c.sources, path)
 		return nil
 	}); err != nil {
-		out.ErrFatal(err)
+		return err
 	}
 	if c.Debug {
 		out.Bug("directories dupe check: " + strings.Join(c.sources, " "))
 	}
+	return nil
 }
 
 // createBucket an empty bucket in the database.
@@ -744,22 +744,26 @@ func printRM(path string, err error) string {
 }
 
 // printWalk prints "Scanning/Looking up".
-func printWalk(lookup bool, c *Config) {
+func printWalk(lookup bool, c *Config) string {
 	if c.Test || c.Quiet || c.Debug {
-		return
+		return ""
 	}
+	w := new(bytes.Buffer)
 	s := "Scanning"
 	if lookup {
 		s = "Looking up"
 	}
 	if runtime.GOOS == winOS {
 		// color output slows down large scans on Windows
-		fmt.Printf("\r%s %d files  ", s, c.files)
-	} else {
-		fmt.Print("\u001b[2K")
-		fmt.Print("\r", color.Secondary.Sprintf("%s ", s),
-			color.Primary.Sprintf("%d files ", c.files))
+		fmt.Fprintf(w, "\r%s %d files  ", s, c.files)
+		return w.String()
 	}
+	if color.Enable {
+		fmt.Fprint(w, "\u001b[2K")
+	}
+	fmt.Fprint(w, "\r", color.Secondary.Sprintf("%s ", s),
+		color.Primary.Sprintf("%d files ", c.files))
+	return w.String()
 }
 
 // read opens the named file and returns a SHA256 checksum of the data.

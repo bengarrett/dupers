@@ -274,7 +274,7 @@ func TestConfig_WalkDirs(t *testing.T) {
 func TestConfig_WalkDir(t *testing.T) {
 	c := Config{}
 	if err := c.WalkDir(""); err == nil {
-		t.Errorf("Config.WalkDir() should return an error.")
+		t.Errorf("Config.WalkDir() should return an error with an empty Config.")
 	}
 	if c.db != nil {
 		c.db.Close()
@@ -291,5 +291,42 @@ func TestConfig_WalkDir(t *testing.T) {
 	b := mock.Bucket1()
 	if err := c.WalkDir(Bucket(b)); err != nil {
 		t.Errorf("Config.WalkDir(%s) returned the error: %v", b, err)
+	}
+}
+
+func TestConfig_WalkSource(t *testing.T) {
+	c := Config{}
+	if err := c.WalkSource(); err == nil {
+		t.Errorf("Config.WalkSource() should return an error with an empty Config.")
+	}
+	c.SetToCheck(mock.Source2())
+	if err := c.WalkSource(); err != nil {
+		t.Errorf("Config.WalkSource() returned an error: %v", err)
+	}
+}
+
+func Test_printWalk(t *testing.T) {
+	c := Config{Test: false, Quiet: false, Debug: false}
+	s := strings.TrimSpace(printWalk(false, &c))
+	want := "Scanning 0 files"
+	if s != want {
+		t.Errorf("printWalk() returned: %s, want %s", s, want)
+	}
+	c.files = 15
+	s = strings.TrimSpace(printWalk(false, &c))
+	want = "Scanning 15 files"
+	if s != want {
+		t.Errorf("printWalk() returned: %s, want %s", s, want)
+	}
+	s = strings.TrimSpace(printWalk(true, &c))
+	want = "Looking up 15 files"
+	if s != want {
+		t.Errorf("printWalk() returned: %s, want %s", s, want)
+	}
+	c.Quiet = true
+	s = strings.TrimSpace(printWalk(true, &c))
+	want = ""
+	if s != want {
+		t.Errorf("printWalk() returned: %s, want a blank string", s)
 	}
 }

@@ -301,7 +301,9 @@ func taskScan(c *dupers.Config, t tasks, args ...string) {
 	}
 	taskCheckPaths(c)
 	// files or directories to compare (these are not saved to database)
-	c.WalkSource()
+	if err := c.WalkSource(); err != nil {
+		out.ErrFatal(err)
+	}
 	if c.Debug {
 		out.Bug("walksource complete.")
 	}
