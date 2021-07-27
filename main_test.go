@@ -14,8 +14,11 @@ const (
 	bucket2 = "test/bucket2"
 )
 
-func BenchmarkRM(*testing.B) {
+func init() {
 	color.Enable = false
+}
+
+func BenchmarkRM(*testing.B) {
 	args := [2]string{"rm", bucket2}
 	c := dupers.Config{Quiet: true, Test: true}
 	taskDBUp(&c, false, args)
@@ -23,7 +26,6 @@ func BenchmarkRM(*testing.B) {
 }
 
 func BenchmarkScan1(*testing.B) {
-	color.Enable = false
 	args := []string{"dupe", match, bucket1}
 	c := dupers.Config{Quiet: true, Test: true}
 	var arr [2]string
@@ -40,7 +42,6 @@ func BenchmarkScan1(*testing.B) {
 }
 
 func BenchmarkScan2(*testing.B) {
-	color.Enable = false
 	args := []string{"dupe", match, bucket1}
 	c := dupers.Config{Quiet: true, Test: true}
 	f, t := false, true
@@ -56,41 +57,24 @@ func BenchmarkScan2(*testing.B) {
 	taskScan(&c, ts, args...)
 }
 
-func BenchmarkSearch1(*testing.B) {
-	color.Enable = false
-	const term, bucket = "hello world", bucket1
-	args := []string{"search", fmt.Sprintf("'%s'", term), bucket}
-	c := dupers.Config{Quiet: true, Test: true}
-	f := false
-	ts := tasks{
-		exact:    &f,
-		filename: &f,
-		quiet:    &f,
-	}
-	var arr [2]string
-	copy(arr[:], args)
-	taskDBUp(&c, false, arr)
-	for i := 0; i <= 3; i++ {
-		taskSearch(ts, args...)
-	}
-}
-
-func BenchmarkSearch2(*testing.B) {
-	color.Enable = false
-	const term, bucket = "TzgPJuhfPJlg", bucket1
-	args := []string{"search", fmt.Sprintf("'%s'", term), bucket}
-	c := dupers.Config{Quiet: true, Test: true}
-	f := false
-	ts := tasks{
-		exact:    &f,
-		filename: &f,
-		quiet:    &f,
-	}
-	var arr [2]string
-	copy(arr[:], args)
-	taskDBUp(&c, false, arr)
-	for i := 0; i <= 3; i++ {
-		taskSearch(ts, args...)
+func BenchmarkSearch(*testing.B) {
+	terms := []string{"TzgPJuhfPJlg", "hello worlld"}
+	const bucket = bucket1
+	for _, term := range terms {
+		args := []string{"search", fmt.Sprintf("'%s'", term), bucket}
+		c := dupers.Config{Quiet: true, Test: true}
+		f := false
+		ts := tasks{
+			exact:    &f,
+			filename: &f,
+			quiet:    &f,
+		}
+		var arr [2]string
+		copy(arr[:], args)
+		taskDBUp(&c, false, arr)
+		for i := 0; i <= 3; i++ {
+			taskSearch(ts, args...)
+		}
 	}
 }
 
@@ -132,7 +116,6 @@ func Test_searchSummary(t *testing.T) {
 		{"filename results", args{term: "xyz", total: 3, filename: true}, "3 filename results exist for 'xyz'."},
 		{"exact filename results", args{term: "xyz", total: 3, exact: true, filename: true}, "3 exact filename results exist for 'xyz'."},
 	}
-	color.Enable = false
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := searchSummary(tt.args.total, tt.args.term, tt.args.exact, tt.args.filename); got != tt.want {

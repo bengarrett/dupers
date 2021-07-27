@@ -193,7 +193,7 @@ func TestConfig_Print(t *testing.T) {
 	c.sources = []string{b1, b2}
 	sum, _ := read(b1)
 	c.compare = make(checksums)
-	c.compare[checksum(sum)] = file1
+	c.compare[sum] = file1
 
 	if s := c.Print(); s == "" {
 		t.Errorf("Config.Print() should have returned a result.")

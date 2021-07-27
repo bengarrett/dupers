@@ -77,7 +77,7 @@ linters:
     - exhaustive
     - funlen
     - gochecknoglobals
-    - gochecknoinits
+  #  - gochecknoinits
     - goconst
     - gocritic
     - gocyclo

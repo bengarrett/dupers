@@ -428,7 +428,7 @@ func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, error) {
 	}
 	fmt.Fprintf(w, "\tRead only mode:\t%s\n", ro)
 	items, cnt := make(item), 0
-	if err = db.View(func(tx *bolt.Tx) error {
+	if err := db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 			v := tx.Bucket(name)
 			if v == nil {

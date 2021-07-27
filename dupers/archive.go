@@ -158,7 +158,7 @@ func (c *Config) WalkArchiver(name Bucket) error {
 			}
 			return err
 		}
-		if err1 := skipDir(d, true); err1 != nil {
+		if err1 := skipDir(d); err1 != nil {
 			return err1
 		}
 		if skipFile(d.Name()) {

@@ -49,8 +49,8 @@ type internal struct {
 	db      *bolt.DB  // Bolt database
 	buckets []Bucket  // buckets to lookup
 	compare checksums // hashes fetched from the database or file system
-	files   int       // total files or database items read
-	sources []string  // files paths to check
+	files   int       // nolint: structcheck
+	sources []string  // nolint: structcheck
 	source  string    // directory or file to compare
 	timer   time.Time
 }
@@ -142,7 +142,7 @@ var (
 )
 
 // CheckPaths counts the files in the directory to check and the buckets.
-func (c *Config) CheckPaths() (ok bool, checkCnt, bucketCnt int) {
+func (c *Config) CheckPaths() (ok bool, checkCnt, bucketCnt int) { //nolint: gocyclo
 	if c.Debug {
 		out.Bug("count the files within the paths")
 	}
@@ -168,7 +168,7 @@ func (c *Config) CheckPaths() (ok bool, checkCnt, bucketCnt int) {
 		if err != nil {
 			return err
 		}
-		if err := skipDir(d, true); err != nil {
+		if err := skipDir(d); err != nil {
 			return err
 		}
 		if !d.Type().IsRegular() {
@@ -198,7 +198,7 @@ func (c *Config) CheckPaths() (ok bool, checkCnt, bucketCnt int) {
 			if c.Debug {
 				out.Bug("walking bucket item: " + path)
 			}
-			if err := skipDir(d, true); err != nil {
+			if err := skipDir(d); err != nil {
 				return err
 			}
 			if !d.Type().IsRegular() {
@@ -497,7 +497,7 @@ func (c *Config) WalkDir(name Bucket) error {
 			}
 			return err
 		}
-		if err1 := skipDir(d, true); err1 != nil {
+		if err1 := skipDir(d); err1 != nil {
 			return err1
 		}
 		if skipFile(d.Name()) {
@@ -555,7 +555,7 @@ func (c *Config) WalkSource() error {
 			return err
 		}
 		// skip directories
-		if err := skipDir(d, true); err != nil {
+		if err := skipDir(d); err != nil {
 			return err
 		}
 		// skip non-files such as symlinks
@@ -800,7 +800,7 @@ func removeAll(root string, files []fs.DirEntry) string {
 }
 
 // skipDir tells WalkDir to ignore specific system and hidden directories.
-func skipDir(d fs.DirEntry, hidden bool) error {
+func skipDir(d fs.DirEntry) error {
 	if !d.IsDir() {
 		return nil
 	}
@@ -811,11 +811,11 @@ func skipDir(d fs.DirEntry, hidden bool) error {
 		return filepath.SkipDir
 	default:
 		// Unix style hidden directories
-		if hidden && strings.HasPrefix(d.Name(), ".") {
+		if strings.HasPrefix(d.Name(), ".") {
 			return filepath.SkipDir
 		}
 		// Windows system directories
-		if hidden && runtime.GOOS == winOS && strings.HasPrefix(d.Name(), "$") {
+		if runtime.GOOS == winOS && strings.HasPrefix(d.Name(), "$") {
 			return filepath.SkipDir
 		}
 		return nil
