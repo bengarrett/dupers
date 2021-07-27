@@ -278,16 +278,15 @@ func Print(quiet bool, m *database.Matches) string {
 
 // Clean removes all empty directories from c.Source.
 // Directories containing hidden system directories or files are not considered empty.
-// TODO: cleanup var names and test
-func (c *Config) Clean() {
-	if c.ToCheck() == "" {
-		return
+func (c *Config) Clean() string {
+	path := c.ToCheck()
+	if path == "" {
+		return ""
 	}
 	var count int
-	if err := godirwalk.Walk(c.ToCheck(), &godirwalk.Options{
+	if err := godirwalk.Walk(path, &godirwalk.Options{
 		Unsorted: true,
 		Callback: func(_ string, _ *godirwalk.Dirent) error {
-			// no-op while diving in; all the fun happens in PostChildrenCallback
 			return nil
 		},
 		PostChildrenCallback: func(osPathname string, _ *godirwalk.Dirent) error {
@@ -295,23 +294,18 @@ func (c *Config) Clean() {
 			if err != nil {
 				return err
 			}
-
-			// Attempt to read only the first directory entry. Remember that
-			// Scan skips both "." and ".." entries.
+			// Attempt to read only the first directory entry.
 			hasAtLeastOneChild := s.Scan()
-
 			// If error reading from directory, wrap up and return.
 			if err1 := s.Err(); err1 != nil {
 				return err1
 			}
-
 			if hasAtLeastOneChild {
-				return nil // do not remove directory with at least one child
+				return nil
 			}
-			if osPathname == c.ToCheck() {
-				return nil // do not remove directory that was provided top-level directory
+			if osPathname == path {
+				return nil
 			}
-
 			count++
 			err = os.Remove(osPathname)
 			if err == nil {
@@ -323,10 +317,9 @@ func (c *Config) Clean() {
 		out.ErrFatal(err)
 	}
 	if count == 0 {
-		fmt.Println("Nothing required cleaning.")
-		return
+		return fmt.Sprintln("Nothing required cleaning.")
 	}
-	fmt.Printf("Removed %d empty directories in: '%s'\n", count, c.ToCheck())
+	return fmt.Sprintf("Removed %d empty directories in: '%s'\n", count, path)
 }
 
 // Print the results of a dupe request.

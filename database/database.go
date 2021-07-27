@@ -62,7 +62,7 @@ func Backup() (name string, written int64, err error) {
 	}
 	name = filepath.Join(dir, backupName())
 
-	written, err = copyFile(src, name)
+	written, err = CopyFile(src, name)
 	if err != nil {
 		return "", 0, err
 	}
@@ -74,9 +74,10 @@ func backupName() string {
 	return fmt.Sprintf("%s-backup-%s%s", strings.TrimSuffix(dbName, ext), now, ext)
 }
 
-func copyFile(src, dest string) (int64, error) {
+// CopyFile duplicates the named file to the destination filepath.
+func CopyFile(name, dest string) (int64, error) {
 	// read source
-	f, err := os.Open(src)
+	f, err := os.Open(name)
 	if err != nil {
 		return 0, err
 	}
@@ -257,7 +258,7 @@ func Compact(debug bool) error {
 	if err = srcDB.Close(); err != nil {
 		out.ErrFatal(err)
 	}
-	if cp, err := copyFile(tmp, src); err != nil {
+	if cp, err := CopyFile(tmp, src); err != nil {
 		return err
 	} else if debug {
 		s := fmt.Sprintf("copied %d bytes to: %s", cp, src)

@@ -4,6 +4,7 @@ package dupers
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -16,6 +17,8 @@ const (
 	bucket2 = "../test/bucket2"
 	file1   = "../test/bucket1/0vlLaUEvzAWP"
 	file2   = "../test/bucket1/GwejJkMzs3yP"
+	rmSrc   = "../test/bucket1/mPzd5cu0Gv5j"
+	rmDst   = "../test/tmp/mPzd5cu0Gv5j"
 	// checksums created from sha256sum <filename>.
 	hash0 = "0000000000000000000000000000000000000000000000000000000000000000"
 	hash1 = "1a1d76a3187ccee147e6c807277273afbad5d2680f5eadf1012310743e148f22"
@@ -196,23 +199,53 @@ func TestConfig_Remove(t *testing.T) {
 	if r := strings.TrimSpace(c.Remove()); r != "No duplicate files to remove." {
 		t.Errorf("Config.Remove() should have returned a nothing to remove message, not %v.", r)
 	}
-	// TODO: test c.sources with c.lookupOne(h)
+	// copy file
+	const written = 20
+	i, err := database.CopyFile(rmSrc, rmDst)
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.Remove(rmDst)
+	if i != written {
+		t.Errorf("CopyFile should have written %d bytes, but wrote %d", written, i)
+	}
+	// setup mock databases
+	c.sources = append(c.sources, rmDst)
+	sum, err := read(rmDst)
+	if err != nil {
+		t.Error(err)
+	}
+	c.compare = make(checksums)
+	c.compare[sum] = rmDst
+	want := fmt.Sprintf("removed: %s", rmDst)
+	if s := c.Remove(); strings.TrimSpace(s) != want {
+		t.Errorf("Config.Remove() returned an unexpected reply: %s, want %s", s, want)
+	}
 }
 
-// func TestConfig_Seek(t *testing.T) {
-// 	c := Config{Debug: true}
-// 	bk, _ := filepath.Abs("../test/bucket1")
-// 	c.SetBuckets(bk)
-// 	c.sources = append(c.sources, mock.Item1())
-// 	c.compare = make(checksums)
-
-// 	if err := mock.DBUp(); err != nil {
-// 		t.Error(err)
-// 	}
-// 	if s := c.Seek(); s == "" {
-// 		t.Errorf("Config.Print() should have returned a result.")
-// 	}
-// 	if err := mock.DBDown(); err != nil {
-// 		t.Error(err)
-// 	}
-// }
+func TestConfig_Clean(t *testing.T) {
+	c := Config{}
+	if r := strings.TrimSpace(c.Clean()); r != "" {
+		t.Errorf("Config.Clean() should have returned blank, not %v.", r)
+	}
+	// copy file
+	const written = 20
+	i, err := database.CopyFile(rmSrc, rmDst)
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.Remove(rmDst)
+	if i != written {
+		t.Errorf("CopyFile should have written %d bytes, but wrote %d", written, i)
+	}
+	// make empty test dir
+	c.source = filepath.Dir(rmDst)
+	dir := filepath.Join(c.source, "empty directory placeholder")
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		t.Error(err)
+	}
+	// clean
+	if r := strings.TrimSpace(c.Clean()); !strings.Contains(r, "Removed 2 empty directories in:") {
+		t.Errorf("Config.Clean() should have returned a remove notice, not %v.", r)
+	}
+}
