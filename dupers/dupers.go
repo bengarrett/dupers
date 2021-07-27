@@ -117,7 +117,7 @@ func (i *internal) ToCheck() string {
 	return i.source
 }
 
-// OpenDB opens the Bold database.
+// OpenDB opens the Bolt database.
 func (i *internal) OpenDB() {
 	if i.db != nil {
 		return

@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/bengarrett/dupers/database"
+	"github.com/bengarrett/dupers/mock"
+	"github.com/gookit/color"
 )
 
 const (
@@ -24,6 +26,10 @@ const (
 	hash1 = "1a1d76a3187ccee147e6c807277273afbad5d2680f5eadf1012310743e148f22"
 	hash2 = "4acc274c2e6dc2241029c735758f672b3dc1109ab76a91fe29aeb2bac6949eb7"
 )
+
+func init() {
+	color.Enable = false
+}
 
 func ExamplePrint() {
 	matches := database.Matches{}
@@ -247,5 +253,43 @@ func TestConfig_Clean(t *testing.T) {
 	// clean
 	if r := strings.TrimSpace(c.Clean()); !strings.Contains(r, "Removed 2 empty directories in:") {
 		t.Errorf("Config.Clean() should have returned a remove notice, not %v.", r)
+	}
+}
+
+func TestConfig_Status(t *testing.T) {
+	c := Config{}
+	c.files = 2
+	want := "Scanned 2 files, taking"
+	if s := strings.TrimSpace(c.Status()); !strings.Contains(s, want) {
+		t.Errorf("Config.Status() should contain %s, got %s", want, s)
+	}
+}
+
+func TestConfig_WalkDirs(t *testing.T) {
+	c := Config{}
+	c.SetBuckets(mock.Bucket1())
+	c.WalkDirs()
+}
+
+func TestConfig_WalkDir(t *testing.T) {
+	c := Config{}
+	if err := c.WalkDir(""); err == nil {
+		t.Errorf("Config.WalkDir() should return an error.")
+	}
+	if c.db != nil {
+		c.db.Close()
+		c.db = nil
+	}
+	f := mock.Item1()
+	if err := c.WalkDir(Bucket(f)); err != nil {
+		t.Errorf("Config.WalkDir(%s) should skip files.", f)
+	}
+	if c.db != nil {
+		c.db.Close()
+		c.db = nil
+	}
+	b := mock.Bucket1()
+	if err := c.WalkDir(Bucket(b)); err != nil {
+		t.Errorf("Config.WalkDir(%s) returned the error: %v", b, err)
 	}
 }

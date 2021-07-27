@@ -27,7 +27,7 @@ func init() {
 	testMode = true
 }
 
-func Test_copyFile(t *testing.T) {
+func TestCopyFile(t *testing.T) {
 	type args struct {
 		src  string
 		dest string
@@ -51,13 +51,13 @@ func Test_copyFile(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := copyFile(tt.args.src, tt.args.dest)
+			got, err := CopyFile(tt.args.src, tt.args.dest)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("copyFile() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("CopyFile() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("copyFile() = %v, want %v", got, tt.want)
+				t.Errorf("CopyFile() = %v, want %v", got, tt.want)
 			}
 		})
 	}
