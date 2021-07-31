@@ -748,14 +748,13 @@ func printWalk(lookup bool, c *Config) string {
 	if c.Test || c.Quiet || c.Debug {
 		return ""
 	}
-	w := new(bytes.Buffer)
-	s := "Scanning"
+	w, s := new(bytes.Buffer), "  Scanning"
 	if lookup {
 		s = "Looking up"
 	}
 	if runtime.GOOS == winOS {
 		// color output slows down large scans on Windows
-		fmt.Fprintf(w, "\r%s %d files  ", s, c.files)
+		fmt.Fprintf(w, "\r%s %d files", s, c.files)
 		return w.String()
 	}
 	if color.Enable {
@@ -852,7 +851,7 @@ func walkDir(root, path string, c *Config) error {
 		if !c.Test && !c.Quiet && !c.Debug {
 			if runtime.GOOS == winOS {
 				// color output slows down large scans on Windows
-				fmt.Printf("\rLooking up %d files", c.files)
+				fmt.Printf("\r  Scanning %d files", c.files)
 			} else {
 				fmt.Print("\u001b[2K\r", color.Secondary.Sprint("Looking up "),
 					color.Primary.Sprintf("%d files", c.files))
