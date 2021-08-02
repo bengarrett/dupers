@@ -4,6 +4,8 @@ package dupers
 
 import (
 	"fmt"
+	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,8 +17,10 @@ import (
 )
 
 const (
+	bucket0 = "../test/tmp"
 	bucket1 = "../test/bucket1"
 	bucket2 = "../test/bucket2"
+	bucket3 = "../test/sensen"
 	file1   = "../test/bucket1/0vlLaUEvzAWP"
 	file2   = "../test/bucket1/GwejJkMzs3yP"
 	rmSrc   = "../test/bucket1/mPzd5cu0Gv5j"
@@ -333,4 +337,78 @@ func Test_printWalk(t *testing.T) {
 	if s != want {
 		t.Errorf("printWalk() returned: %s, want a blank string", s)
 	}
+}
+
+func TestRemoveAll(t *testing.T) {
+	c := Config{Test: true, Quiet: false, Debug: true}
+	if err := cleanDir(bucket0); err != nil {
+		t.Error(err)
+	}
+	if err := mirrorDir(bucket3, bucket0); err != nil {
+		t.Error(err)
+	}
+	abs, err := filepath.Abs(bucket0)
+	if err != nil {
+		t.Error(err)
+	}
+	srcs, err := filepath.Abs(bucket2)
+	if err != nil {
+		t.Error(err)
+	}
+	c.source = abs
+	c.sources = append(c.sources, srcs)
+	s := c.RemoveAll()
+	fmt.Println(s)
+	// t.Error()
+}
+
+func cleanDir(name string) error {
+	abs, err := filepath.Abs(name)
+	if err != nil {
+		return err
+	}
+	return filepath.WalkDir(abs, func(path string, d fs.DirEntry, err error) error {
+		if path == abs {
+			return nil
+		}
+		if _, err := os.Stat(path); err != nil {
+			return nil
+		}
+		fmt.Println(path)
+		if err := os.RemoveAll(path); err != nil {
+			log.Println(err)
+		}
+		return nil
+	})
+}
+
+func mirrorDir(src, dst string) error {
+	const dirAllAccess fs.FileMode = 0777
+	from, err := filepath.Abs(src)
+	if err != nil {
+		return err
+	}
+	to, err := filepath.Abs(dst)
+	if err != nil {
+		return err
+	}
+	return filepath.WalkDir(from, func(path string, d fs.DirEntry, err error) error {
+		if path == from {
+			return nil
+		}
+		dest := filepath.Join(to, strings.Replace(path, from, "", 1))
+		if d.IsDir() {
+			if errM := os.MkdirAll(dest, dirAllAccess); errM != nil {
+				log.Println(errM)
+			}
+			return nil
+		}
+		if !d.Type().IsRegular() {
+			return nil
+		}
+		if _, errC := database.CopyFile(path, dest); errC != nil {
+			log.Println(errC)
+		}
+		return nil
+	})
 }

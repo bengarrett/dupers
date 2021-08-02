@@ -354,7 +354,7 @@ func taskScanClean(c *dupers.Config, t tasks) {
 		if c.Debug {
 			out.Bug("remove all non unique Windows and MS-DOS files.")
 		}
-		fmt.Print(c.RemoveAll(*t.rmPlus))
+		fmt.Print(c.RemoveAll())
 		fmt.Print(c.Remove())
 	} else if *t.rmPlus {
 		if c.Debug {
