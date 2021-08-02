@@ -104,7 +104,6 @@ func Abs(bucket string) ([]byte, error) {
 // AllBuckets lists all the stored bucket names in the database.
 func AllBuckets() (names []string, err error) {
 	path, err := DB()
-	fmt.Println("db: ", path)
 	if err != nil {
 		return nil, err
 	}
@@ -129,15 +128,18 @@ func AllBuckets() (names []string, err error) {
 	return names, nil
 }
 
-// Clean the stale items from all database buckets.
+// Clean the stale items from database buckets.
 // Stale items are file pointers that no longer exist on the host file system.
-func Clean(quiet, debug bool) error { // nolint: gocyclo
+func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo
 	if debug {
 		out.Bug("running database clean")
 	}
-	buckets, err := AllBuckets()
-	if err != nil {
-		return err
+	var err error
+	if len(buckets) == 0 {
+		buckets, err = AllBuckets()
+		if err != nil {
+			return err
+		}
 	}
 	if debug {
 		s := fmt.Sprintf("list of buckets:\n%s", strings.Join(buckets, "\n"))
@@ -169,6 +171,9 @@ func Clean(quiet, debug bool) error { // nolint: gocyclo
 				return ErrNoBucket
 			}
 			err = b.ForEach(func(k, v []byte) error {
+				if debug {
+					out.Bug("clean: " + string(k))
+				}
 				if _, err1 := os.Stat(string(k)); err1 != nil {
 					f := string(k)
 					if st, err2 := os.Stat(filepath.Dir(f)); err2 == nil {
