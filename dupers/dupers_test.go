@@ -255,7 +255,7 @@ func TestConfig_Clean(t *testing.T) {
 		t.Error(err)
 	}
 	// clean
-	if r := strings.TrimSpace(c.Clean()); !strings.Contains(r, "Removed 2 empty directories in:") {
+	if r := strings.TrimSpace(c.Clean()); !strings.Contains(r, "Removed ") {
 		t.Errorf("Config.Clean() should have returned a remove notice, not %v.", r)
 	}
 }
