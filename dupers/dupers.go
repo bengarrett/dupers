@@ -358,6 +358,12 @@ func (c *Config) Remove() string {
 		if c.Debug {
 			out.Bug("remove read: " + path)
 		}
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			if c.Debug {
+				out.Bug("path is not exist: " + path)
+			}
+			continue
+		}
 		h, err := read(path)
 		if err != nil {
 			out.ErrCont(err)
@@ -375,7 +381,7 @@ func (c *Config) Remove() string {
 }
 
 // RemoveAll removes directories from the source directory that do not contain unique MS-DOS or Windows programs.
-func (c *Config) RemoveAll(clean bool) string {
+func (c *Config) RemoveAll() string {
 	root := c.ToCheck()
 	_, err := os.Stat(root)
 	if errors.Is(err, os.ErrNotExist) {
@@ -387,18 +393,18 @@ func (c *Config) RemoveAll(clean bool) string {
 	if len(c.sources) == 0 {
 		return ""
 	}
-
 	files, err := os.ReadDir(root)
 	if err != nil {
 		out.ErrCont(err)
 	}
-
-	color.Info.Println("\nRemove ALL files, except for unique Windows/MS-DOS programs ?")
-	fmt.Printf("%s %s", color.Secondary.Sprint("target directory:"), root)
-	if input := out.YN("Please confirm"); !input {
-		os.Exit(0)
+	if !c.Test {
+		color.Info.Println("\nRemove ALL files, except for unique Windows/MS-DOS programs ?")
+		fmt.Printf("%s %s", color.Secondary.Sprint("target directory:"), root)
+		if input := out.YN("Please confirm"); !input {
+			os.Exit(0)
+		}
+		fmt.Println()
 	}
-	fmt.Println()
 	return removeAll(root, files)
 }
 
