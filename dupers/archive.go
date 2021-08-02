@@ -133,11 +133,16 @@ func IsExtension(name string) (result bool, mime string) {
 // Any archived files supported by archiver will also have its content hashed.
 // Archives within archives are currently left unwalked.
 func (c *Config) WalkArchiver(name Bucket) error {
+	if name == "" {
+		return ErrNoBucket
+	}
 	root := string(name)
 	c.init()
 	skip := c.skipFiles()
-	c.OpenDB()
-	defer c.db.Close()
+	if c.db == nil {
+		c.OpenDB()
+		defer c.db.Close()
+	}
 	// create a new bucket if needed
 	if err := c.createBucket(name); err != nil {
 		return err

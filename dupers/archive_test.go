@@ -4,7 +4,6 @@
 package dupers
 
 import (
-	"fmt"
 	"log"
 	"strings"
 	"testing"
@@ -96,43 +95,32 @@ func TestIsExtension(t *testing.T) {
 }
 
 func TestConfig_WalkArchiver(t *testing.T) {
-	type fields struct {
-		Debug    bool
-		Quiet    bool
-		Test     bool
-		internal internal
-	}
 	type args struct {
 		name Bucket
 	}
 	tests := []struct {
 		name    string
-		fields  fields
 		args    args
 		wantErr bool
 	}{
-		//{"empty", fields{}, args{""}, true},
-		//{"bucket1", fields{Test: true}, args{Bucket(mock.Bucket1())}, false},
-	}
-	if err := mock.DBUp(); err != nil {
-		t.Error(err)
+		{"empty", args{""}, true},
+		{"bucket1", args{Bucket(mock.Bucket1())}, false},
 	}
 	for _, tt := range tests {
-		fmt.Println("name:", tt.name)
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Config{
-				Debug:    tt.fields.Debug,
-				Quiet:    tt.fields.Quiet,
-				Test:     tt.fields.Test,
-				internal: tt.fields.internal,
+			var err error
+			c := Config{
+				Test: true,
 			}
+			c.db, err = mock.DBForConfig()
+			if err != nil {
+				t.Error(err)
+			}
+			defer c.db.Close()
 			if err := c.WalkArchiver(tt.args.name); (err != nil) != tt.wantErr {
 				t.Errorf("Config.WalkArchiver() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
-	}
-	if err := mock.DBDown(); err != nil {
-		log.Fatal(err)
 	}
 }
 
