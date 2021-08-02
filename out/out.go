@@ -32,6 +32,14 @@ func ErrCont(err error) {
 	color.Warn.Printf("The %s.\n", err.Error())
 }
 
+func ErrAppend(err error) {
+	if err == nil {
+		return
+	}
+	s := strings.ToLower(err.Error())
+	color.Warn.Printf("%s.\n", strings.TrimSpace(s))
+}
+
 // Example is intended for help screens and prints the example command.
 func Example(cmd string) {
 	if cmd == "" {

@@ -279,7 +279,7 @@ func (c *Config) read7Zip(bucket, name string) {
 	}
 	r, err := sevenzip.OpenReader(name)
 	if err != nil {
-		out.ErrCont(err)
+		out.ErrAppend(err)
 		return
 	}
 	defer r.Close()
@@ -294,20 +294,20 @@ func (c *Config) read7Zip(bucket, name string) {
 		}
 		rc, err := f.Open()
 		if err != nil {
-			out.ErrCont(err)
+			out.ErrAppend(err)
 			continue
 		}
 		defer rc.Close()
 		cnt++
 		buf, h := make([]byte, oneMb), sha256.New()
 		if _, err := io.CopyBuffer(h, rc, buf); err != nil {
-			out.ErrCont(err)
+			out.ErrAppend(err)
 			continue
 		}
 		var sum checksum
 		copy(sum[:], h.Sum(nil))
 		if err := c.updateArchiver(fp, bucket, sum); err != nil {
-			out.ErrCont(err)
+			out.ErrAppend(err)
 			continue
 		}
 	}
@@ -382,18 +382,18 @@ func (c *Config) readArchiver(bucket, archive, ext string) { // nolint: gocyclo
 			}
 			buf, h := make([]byte, oneMb), sha256.New()
 			if _, err := io.CopyBuffer(h, f, buf); err != nil {
-				out.ErrCont(err)
+				out.ErrAppend(err)
 				return nil
 			}
 			var sum checksum
 			copy(sum[:], h.Sum(nil))
 			if err := c.updateArchiver(fp, bucket, sum); err != nil {
-				out.ErrCont(err)
+				out.ErrAppend(err)
 			}
 			cnt++
 			return nil
 		}); err != nil {
-			out.ErrCont(err)
+			out.ErrAppend(err)
 		}
 	default:
 		color.Warn.Printf("Unsupported archive: '%s'\n", archive)

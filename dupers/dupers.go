@@ -875,10 +875,10 @@ func walkDir(root, path string, c *Config) error {
 		if !c.Test && !c.Quiet && !c.Debug {
 			if runtime.GOOS == winOS {
 				// color output slows down large scans on Windows
-				fmt.Printf("\r  Scanning %d files", c.files)
+				fmt.Printf("\r  Scanning %d files ", c.files)
 			} else {
 				fmt.Print("\u001b[2K\r", color.Secondary.Sprint("Looking up "),
-					color.Primary.Sprintf("%d files", c.files))
+					color.Primary.Sprintf("%d files ", c.files))
 			}
 		}
 		b := tx.Bucket([]byte(root))
