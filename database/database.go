@@ -104,6 +104,7 @@ func Abs(bucket string) ([]byte, error) {
 // AllBuckets lists all the stored bucket names in the database.
 func AllBuckets() (names []string, err error) {
 	path, err := DB()
+	fmt.Println("db: ", path)
 	if err != nil {
 		return nil, err
 	}

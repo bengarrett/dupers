@@ -75,6 +75,19 @@ func Name() (string, error) {
 	return filepath.Join(dir, dbName), nil
 }
 
+func DBForConfig() (*bolt.DB, error) {
+	path, err := Name()
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(path)
+	db, err := bolt.Open(path, FileMode, nil)
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}
+
 func DBUp() error {
 	path, err := Name()
 	if err != nil {

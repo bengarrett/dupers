@@ -4,6 +4,7 @@
 package dupers
 
 import (
+	"fmt"
 	"log"
 	"strings"
 	"testing"
@@ -110,13 +111,14 @@ func TestConfig_WalkArchiver(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		{"empty", fields{}, args{""}, true},
-		{"bucket1", fields{Test: true}, args{Bucket(mock.Bucket1())}, false},
+		//{"empty", fields{}, args{""}, true},
+		//{"bucket1", fields{Test: true}, args{Bucket(mock.Bucket1())}, false},
 	}
 	if err := mock.DBUp(); err != nil {
 		t.Error(err)
 	}
 	for _, tt := range tests {
+		fmt.Println("name:", tt.name)
 		t.Run(tt.name, func(t *testing.T) {
 			c := &Config{
 				Debug:    tt.fields.Debug,

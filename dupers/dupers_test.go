@@ -129,10 +129,10 @@ func Test_SetBuckets(t *testing.T) {
 }
 
 func Test_SetToCheck(t *testing.T) {
-	i := internal{}
-	i.SetToCheck(bucket1)
+	c := Config{}
+	c.SetToCheck(bucket1)
 	t.Run("test set", func(t *testing.T) {
-		if s := i.source; s == "" {
+		if s := c.source; s == "" {
 			t.Errorf("SetToCheck() got = %v, want the absolute path of: %v", s, bucket1)
 		}
 	})
@@ -201,7 +201,7 @@ func TestConfig_Print(t *testing.T) {
 }
 
 func TestConfig_Remove(t *testing.T) {
-	c := Config{}
+	c := Config{Test: true}
 	if r := strings.TrimSpace(c.Remove()); r != "No duplicate files to remove." {
 		t.Errorf("Config.Remove() should have returned a nothing to remove message, not %v.", r)
 	}
@@ -230,7 +230,7 @@ func TestConfig_Remove(t *testing.T) {
 }
 
 func TestConfig_Clean(t *testing.T) {
-	c := Config{}
+	c := Config{Test: true}
 	if r := strings.TrimSpace(c.Clean()); r != "" {
 		t.Errorf("Config.Clean() should have returned blank, not %v.", r)
 	}
@@ -257,36 +257,40 @@ func TestConfig_Clean(t *testing.T) {
 }
 
 func TestConfig_Status(t *testing.T) {
-	c := Config{}
+	c := Config{Test: true}
 	c.files = 2
-	want := "Scanned 2 files, taking"
+	want := "Scanned 2 files"
 	if s := strings.TrimSpace(c.Status()); !strings.Contains(s, want) {
 		t.Errorf("Config.Status() should contain %s, got %s", want, s)
 	}
 }
 
 func TestConfig_WalkDirs(t *testing.T) {
-	c := Config{}
+	var err error
+	c := Config{Test: true, Debug: true}
+	c.db, err = mock.DBForConfig()
+	if err != nil {
+		t.Error(err)
+	}
+	defer c.db.Close()
 	c.SetBuckets(mock.Bucket1())
 	c.WalkDirs()
 }
 
 func TestConfig_WalkDir(t *testing.T) {
-	c := Config{}
+	var err error
+	c := Config{Test: true, Debug: true}
+	c.db, err = mock.DBForConfig()
+	if err != nil {
+		t.Error(err)
+	}
+	defer c.db.Close()
 	if err := c.WalkDir(""); err == nil {
 		t.Errorf("Config.WalkDir() should return an error with an empty Config.")
-	}
-	if c.db != nil {
-		c.db.Close()
-		c.db = nil
 	}
 	f := mock.Item1()
 	if err := c.WalkDir(Bucket(f)); err != nil {
 		t.Errorf("Config.WalkDir(%s) should skip files.", f)
-	}
-	if c.db != nil {
-		c.db.Close()
-		c.db = nil
 	}
 	b := mock.Bucket1()
 	if err := c.WalkDir(Bucket(b)); err != nil {

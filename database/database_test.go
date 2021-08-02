@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -67,11 +68,11 @@ func TestCopyFile(t *testing.T) {
 func TestAllBuckets(t *testing.T) {
 	color.Enable = false
 	tests := []struct {
-		name      string
-		wantNames []string
-		wantErr   bool
+		name     string
+		wantName string
+		wantErr  bool
 	}{
-		{"test", []string{mock.Bucket1()}, false},
+		{"test", mock.Bucket1(), false},
 	}
 	if err := mock.DBUp(); err != nil {
 		t.Error(err)
@@ -83,8 +84,9 @@ func TestAllBuckets(t *testing.T) {
 				t.Errorf("AllBuckets() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(gotNames, tt.wantNames) {
-				t.Errorf("AllBuckets() = %v, want %v", gotNames, tt.wantNames)
+			sort.Strings(gotNames)
+			if sort.SearchStrings(gotNames, tt.wantName) > len(gotNames) {
+				t.Errorf("AllBuckets() = %v, want %v", gotNames, tt.wantName)
 			}
 		})
 	}

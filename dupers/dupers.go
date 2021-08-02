@@ -55,6 +55,12 @@ type internal struct {
 	timer   time.Time
 }
 
+var (
+	ErrNoBucket  = errors.New("a named bucket is required")
+	ErrNoPath    = errors.New("path does not exist")
+	ErrPathExist = errors.New("path exists in the database bucket")
+)
+
 // SetAllBuckets sets all the database backets for use with the dupe or search.
 func (i *internal) SetAllBuckets() {
 	names, err := database.AllBuckets()
@@ -135,11 +141,6 @@ func (i *internal) OpenDB() {
 func (i *internal) Timer() time.Duration {
 	return time.Since(i.timer)
 }
-
-var (
-	ErrNoPath    = errors.New("path does not exist")
-	ErrPathExist = errors.New("path exists in the database bucket")
-)
 
 // CheckPaths counts the files in the directory to check and the buckets.
 func (c *Config) CheckPaths() (ok bool, checkCnt, bucketCnt int) { //nolint: gocyclo
@@ -453,7 +454,7 @@ func (c *Config) Status() string {
 // WalkDirs walks the named bucket directories for any new files and saves their checksums to the database.
 func (c *Config) WalkDirs() {
 	c.init()
-	if c.db == nil {
+	if !c.Test && c.db == nil {
 		c.OpenDB()
 		defer c.db.Close()
 	}
@@ -470,11 +471,14 @@ func (c *Config) WalkDirs() {
 
 // WalkDir walks the named bucket directory for any new files and saves their checksums to the bucket.
 func (c *Config) WalkDir(name Bucket) error {
+	if name == "" {
+		return ErrNoBucket
+	}
 	root := string(name)
 	c.init()
 	skip := c.skipFiles()
 	// open database
-	if c.db == nil {
+	if !c.Test && c.db == nil {
 		c.OpenDB()
 		defer c.db.Close()
 	}
@@ -585,6 +589,9 @@ func (c *Config) createBucket(name Bucket) error {
 	} else if err != nil {
 		return err
 	}
+	if c.db == nil {
+		return bolt.ErrDatabaseNotOpen
+	}
 	return c.db.Update(func(tx *bolt.Tx) error {
 		if b := tx.Bucket([]byte(name)); b == nil {
 			fmt.Printf("New database bucket: '%s'\n", name)
@@ -598,7 +605,7 @@ func (c *Config) createBucket(name Bucket) error {
 // init initializes the Config maps and database.
 func (c *Config) init() {
 	// use all the buckets if no specific buckets are provided
-	if len(c.Buckets()) == 0 {
+	if !c.Test && len(c.Buckets()) == 0 {
 		c.SetAllBuckets()
 	}
 	// normalise bucket names
@@ -611,9 +618,10 @@ func (c *Config) init() {
 		}
 		c.Buckets()[i] = Bucket(abs)
 	}
-	//
 	if c.compare == nil {
 		c.compare = make(checksums)
+	}
+	if !c.Test && c.compare == nil {
 		for i, b := range c.Buckets() {
 			c.SetCompares(b)
 			if c.Debug {
@@ -654,6 +662,10 @@ func (c *Config) update(name, bucket string) {
 		return
 	}
 	if sum == [32]byte{} {
+		return
+	}
+	if c.db == nil {
+		out.ErrCont(bolt.ErrDatabaseNotOpen)
 		return
 	}
 	if err = c.db.Update(func(tx *bolt.Tx) error {
@@ -847,6 +859,12 @@ func skipSelf(path string, skip ...string) bool {
 
 // walkDir walks the root directory and adds the checksums of the files to c.compare.
 func walkDir(root, path string, c *Config) error {
+	if c.db == nil {
+		return bolt.ErrDatabaseNotOpen
+	}
+	if c.compare == nil {
+		c.compare = make(checksums)
+	}
 	return c.db.View(func(tx *bolt.Tx) error {
 		if !c.Test && !c.Quiet && !c.Debug {
 			if runtime.GOOS == winOS {
