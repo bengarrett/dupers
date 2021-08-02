@@ -186,7 +186,7 @@ func (c *Config) WalkArchiver(name Bucket) error {
 
 func (c *Config) walkThread(bucket, path string, wg *sync.WaitGroup) error {
 	// detect archive type by file extension
-	ext := filepath.Ext(path)
+	ext := strings.ToLower(filepath.Ext(path))
 	ok, _ := IsExtension(path)
 	if c.Debug {
 		out.Bug(fmt.Sprintf("is known extension: %v, %s", ok, ext))
@@ -341,7 +341,7 @@ func (c *Config) readArchiver(bucket, archive, ext string) { // nolint: gocyclo
 	if ext != "" {
 		filename = ext
 	}
-	f, err := archiver.ByExtension(filename)
+	f, err := archiver.ByExtension(strings.ToLower(filename))
 	if err != nil {
 		out.ErrCont(err)
 		return
