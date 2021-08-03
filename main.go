@@ -259,7 +259,7 @@ func taskDBUp(c *dupers.Config, plus bool, args [2]string) {
 	name := dupers.Bucket(path)
 	if runtime.GOOS == winOS && !c.Quiet {
 		fmt.Printf("To improve performance on Windows use the quiet flag: %s\n",
-			color.Debug.Sprintf("duper -quiet up '%s'", path))
+			color.Debug.Sprintf("duper -quiet up ..."))
 	}
 	if plus {
 		if err := c.WalkArchiver(name); err != nil {
@@ -310,7 +310,7 @@ func taskScan(c *dupers.Config, t tasks, args ...string) {
 	// windows notice
 	if runtime.GOOS == winOS && !*t.quiet {
 		fmt.Printf("To improve performance on Windows use the quiet flag: %s\n",
-			color.Debug.Sprintf("duper -quiet dupe '%s' '%s'", c.ToCheck(), c.PrintBuckets()))
+			color.Debug.Sprintf("duper -quiet dupe ..."))
 	}
 	// walk, scan and save file paths and hashes to the database
 	taskLookup(c, t)

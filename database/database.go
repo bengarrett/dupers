@@ -215,6 +215,7 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo
 		return nil
 	}
 	if finds == 0 {
+		fmt.Println()
 		return ErrDBClean
 	}
 	fmt.Printf("The database removed %d stale items\n", finds)
@@ -403,6 +404,7 @@ func Info() (string, error) {
 		w.Flush()
 		return b.String(), err
 	}
+	fmt.Fprintf(w, "\tModified:\t%s\n", s.ModTime().Local().Format("Jan 2 15:04:05"))
 	fmt.Fprintf(w, "\tFile:\t%s",
 		color.Primary.Sprint(humanize.Bytes(uint64(s.Size()))))
 	if runtime.GOOS != "windows" {
