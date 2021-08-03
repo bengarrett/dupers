@@ -323,27 +323,22 @@ func taskScan(c *dupers.Config, t tasks, args ...string) {
 }
 
 func taskLookup(c *dupers.Config, t tasks) {
+	if c.Debug {
+		out.Bug("database cleanup.")
+	}
+	var bkts []string
+	for _, b := range c.Buckets() {
+		bkts = append(bkts, string(b))
+	}
 	if !*t.lookup {
-		if c.Debug {
-			out.Bug("database cleanup.")
-		}
-		var bkts []string
-		for _, b := range c.Buckets() {
-			bkts = append(bkts, string(b))
-		}
 		if err := database.Clean(c.Quiet, c.Debug, bkts...); err != nil {
 			out.ErrCont(err)
 		}
-		if c.Debug {
-			out.Bug("walk the buckets.")
-		}
-		c.WalkDirs()
-		return
 	}
 	if c.Debug {
-		out.Bug("seek in buckets.")
+		out.Bug("walk the buckets.")
 	}
-	fmt.Print(c.Seek())
+	c.WalkDirs()
 }
 
 func taskScanClean(c *dupers.Config, t tasks) {

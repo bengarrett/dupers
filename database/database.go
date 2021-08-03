@@ -157,7 +157,7 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo
 		return err
 	}
 	defer db.Close()
-	cnt := 0
+	cnt, finds, total := 0, 0, 0
 	for _, bucket := range buckets {
 		abs, err := Abs(bucket)
 		if err != nil {
@@ -170,7 +170,15 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo
 			if b == nil {
 				return ErrNoBucket
 			}
+			total, err = Count(b, db)
+			if err != nil {
+				return err
+			}
 			err = b.ForEach(func(k, v []byte) error {
+				cnt++
+				if !debug && !quiet {
+					fmt.Printf("\rChecking %d of %d items", cnt, total)
+				}
 				if debug {
 					out.Bug("clean: " + string(k))
 				}
@@ -190,7 +198,7 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo
 					}); err2 != nil {
 						return err2
 					}
-					cnt++
+					finds++
 					return nil
 				}
 				return nil
@@ -206,10 +214,10 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo
 	if quiet {
 		return nil
 	}
-	if cnt == 0 {
+	if finds == 0 {
 		return ErrDBClean
 	}
-	fmt.Printf("The database removed %d stale items\n", cnt)
+	fmt.Printf("The database removed %d stale items\n", finds)
 	return nil
 }
 
@@ -537,29 +545,37 @@ func RM(name string) error {
 }
 
 // Seek searches a bucket for an exact SHA256 checksum match.
-func Seek(sum [32]byte, bucket string) (finds []string, records int, err error) {
-	path, err := DB()
-	if err != nil {
-		return nil, 0, err
-	}
-	db, err := bolt.Open(path, FileMode, &bolt.Options{ReadOnly: true})
-	if err != nil {
-		return nil, 0, err
-	}
-	defer db.Close()
+func Seek(sum [32]byte, bucket string, db *bolt.DB) (finds []string, records int, err error) {
 	return finds, records, db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
 		if b == nil {
 			return ErrNoBucket
 		}
-		h := sum[:]
-		err = b.ForEach(func(k, v []byte) error {
+		// Cursor search is sorted and runs slightly (20ms) faster on my machine.
+		c, h := b.Cursor(), sum[:]
+		for k, v := c.First(); k != nil; k, v = c.Next() {
 			records++
 			if bytes.Equal(v, h) {
 				finds = append(finds, string(k))
 			}
-			return nil
-		})
-		return err
+		}
+		return nil
 	})
+}
+
+func Count(b *bolt.Bucket, db *bolt.DB) (int, error) {
+	records := 0
+	if err := db.View(func(tx *bolt.Tx) error {
+		if b == nil {
+			return ErrNoBucket
+		}
+		c := b.Cursor()
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			records++
+		}
+		return nil
+	}); err != nil {
+		return records, err
+	}
+	return records, nil
 }

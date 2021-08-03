@@ -411,8 +411,23 @@ func (c *Config) RemoveAll() string {
 // Seek sources from the database and print out the matches.
 func (c *Config) Seek() string {
 	c.init()
-	finds, w := []string{}, new(bytes.Buffer)
+	// open DB here to improve performance
+	path, err := database.DB()
+	if err != nil {
+		out.ErrFatal(err)
+	}
+	db, err := bolt.Open(path, database.FileMode, &bolt.Options{ReadOnly: true})
+	if err != nil {
+		out.ErrFatal(err)
+	}
+	defer db.Close()
+	// parse over the sources
+	cnt, srcs, w := 0, len(c.sources), new(bytes.Buffer)
 	for _, path := range c.sources {
+		cnt++
+		if !c.Debug && !c.Quiet {
+			fmt.Printf("\rSeeking %d of %d items", cnt, srcs)
+		}
 		if c.Debug {
 			out.Bug("seeking source: " + path)
 		}
@@ -425,18 +440,24 @@ func (c *Config) Seek() string {
 			s := fmt.Sprintf("source: %x: %s", h, path)
 			out.Bug(s)
 		}
+		var finds []string
+		now := time.Now()
 		for _, bucket := range c.Buckets() {
-			finds, c.files, err = database.Seek(h, string(bucket))
+			finds, c.files, err = database.Seek(h, string(bucket), db)
 			if err != nil {
 				out.ErrCont(err)
 				continue
 			}
-		}
-		if len(finds) > 0 {
+			if len(finds) == 0 {
+				continue
+			}
 			for _, find := range finds {
 				c.compare[h] = path
 				fmt.Fprintln(w, match(path, find))
 			}
+		}
+		if c.Debug {
+			fmt.Println(time.Since(now))
 		}
 	}
 	return w.String()

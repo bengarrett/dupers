@@ -379,7 +379,11 @@ func TestSeek(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-
+	db, err := mock.DBForConfig()
+	if err != nil {
+		t.Error(err)
+	}
+	defer db.Close()
 	type args struct {
 		sum    [32]byte
 		bucket string
@@ -395,12 +399,9 @@ func TestSeek(t *testing.T) {
 		{"no find", args{sum0, mock.Bucket1()}, nil, 1, false},
 		{"find", args{sum1, mock.Bucket1()}, []string{mock.Item1()}, 1, false},
 	}
-	if err := mock.DBUp(); err != nil {
-		t.Error(err)
-	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotFinds, gotRecords, err := Seek(tt.args.sum, tt.args.bucket)
+			gotFinds, gotRecords, err := Seek(tt.args.sum, tt.args.bucket, db)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Seek() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -412,9 +413,6 @@ func TestSeek(t *testing.T) {
 				t.Errorf("Seek() gotRecords = %v, want %v", gotRecords, tt.wantRecords)
 			}
 		})
-	}
-	if err := mock.DBDown(); err != nil {
-		log.Fatal(err)
 	}
 }
 
