@@ -31,6 +31,7 @@ var (
 	ErrNoArgs = errors.New("request is missing arguments")
 	ErrNoDB   = errors.New("database has no bucket name")
 	ErrSearch = errors.New("search request needs an expression")
+	ErrWinDir = errors.New("cannot parse the directory path")
 )
 
 const (
@@ -75,7 +76,8 @@ func main() {
 	t.filename = flag.Bool("name", false, "search for filenames, and ignore directories")
 	fn := flag.Bool("n", false, "alias for name")
 	// general options
-	t.quiet = flag.Bool("quiet", false, "quiet mode hides all but essential feedback")
+	t.quiet = flag.Bool("quiet", false, "quiet mode hides all but essential feedback"+
+		"\n\tthis improves performance with slow, default terminal programs")
 	q := flag.Bool("q", false, "alias for quiet")
 	ver := flag.Bool("version", false, "version and information for this program")
 	v := flag.Bool("v", false, "alias for version")
@@ -97,7 +99,11 @@ func main() {
 		fmt.Print(s)
 		os.Exit(0)
 	}
-
+	if runtime.GOOS == winOS && len(flag.Args()) > 1 {
+		for _, s := range flag.Args()[1:] {
+			chkWinDir(s)
+		}
+	}
 	selection := strings.ToLower(flag.Args()[0])
 	if c.Debug {
 		out.Bug("command selection: " + selection)
@@ -175,6 +181,35 @@ func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
 	default:
 		out.ErrFatal(ErrCmd)
 	}
+}
+
+func chkWinDir(s string) {
+	if s == "" {
+		return
+	}
+	const dblQuote rune = 34
+	r := []rune(s)
+	l := len(r)
+	first, last := r[0:1][0], r[l-1 : l][0]
+	if first == dblQuote && last == dblQuote {
+		return // okay as the string is fully quoted
+	}
+	if first != dblQuote && last != dblQuote {
+		return // okay as the string is not quoted
+	}
+	// otherwise there is a problem, as only the start or end of the string is quoted.
+	// this is caused by flag.Parse() treating the \" prefix on a quoted directory path as an escaped quote.
+	// so "C:\Example\" will be incorrectly parsed as C:\Example"
+	h := "please remove the trailing backslash \\ character from any quoted directory paths"
+	if usr, err := os.UserHomeDir(); err == nil {
+		h += "\n"
+		h += color.Success.Sprint("Good: ")
+		h += fmt.Sprintf("\"%s\" ", usr)
+		h += "\n"
+		h += color.Warn.Sprint("Bad:  ")
+		h += fmt.Sprintf("\"%s\\\"", usr)
+	}
+	out.ErrFatal(fmt.Errorf("%w\n%s", ErrWinDir, h))
 }
 
 func taskDBList(quiet bool, args [2]string) {
@@ -288,6 +323,7 @@ func taskScan(c *dupers.Config, t tasks, args ...string) {
 		taskScanErr(l, len(b))
 	}
 	// directory or a file to match
+	fmt.Println("taskScan:", args)
 	c.SetToCheck(args[1])
 	// directories and files to scan, a bucket is the name given to database tables
 	arr := args[2:]
