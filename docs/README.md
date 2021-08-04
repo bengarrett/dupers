@@ -47,10 +47,6 @@ scoop bucket add dupers https://github.com/bengarrett/dupers.git
 scoop install dupers
 ```
 
-## Windows Performance
-
-It is highly encouraged that Windows users temporarily disable **Virus & threat protection, Real-time protection**, or [create **Windows Security Exclusion**s](https://support.microsoft.com/en-us/windows/add-an-exclusion-to-windows-security-811816c0-4dfd-af4a-47e4-c301afe13b26) for the folders to be scanned before running `dupers`. Otherwise, the hit to performance is amazingly stark!
-
 ## Usage
 
 TODO screenshots
@@ -58,7 +54,7 @@ TODO screenshots
 ## Example usage
 #### Dupe check
 
-Run a check of the files in Downloads on the collection of textfiles.
+Run a check of the files in Downloads on the collection of text files.
 
 ```sh
 # Windows
@@ -70,7 +66,7 @@ duper dupe ~/Downloads ~/textfiles
 
 #### Dupe check multiple locations
 
-Run a check of the files in Downloads on collections of textfiles and images.
+Run a check of the files in Downloads on collections of text files and images.
 
 ```sh
 # Windows
@@ -89,11 +85,63 @@ duper -name search .zip
 duper search '2010' D:\photos
 ```
 
+## Performance
+
+Due to the nature of duplicate file checking there are a number of unrelated issues that can greatly effect the performance of duper.
+
+#### Live statuses and command flags.
+
+The terminal and command prompt apps are not designed for the rapid display of live text and can introduce a huge performance hit to dupers when processing large tasks. An easy fix is to use the `-quiet` flag with the duper commands.
+
+```sh
+# dupe command using quiet fast mode, takes less than a second
+duper -quiet -fast dupe C:\Users\Me\Downloads D:\textfiles
+# Scanned 191842 files, taking 901ms
+```
+
+```sh
+# dupe command taking 46 seconds
+duper dupe C:\Users\Me\Downloads D:\textfiles
+# Checking 51179 of 387859 items...
+# Scanned 191842 files, taking 46.3s
+
+# dupe command using quiet mode, taking 15 seconds
+duper -quiet dupe C:\Users\Me\Downloads D:\textfiles
+# Scanned 191842 files, taking 15.0s
+
+# dupe command using fast mode, taking 9 seconds
+duper -quiet dupe C:\Users\Me\Downloads D:\textfiles
+# Scanned 191842 files, taking 9.0s
+```
+
+#### Windows real-time protection.
+
+It is highly encouraged that Windows users temporarily disable **Virus & threat protection, Real-time protection**, or [create **Windows Security Exclusion**s](https://support.microsoft.com/en-us/windows/add-an-exclusion-to-windows-security-811816c0-4dfd-af4a-47e4-c301afe13b26) for the folders to be scanned before running `dupers`. Otherwise, Defender will lock, open and read every file dupers scans, greatly slowing down the process.
+
+#### Hardware
+
+to-do
+
 ## Limitations
 
 #### Identical files within a bucket are not saved to the database.
 
 Dupers uses the SHA-256 file checksums as unique keys and each key's value only holds a single path location. This means both the `dupe` and `search` commands will not return all the possible locations of identical files in a bucket, as only one unique file is ever stored.
+
+
+#### Windows directory paths
+
+Go, the language dupers is created on treats the backslash `\` as an escape character. This unfortunately means Windows users cannot use tailing backslashes with directories.
+
+##### Good
+```ps
+dupers dupe "C:\Users\Ben\Some directory"
+```
+
+##### Incorrect
+```ps
+dupers dupe "C:\Users\Ben\Some directory\"
+```
 
 ## Troubleshoot
 
@@ -101,7 +149,7 @@ Dupers uses the SHA-256 file checksums as unique keys and each key's value only 
 
 > `Not enough memory resources are available to process this command.`
 
-This is a misleading generic Windows error that occures when interacting with the database.
+This is a misleading generic Windows error that occurs when interacting with the database.
 There is no guaranteed fix but try rebooting or running this command:
 
 ```ps
