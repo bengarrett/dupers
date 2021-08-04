@@ -86,18 +86,20 @@ func help() string {
 func exampleDupe(w *tabwriter.Writer) *tabwriter.Writer {
 	fmt.Fprintln(w, "\n  Examples:")
 	fmt.Fprint(w, color.Secondary.Sprint("    # find identical copies of file.txt in the Downloads directory\n"))
+	if runtime.GOOS == winOS {
+		fmt.Fprint(w, color.Info.Sprintf("    dupers dupe \"%s\" \"%s\"",
+			filepath.Join(home(), "file.txt"), filepath.Join(home(), "Downloads")))
+		fmt.Fprint(w, color.Secondary.Sprint("\n    # search for files in Documents that also exist on drives D: and E:\n"))
+		fmt.Fprint(w, color.Info.Sprintf("    dupers dupe \"%s\" %s %s",
+			filepath.Join(home(), "Documents"), "D:", "E:"))
+		fmt.Fprintln(w)
+		return w
+	}
 	fmt.Fprint(w, color.Info.Sprintf("    dupers dupe '%s' '%s'",
 		filepath.Join(home(), "file.txt"), filepath.Join(home(), "Downloads")))
-
-	if runtime.GOOS == winOS {
-		fmt.Fprint(w, color.Secondary.Sprint("\n    # search for files in Documents that also exist on drives D: and E:\n"))
-		fmt.Fprint(w, color.Info.Sprintf("    dupers dupe '%s' %s %s",
-			filepath.Join(home(), "Documents"), "D:", "E:"))
-	} else {
-		fmt.Fprint(w, color.Secondary.Sprint("\n    # search for files in Documents that also exist in /var/www\n"))
-		fmt.Fprint(w, color.Info.Sprintf("    dupers dupe '%s' '%s'",
-			filepath.Join(home(), "Documents"), "/var/www"))
-	}
+	fmt.Fprint(w, color.Secondary.Sprint("\n    # search for files in Documents that also exist in /var/www\n"))
+	fmt.Fprint(w, color.Info.Sprintf("    dupers dupe '%s' '%s'",
+		filepath.Join(home(), "Documents"), "/var/www"))
 	fmt.Fprintln(w)
 	return w
 }
@@ -139,6 +141,13 @@ func self() (string, error) {
 func exampleSearch(w *tabwriter.Writer) *tabwriter.Writer {
 	fmt.Fprintln(w, "\n  Examples:")
 	fmt.Fprint(w, color.Secondary.Sprint("    # search for the expression foo in your home directory\n"))
+	if runtime.GOOS == winOS {
+		fmt.Fprint(w, "    "+color.Info.Sprintf("dupers search \"foo\" \"%s\"", home()))
+		fmt.Fprint(w, color.Secondary.Sprint("\n    # search for filenames containing .zip\n"))
+		fmt.Fprint(w, "    "+color.Info.Sprint("dupers -name search \".zip\""))
+		fmt.Fprintln(w)
+		return w
+	}
 	fmt.Fprint(w, "    "+color.Info.Sprintf("dupers search 'foo' '%s'", home()))
 	fmt.Fprint(w, color.Secondary.Sprint("\n    # search for filenames containing .zip\n"))
 	fmt.Fprint(w, "    "+color.Info.Sprint("dupers -name search '.zip'"))

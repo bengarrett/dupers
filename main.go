@@ -323,7 +323,6 @@ func taskScan(c *dupers.Config, t tasks, args ...string) {
 		taskScanErr(l, len(b))
 	}
 	// directory or a file to match
-	fmt.Println("taskScan:", args)
 	c.SetToCheck(args[1])
 	// directories and files to scan, a bucket is the name given to database tables
 	arr := args[2:]
