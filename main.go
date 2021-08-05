@@ -134,7 +134,29 @@ func mainDefault(selection string) {
 	out.ErrFatal(nil)
 }
 
+func checkDatabase() {
+	path, err := database.DB()
+	if err != nil {
+		out.ErrFatal(err)
+	}
+	i, err1 := os.Stat(path)
+	if os.IsNotExist(err1) {
+		out.ErrCont(database.ErrDBNotFound)
+		fmt.Printf("\n%s\nThe database will be located at: %s", database.NotFound, path)
+		os.Exit(0)
+	} else if err1 != nil {
+		out.ErrFatal(err1)
+	}
+	if i.Size() == 0 {
+		out.ErrCont(database.ErrDBZeroByte)
+		s := "This error occures when dupers cannot save any data to the file system."
+		fmt.Printf("\n%s\nThe database is located at: %s\n", s, path)
+		os.Exit(1)
+	}
+}
+
 func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
+	checkDatabase()
 	arr := [2]string{}
 	switch args[0] {
 	case dbk:

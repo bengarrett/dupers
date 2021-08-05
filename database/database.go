@@ -37,6 +37,7 @@ const (
 	PrivateFile fs.FileMode = 0600
 	PrivateDir  fs.FileMode = 0700
 
+	NotFound   = "This is okay as one will be created when using the dupe or search commands."
 	backupTime = "20060102-150405"
 	dbName     = "dupers.db"
 	dbPath     = "dupers"
@@ -46,9 +47,10 @@ const (
 
 var (
 	ErrBucketNotFound = bolt.ErrBucketNotFound
-	ErrDBClean        = errors.New("database had nothing to clean")
+	ErrDBClean        = errors.New("database has nothing to clean")
 	ErrDBCompact      = errors.New("database compression has not reduced the size")
 	ErrDBNotFound     = errors.New("database file does not exist")
+	ErrDBZeroByte     = errors.New("database is a zero byte file")
 
 	testMode = false // nolint: gochecknoglobals
 )
@@ -418,7 +420,7 @@ func Info() (string, error) {
 	fmt.Fprintf(w, "\tLocation:\t%s\n", path)
 	s, err := os.Stat(path)
 	if os.IsNotExist(err) {
-		fmt.Fprintln(w, "\nThis is okay, one will be created during the next dupe or bucket scan.")
+		fmt.Fprintf(w, "\n%s\n", NotFound)
 		w.Flush()
 		return b.String(), ErrDBNotFound
 	} else if err != nil {
