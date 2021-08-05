@@ -132,7 +132,7 @@ func (i *internal) OpenDB() {
 	if err != nil {
 		out.ErrFatal(err)
 	}
-	if i.db, err = bolt.Open(name, database.FileMode, nil); err != nil {
+	if i.db, err = bolt.Open(name, database.PrivateFile, nil); err != nil {
 		out.ErrFatal(err)
 	}
 }
@@ -416,7 +416,7 @@ func (c *Config) Seek() string {
 	if err != nil {
 		out.ErrFatal(err)
 	}
-	db, err := bolt.Open(path, database.FileMode, &bolt.Options{ReadOnly: true})
+	db, err := bolt.Open(path, database.PrivateFile, &bolt.Options{ReadOnly: true})
 	if err != nil {
 		out.ErrFatal(err)
 	}

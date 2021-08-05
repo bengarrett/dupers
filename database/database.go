@@ -34,23 +34,60 @@ type (
 )
 
 const (
-	FileMode   fs.FileMode = 0600
-	PrivateDir fs.FileMode = 0700
-	backupTime             = "20060102-150405"
-	dbName                 = "dupers.db"
-	dbPath                 = "dupers"
-	tabPadding             = 4
-	tabWidth               = 8
+	PrivateFile fs.FileMode = 0600
+	PrivateDir  fs.FileMode = 0700
+
+	backupTime = "20060102-150405"
+	dbName     = "dupers.db"
+	dbPath     = "dupers"
+	tabPadding = 4
+	tabWidth   = 8
 )
 
 var (
-	ErrNoBucket  = errors.New("bucket does not exist")
-	ErrDB        = errors.New("database does not exist")
-	ErrDBClean   = errors.New("database had nothing to clean")
-	ErrDBCompact = errors.New("database compression has not reduced the size")
+	ErrBucketNotFound = bolt.ErrBucketNotFound
+	ErrDBClean        = errors.New("database had nothing to clean")
+	ErrDBCompact      = errors.New("database compression has not reduced the size")
+	ErrDBFile         = errors.New("database file does not exist")
 
 	testMode = false // nolint: gochecknoglobals
 )
+
+// Abs returns an absolute representation of the named bucket.
+func Abs(bucket string) ([]byte, error) {
+	s, err := filepath.Abs(bucket)
+	if err != nil {
+		return nil, err
+	}
+	return []byte(s), nil
+}
+
+// AllBuckets lists all the stored bucket names in the database.
+func AllBuckets() (names []string, err error) {
+	path, err := DB()
+	if err != nil {
+		return nil, err
+	}
+	db, err := bolt.Open(path, PrivateFile, &bolt.Options{ReadOnly: true})
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	if err1 := db.View(func(tx *bolt.Tx) error {
+		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
+			v := tx.Bucket(name)
+			if v == nil {
+				return fmt.Errorf("%w: %s", ErrBucketNotFound, string(name))
+			}
+			names = append(names, string(name))
+			return nil
+		})
+	}); err1 != nil {
+		return nil, err1
+	}
+	return names, nil
+}
 
 // Backup makes a copy of the database to the named location.
 func Backup() (name string, written int64, err error) {
@@ -77,60 +114,6 @@ func backupName() string {
 	return fmt.Sprintf("%s-backup-%s%s", strings.TrimSuffix(dbName, ext), now, ext)
 }
 
-// CopyFile duplicates the named file to the destination filepath.
-func CopyFile(name, dest string) (int64, error) {
-	// read source
-	f, err := os.Open(name)
-	if err != nil {
-		return 0, err
-	}
-	defer f.Close()
-	// create backup file
-	bu, err := os.Create(dest)
-	if err != nil {
-		return 0, err
-	}
-	defer bu.Close()
-	// duplicate data
-	return io.Copy(bu, f)
-}
-
-// Abs returns an absolute representation of the named bucket.
-func Abs(bucket string) ([]byte, error) {
-	s, err := filepath.Abs(bucket)
-	if err != nil {
-		return nil, err
-	}
-	return []byte(s), nil
-}
-
-// AllBuckets lists all the stored bucket names in the database.
-func AllBuckets() (names []string, err error) {
-	path, err := DB()
-	if err != nil {
-		return nil, err
-	}
-	db, err := bolt.Open(path, FileMode, &bolt.Options{ReadOnly: true})
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
-	if err1 := db.View(func(tx *bolt.Tx) error {
-		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
-			v := tx.Bucket(name)
-			if v == nil {
-				return fmt.Errorf("%w: %s", ErrNoBucket, string(name))
-			}
-			names = append(names, string(name))
-			return nil
-		})
-	}); err1 != nil {
-		return nil, err1
-	}
-	return names, nil
-}
-
 // Clean the stale items from database buckets.
 // Stale items are file pointers that no longer exist on the host file system.
 func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo
@@ -155,7 +138,7 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo
 	if debug {
 		out.Bug("database path: " + path)
 	}
-	db, err := bolt.Open(path, FileMode, nil)
+	db, err := bolt.Open(path, PrivateFile, nil)
 	if err != nil {
 		return err
 	}
@@ -171,7 +154,7 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo
 		if err = db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket(abs)
 			if b == nil {
-				return ErrNoBucket
+				return ErrBucketNotFound
 			}
 			total, err = Count(b, db)
 			if err != nil {
@@ -238,14 +221,14 @@ func Compact(debug bool) error {
 	// make a temporary database
 	tmp := filepath.Join(os.TempDir(), backupName())
 	// open both databases
-	srcDB, err := bolt.Open(src, FileMode, nil)
+	srcDB, err := bolt.Open(src, PrivateFile, nil)
 	if err != nil {
 		return err
 	} else if debug {
 		out.Bug("opened original database: " + src)
 	}
 	defer srcDB.Close()
-	tmpDB, err := bolt.Open(tmp, FileMode, nil)
+	tmpDB, err := bolt.Open(tmp, PrivateFile, nil)
 	if err != nil {
 		return err
 	} else if debug {
@@ -311,7 +294,7 @@ func compare(term []byte, noCase, base bool, buckets ...string) (*Matches, error
 	if err != nil {
 		return nil, err
 	}
-	db, err := bolt.Open(path, FileMode, &bolt.Options{ReadOnly: true})
+	db, err := bolt.Open(path, PrivateFile, &bolt.Options{ReadOnly: true})
 	if err != nil {
 		return nil, err
 	}
@@ -333,7 +316,7 @@ func compare(term []byte, noCase, base bool, buckets ...string) (*Matches, error
 		if err = db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket(abs)
 			if b == nil {
-				return ErrNoBucket
+				return ErrBucketNotFound
 			}
 			s := term
 			if noCase {
@@ -357,7 +340,7 @@ func compare(term []byte, noCase, base bool, buckets ...string) (*Matches, error
 				return nil
 			})
 			return err
-		}); errors.Is(err, ErrNoBucket) {
+		}); errors.Is(err, ErrBucketNotFound) {
 			return nil, fmt.Errorf("%w: '%s'", err, abs)
 		} else if err != nil {
 			return nil, err
@@ -366,11 +349,29 @@ func compare(term []byte, noCase, base bool, buckets ...string) (*Matches, error
 	return &finds, nil
 }
 
+// CopyFile duplicates the named file to the destination filepath.
+func CopyFile(name, dest string) (int64, error) {
+	// read source
+	f, err := os.Open(name)
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+	// create backup file
+	bu, err := os.Create(dest)
+	if err != nil {
+		return 0, err
+	}
+	defer bu.Close()
+	// duplicate data
+	return io.Copy(bu, f)
+}
+
 func Count(b *bolt.Bucket, db *bolt.DB) (int, error) {
 	records := 0
 	if err := db.View(func(tx *bolt.Tx) error {
 		if b == nil {
-			return ErrNoBucket
+			return ErrBucketNotFound
 		}
 		c := b.Cursor()
 		for k, _ := c.First(); k != nil; k, _ = c.Next() {
@@ -419,7 +420,7 @@ func Info() (string, error) {
 	if os.IsNotExist(err) {
 		fmt.Fprintln(w, "\nThis is okay, one will be created during the next dupe or bucket scan.")
 		w.Flush()
-		return b.String(), ErrDB
+		return b.String(), ErrDBFile
 	} else if err != nil {
 		w.Flush()
 		return b.String(), err
@@ -453,7 +454,7 @@ func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, error) {
 		}
 		item map[string]vals
 	)
-	db, err := bolt.Open(name, FileMode, &bolt.Options{ReadOnly: true})
+	db, err := bolt.Open(name, PrivateFile, &bolt.Options{ReadOnly: true})
 	if err != nil {
 		return w, err
 	}
@@ -468,7 +469,7 @@ func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, error) {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 			v := tx.Bucket(name)
 			if v == nil {
-				return fmt.Errorf("%w: %s", ErrNoBucket, string(name))
+				return fmt.Errorf("%w: %s", ErrBucketNotFound, string(name))
 			}
 			cnt++
 			items[string(name)] = vals{v.Stats().KeyN, humanize.Bytes(uint64(v.Stats().LeafAlloc))}
@@ -495,7 +496,7 @@ func IsEmpty() (bool, error) {
 	if err != nil {
 		return true, err
 	}
-	db, err := bolt.Open(path, FileMode, nil)
+	db, err := bolt.Open(path, PrivateFile, nil)
 	if err != nil {
 		return true, err
 	}
@@ -521,7 +522,7 @@ func List(bucket string) (ls Lists, err error) {
 	if err != nil {
 		return nil, err
 	}
-	db, err := bolt.Open(path, FileMode, &bolt.Options{ReadOnly: true})
+	db, err := bolt.Open(path, PrivateFile, &bolt.Options{ReadOnly: true})
 	if err != nil {
 		return nil, err
 	}
@@ -530,7 +531,7 @@ func List(bucket string) (ls Lists, err error) {
 	if err1 := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
 		if b == nil {
-			return ErrNoBucket
+			return ErrBucketNotFound
 		}
 		h := [32]byte{}
 		err = b.ForEach(func(k, v []byte) error {
@@ -551,7 +552,7 @@ func RM(name string) error {
 	if err != nil {
 		return err
 	}
-	db, err := bolt.Open(path, FileMode, nil)
+	db, err := bolt.Open(path, PrivateFile, nil)
 	if err != nil {
 		return err
 	}
@@ -560,7 +561,7 @@ func RM(name string) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(name))
 		if b == nil {
-			return ErrNoBucket
+			return ErrBucketNotFound
 		}
 		return tx.DeleteBucket([]byte(name))
 	})
@@ -571,7 +572,7 @@ func Seek(sum [32]byte, bucket string, db *bolt.DB) (finds []string, records int
 	return finds, records, db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
 		if b == nil {
-			return ErrNoBucket
+			return ErrBucketNotFound
 		}
 		// Cursor search is sorted and runs slightly (20ms) faster on my machine.
 		c, h := b.Cursor(), sum[:]

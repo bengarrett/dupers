@@ -264,7 +264,7 @@ func (c *Config) listItems(bucket string) error {
 			return nil
 		})
 		return err
-	}); errors.Is(err, database.ErrNoBucket) {
+	}); errors.Is(err, bolt.ErrBucketNotFound) {
 		return fmt.Errorf("%w: '%s'", err, abs)
 	} else if err != nil {
 		return err

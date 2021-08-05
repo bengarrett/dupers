@@ -205,7 +205,7 @@ func taskScanErr(args, buckets int) {
 }
 
 func taskSearchErr(err error) {
-	if errors.As(err, &database.ErrNoBucket) {
+	if errors.As(err, &database.ErrBucketNotFound) {
 		out.ErrCont(err)
 		fmt.Println("\nTo add this directory to the database, run:")
 		dir := strings.ReplaceAll(err.Error(), errors.Unwrap(err).Error()+": ", "")

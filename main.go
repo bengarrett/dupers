@@ -259,10 +259,10 @@ func taskDBRM(quiet bool, args [2]string) {
 		out.ErrFatal(err)
 	}
 	if err := database.RM(name); err != nil {
-		if errors.Is(err, database.ErrNoBucket) {
+		if errors.Is(err, database.ErrBucketNotFound) {
 			// retry with the original argument
 			if err1 := database.RM(args[1]); err1 != nil {
-				if errors.Is(err1, database.ErrNoBucket) {
+				if errors.Is(err1, database.ErrBucketNotFound) {
 					out.ErrCont(err1)
 					fmt.Printf("Bucket to remove: %s\n", color.Danger.Sprint(name))
 					buckets, err2 := database.AllBuckets()
@@ -282,7 +282,7 @@ func taskDBRM(quiet bool, args [2]string) {
 
 func taskDBUp(c *dupers.Config, plus bool, args [2]string) {
 	if args[1] == "" {
-		out.ErrCont(database.ErrNoBucket)
+		out.ErrCont(database.ErrBucketNotFound)
 		fmt.Println("Cannot add or update a bucket to the database as no bucket name was provided.")
 		if plus {
 			out.Example("\ndupers up+ <bucket name>")
