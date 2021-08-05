@@ -363,6 +363,23 @@ func compare(term []byte, noCase, base bool, buckets ...string) (*Matches, error
 	return &finds, nil
 }
 
+func Count(b *bolt.Bucket, db *bolt.DB) (int, error) {
+	records := 0
+	if err := db.View(func(tx *bolt.Tx) error {
+		if b == nil {
+			return ErrNoBucket
+		}
+		c := b.Cursor()
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			records++
+		}
+		return nil
+	}); err != nil {
+		return records, err
+	}
+	return records, nil
+}
+
 // DB returns the absolute path of the Bolt database.
 func DB() (string, error) {
 	dir, err := os.UserConfigDir()
@@ -563,21 +580,4 @@ func Seek(sum [32]byte, bucket string, db *bolt.DB) (finds []string, records int
 		}
 		return nil
 	})
-}
-
-func Count(b *bolt.Bucket, db *bolt.DB) (int, error) {
-	records := 0
-	if err := db.View(func(tx *bolt.Tx) error {
-		if b == nil {
-			return ErrNoBucket
-		}
-		c := b.Cursor()
-		for k, _ := c.First(); k != nil; k, _ = c.Next() {
-			records++
-		}
-		return nil
-	}); err != nil {
-		return records, err
-	}
-	return records, nil
 }

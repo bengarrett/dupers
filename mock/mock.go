@@ -56,6 +56,23 @@ func Source2() string {
 	return b
 }
 
+func CreateItem(bucket, item string, db *bolt.DB) error {
+	if db == nil {
+		return bolt.ErrDatabaseNotOpen
+	}
+	return db.Update(func(tx *bolt.Tx) error {
+		b, err := tx.CreateBucket([]byte(bucket))
+		if err != nil {
+			return err
+		}
+		sum256, err := Read(item)
+		if err != nil {
+			return err
+		}
+		return b.Put([]byte(item), sum256[:])
+	})
+}
+
 // Name returns the absolute path of the Bolt database.
 func Name() (string, error) {
 	dir, err := os.UserConfigDir()

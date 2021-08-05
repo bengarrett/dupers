@@ -384,6 +384,9 @@ func TestSeek(t *testing.T) {
 		t.Error(err)
 	}
 	defer db.Close()
+	if err := mock.CreateItem(mock.Bucket1(), mock.Item1(), db); err != nil {
+		t.Error(err)
+	}
 	type args struct {
 		sum    [32]byte
 		bucket string
