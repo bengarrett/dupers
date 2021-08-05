@@ -27,11 +27,11 @@ var (
 )
 
 var (
-	ErrCmd    = errors.New("command is unknown")
-	ErrNoArgs = errors.New("request is missing arguments")
-	ErrNoDB   = errors.New("database has no bucket name")
-	ErrSearch = errors.New("search request needs an expression")
-	ErrWinDir = errors.New("cannot parse the directory path")
+	ErrCmd          = errors.New("command is unknown")
+	ErrDatabaseName = errors.New("database has no bucket name")
+	ErrNoArgs       = errors.New("request is missing arguments")
+	ErrSearch       = errors.New("search request needs an expression")
+	ErrWindowsDir   = errors.New("cannot parse the directory path")
 )
 
 const (
@@ -58,10 +58,7 @@ type tasks struct {
 }
 
 func main() {
-	var (
-		c dupers.Config
-		t tasks
-	)
+	c, t := dupers.Config{}, tasks{}
 	c.SetTimer()
 	// dupe options
 	t.lookup = flag.Bool("fast", false, "query the database for a much faster match,"+
@@ -137,7 +134,7 @@ func mainDefault(selection string) {
 }
 
 func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
-	var arr [2]string
+	arr := [2]string{}
 	switch args[0] {
 	case dbk:
 		n, w, err := database.Backup()
@@ -213,12 +210,12 @@ func chkWinDir(s string) {
 		h += color.Warn.Sprint("Bad:  ")
 		h += fmt.Sprintf("\"%s\\\"", usr)
 	}
-	out.ErrFatal(fmt.Errorf("%w\n%s", ErrWinDir, h))
+	out.ErrFatal(fmt.Errorf("%w\n%s", ErrWindowsDir, h))
 }
 
 func taskDBList(quiet bool, args [2]string) {
 	if args[1] == "" {
-		out.ErrCont(ErrNoDB)
+		out.ErrCont(ErrDatabaseName)
 		fmt.Println("Cannot list the bucket as no bucket name was provided.")
 		out.Example("\ndupers ls <bucket name>")
 		out.ErrFatal(nil)
@@ -249,7 +246,7 @@ func taskDBList(quiet bool, args [2]string) {
 
 func taskDBRM(quiet bool, args [2]string) {
 	if args[1] == "" {
-		out.ErrCont(ErrNoDB)
+		out.ErrCont(ErrDatabaseName)
 		fmt.Println("Cannot remove a bucket from the database as no bucket name was provided.")
 		out.Example("\ndupers rm <bucket name>")
 		out.ErrFatal(nil)

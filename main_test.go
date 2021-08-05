@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	match   = "test/files_to_check"
 	bucket1 = "test/bucket1"
 	bucket2 = "test/bucket2"
+	match   = "test/files_to_check"
 )
 
 func init() {
