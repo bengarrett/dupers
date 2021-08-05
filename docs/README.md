@@ -127,9 +127,9 @@ to-do
 Dupers uses the SHA-256 file checksums as unique keys and each key's value only holds a single path location. This means both the `dupe` and `search` commands will not return all the possible locations of identical files in a bucket, as only one unique file is ever stored.
 
 
-#### Windows directory paths
+#### Windows Command Prompt directory paths
 
-[Go](https://golang.org/), the language dupers is created on treats the backslash `\` as an escape character. This unfortunately means Windows users cannot use tailing backslashes with directories.
+Windows Command Prompt (cmd.exe) users cannot use tailing backslashes with quoted directories. Other terminal apps such as [Windows Terminal](https://www.microsoft.com/en-au/p/windows-terminal/9n0dx20hk701) do not suffer this issue.
 
 ##### ✔️ Good
 ```ps
