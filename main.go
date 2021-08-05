@@ -4,6 +4,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
@@ -201,16 +202,17 @@ func chkWinDir(s string) {
 	// otherwise there is a problem, as only the start or end of the string is quoted.
 	// this is caused by flag.Parse() treating the \" prefix on a quoted directory path as an escaped quote.
 	// so "C:\Example\" will be incorrectly parsed as C:\Example"
-	h := "please remove the trailing backslash \\ character from any quoted directory paths"
+	w := new(bytes.Buffer)
+	fmt.Fprint(w, "please remove the trailing backslash \\ character from any quoted directory paths")
 	if usr, err := os.UserHomeDir(); err == nil {
-		h += "\n"
-		h += color.Success.Sprint("Good: ")
-		h += fmt.Sprintf("\"%s\" ", usr)
-		h += "\n"
-		h += color.Warn.Sprint("Bad:  ")
-		h += fmt.Sprintf("\"%s\\\"", usr)
+		fmt.Fprint(w, "\n")
+		fmt.Fprint(w, color.Success.Sprint("Good: "))
+		fmt.Fprintf(w, "\"%s\" ", usr)
+		fmt.Fprint(w, "\n")
+		fmt.Fprint(w, color.Warn.Sprint("Bad: "))
+		fmt.Fprintf(w, "\"%s\\\"", usr)
 	}
-	out.ErrFatal(fmt.Errorf("%w\n%s", ErrWindowsDir, h))
+	out.ErrFatal(fmt.Errorf("%w\n%s", ErrWindowsDir, w.String()))
 }
 
 func taskDBList(quiet bool, args [2]string) {
