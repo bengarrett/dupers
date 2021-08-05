@@ -24,7 +24,7 @@ func Test_extension(t *testing.T) {
 		{"caps", strings.ToUpper(xz), appXZ},
 		{"no dot", "xz", xz},
 	}
-	if err := mock.DBUp(); err != nil {
+	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
 	for _, tt := range tests {
@@ -34,7 +34,7 @@ func Test_extension(t *testing.T) {
 			}
 		})
 	}
-	if err := mock.DBDown(); err != nil {
+	if err := mock.TestRemove(); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -112,7 +112,7 @@ func TestConfig_WalkArchiver(t *testing.T) {
 			c := Config{
 				Test: true,
 			}
-			c.db, err = mock.DBForConfig()
+			c.db, err = mock.Open()
 			if err != nil {
 				t.Error(err)
 			}
@@ -143,7 +143,7 @@ func TestConfig_read7Zip(t *testing.T) {
 		{"empty", fields{Test: true}, args{}},
 		{"7z", fields{Test: true}, args{mock.Bucket1(), mock.SevenZip}},
 	}
-	if err := mock.DBUp(); err != nil {
+	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
 	for _, tt := range tests {
@@ -157,7 +157,7 @@ func TestConfig_read7Zip(t *testing.T) {
 			c.read7Zip(tt.args.bucket, tt.args.name)
 		})
 	}
-	if err := mock.DBDown(); err != nil {
+	if err := mock.TestRemove(); err != nil {
 		log.Fatal(err)
 	}
 }

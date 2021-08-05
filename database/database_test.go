@@ -74,7 +74,7 @@ func TestAllBuckets(t *testing.T) {
 	}{
 		{"test", mock.Bucket1(), false},
 	}
-	if err := mock.DBUp(); err != nil {
+	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
 	for _, tt := range tests {
@@ -100,7 +100,7 @@ func TestBackup(t *testing.T) {
 	}{
 		{"backup", false},
 	}
-	if err := mock.DBUp(); err != nil {
+	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
 	for _, tt := range tests {
@@ -136,7 +136,7 @@ func TestClean(t *testing.T) {
 	}{
 		{"temp", args{quiet: true}, false},
 	}
-	if err := mock.DBUp(); err != nil {
+	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
 	for _, tt := range tests {
@@ -155,7 +155,7 @@ func TestCompact(t *testing.T) {
 	}{
 		{"temp", false},
 	}
-	if err := mock.DBUp(); err != nil {
+	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
 	for _, tt := range tests {
@@ -171,10 +171,10 @@ func TestCompact(t *testing.T) {
 }
 
 func TestCompare(t *testing.T) {
-	if err := mock.DBDown(); err != nil {
+	if err := mock.TestRemove(); err != nil {
 		log.Fatal(err)
 	}
-	if err := mock.DBUp(); err != nil {
+	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
 	type args struct {
@@ -211,7 +211,7 @@ func TestCompare(t *testing.T) {
 }
 
 func TestCompareBase(t *testing.T) {
-	if err := mock.DBUp(); err != nil {
+	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
 	type args struct {
@@ -269,7 +269,7 @@ func TestCompareBase(t *testing.T) {
 }
 
 func TestCompareNoCase(t *testing.T) {
-	if err := mock.DBUp(); err != nil {
+	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
 	type args struct {
@@ -306,7 +306,7 @@ func TestCompareNoCase(t *testing.T) {
 }
 
 func TestIsEmpty(t *testing.T) {
-	if err := mock.DBUp(); err != nil {
+	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
 	t.Run("is empty", func(t *testing.T) {
@@ -334,15 +334,14 @@ func TestIsEmpty(t *testing.T) {
 		if got != want {
 			t.Errorf("IsEmpty() = %v, want %v", got, want)
 		}
-		// delete modified db
-		if err := mock.DBDown(); err != nil {
+		if err := mock.TestRemove(); err != nil {
 			log.Fatal(err)
 		}
 	})
 }
 
 func TestList(t *testing.T) {
-	if err := mock.DBUp(); err != nil {
+	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
 	tests := []struct {
@@ -368,7 +367,7 @@ func TestList(t *testing.T) {
 		})
 	}
 	// delete modified db
-	if err := mock.DBDown(); err != nil {
+	if err := mock.TestRemove(); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -379,7 +378,7 @@ func TestSeek(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	db, err := mock.DBForConfig()
+	db, err := mock.Open()
 	if err != nil {
 		t.Error(err)
 	}
@@ -420,7 +419,7 @@ func TestSeek(t *testing.T) {
 }
 
 func TestInfo(t *testing.T) {
-	if err := mock.DBUp(); err != nil {
+	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
 	info, err := Info()
@@ -431,7 +430,7 @@ func TestInfo(t *testing.T) {
 	if !strings.Contains(info, want) {
 		t.Errorf("Info() should display the mock database path, %v\ngot:\n%v", want, info)
 	}
-	if err := mock.DBDown(); err != nil {
+	if err := mock.TestRemove(); err != nil {
 		log.Fatal(err)
 	}
 }

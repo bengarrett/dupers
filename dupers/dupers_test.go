@@ -272,7 +272,7 @@ func TestConfig_Status(t *testing.T) {
 func TestConfig_WalkDirs(t *testing.T) {
 	var err error
 	c := Config{Test: true, Debug: true}
-	c.db, err = mock.DBForConfig()
+	c.db, err = mock.Open()
 	if err != nil {
 		t.Error(err)
 	}
@@ -284,7 +284,7 @@ func TestConfig_WalkDirs(t *testing.T) {
 func TestConfig_WalkDir(t *testing.T) {
 	var err error
 	c := Config{Test: true, Debug: true}
-	c.db, err = mock.DBForConfig()
+	c.db, err = mock.Open()
 	if err != nil {
 		t.Error(err)
 	}
@@ -307,7 +307,7 @@ func TestConfig_WalkSource(t *testing.T) {
 	if err := c.WalkSource(); err == nil {
 		t.Errorf("Config.WalkSource() should return an error with an empty Config.")
 	}
-	c.SetToCheck(mock.Source2())
+	c.SetToCheck(mock.Bucket2())
 	if err := c.WalkSource(); err != nil {
 		t.Errorf("Config.WalkSource() returned an error: %v", err)
 	}

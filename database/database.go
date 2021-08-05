@@ -48,7 +48,7 @@ var (
 	ErrBucketNotFound = bolt.ErrBucketNotFound
 	ErrDBClean        = errors.New("database had nothing to clean")
 	ErrDBCompact      = errors.New("database compression has not reduced the size")
-	ErrDBFile         = errors.New("database file does not exist")
+	ErrDBNotFound     = errors.New("database file does not exist")
 
 	testMode = false // nolint: gochecknoglobals
 )
@@ -420,7 +420,7 @@ func Info() (string, error) {
 	if os.IsNotExist(err) {
 		fmt.Fprintln(w, "\nThis is okay, one will be created during the next dupe or bucket scan.")
 		w.Flush()
-		return b.String(), ErrDBFile
+		return b.String(), ErrDBNotFound
 	} else if err != nil {
 		w.Flush()
 		return b.String(), err
