@@ -144,19 +144,26 @@ func (i *internal) Timer() time.Duration {
 
 // CheckPaths counts the files in the directory to check and the buckets.
 func (c *Config) CheckPaths() (ok bool, checkCnt, bucketCnt int) { //nolint: gocyclo
+	const notDirectory = true
 	if c.Debug {
 		out.Bug("count the files within the paths")
 	}
 	root := c.ToCheck()
 	if c.Debug {
-		out.Bug("directory to check: " + root)
+		out.Bug("path to check: " + root)
 	}
 	stat, err := os.Stat(root)
 	if err != nil {
-		return ok, 0, 0
+		if c.Debug {
+			out.Bug("path is not found")
+		}
+		return notDirectory, 0, 0
 	}
 	if !stat.IsDir() {
-		return ok, 0, 0
+		if c.Debug {
+			out.Bug("path is a file")
+		}
+		return notDirectory, 0, 0
 	}
 	checkCnt, bucketCnt = 0, 0
 	check := func() bool {
