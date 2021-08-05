@@ -862,16 +862,14 @@ func skipDir(d fs.DirEntry) error {
 
 // skipFile returns true if the file matches a known Windows or macOS system file.
 func skipFile(name string) bool {
+	const macOS, windows, macOSExtension = true, true, "._"
 	switch strings.ToLower(name) {
 	case ".ds_store", ".trashes":
-		// macOS
-		return true
+		return macOS
 	case "desktop.ini", "hiberfil.sys", "ntuser.dat", "pagefile.sys", "swapfile.sys", "thumbs.db":
-		// Windows
-		return true
+		return windows
 	}
-	// macOS
-	return strings.HasPrefix(name, "._")
+	return strings.HasPrefix(name, macOSExtension)
 }
 
 // skipSelf returns true if the path exists in skip.
