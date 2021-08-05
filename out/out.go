@@ -16,12 +16,13 @@ func Bug(debug string) {
 	fmt.Printf("∙%s\n", debug)
 }
 
-// ErrFatal prints the error and exits the program.
-func ErrFatal(err error) {
-	if err != nil {
-		color.Error.Tips(" " + err.Error())
+// ErrAppend prints the error to an active line.
+func ErrAppend(err error) {
+	if err == nil {
+		return
 	}
-	os.Exit(1)
+	s := strings.ToLower(err.Error())
+	color.Warn.Printf("%s.\n", strings.TrimSpace(s))
 }
 
 // ErrFatal prints the error.
@@ -32,12 +33,12 @@ func ErrCont(err error) {
 	color.Warn.Printf("The %s.\n", err.Error())
 }
 
-func ErrAppend(err error) {
-	if err == nil {
-		return
+// ErrFatal prints the error and exits the program.
+func ErrFatal(err error) {
+	if err != nil {
+		color.Error.Tips(" " + err.Error())
 	}
-	s := strings.ToLower(err.Error())
-	color.Warn.Printf("%s.\n", strings.TrimSpace(s))
+	os.Exit(1)
 }
 
 // Example is intended for help screens and prints the example command.

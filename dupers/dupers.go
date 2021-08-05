@@ -56,9 +56,9 @@ type internal struct {
 }
 
 var (
-	ErrNoBucket  = errors.New("a named bucket is required")
-	ErrNoPath    = errors.New("path does not exist")
-	ErrPathExist = errors.New("path exists in the database bucket")
+	ErrNoBucket    = errors.New("a named bucket is required")
+	ErrPathExist   = errors.New("path exists in the database bucket")
+	ErrPathNoFound = errors.New("path does not exist")
 )
 
 // SetAllBuckets sets all the database backets for use with the dupe or search.
@@ -385,7 +385,7 @@ func (c *Config) RemoveAll() string {
 	root := c.ToCheck()
 	_, err := os.Stat(root)
 	if errors.Is(err, os.ErrNotExist) {
-		e := fmt.Errorf("%w: %s", ErrNoPath, root)
+		e := fmt.Errorf("%w: %s", ErrPathNoFound, root)
 		out.ErrFatal(e)
 	} else if err != nil {
 		out.ErrFatal(err)
@@ -567,7 +567,7 @@ func (c *Config) WalkSource() error {
 	}
 	stat, err := os.Stat(root)
 	if errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("%w: %s", ErrNoPath, root)
+		return fmt.Errorf("%w: %s", ErrPathNoFound, root)
 	} else if err != nil {
 		return err
 	}
@@ -612,7 +612,7 @@ func (c *Config) WalkSource() error {
 func (c *Config) createBucket(name Bucket) error {
 	_, err := os.Stat(string(name))
 	if errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("%w: %s", ErrNoPath, name)
+		return fmt.Errorf("%w: %s", ErrPathNoFound, name)
 	} else if err != nil {
 		return err
 	}
