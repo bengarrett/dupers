@@ -390,7 +390,8 @@ func taskScanClean(c *dupers.Config, t tasks) {
 		}
 		fmt.Print(c.RemoveAll())
 		fmt.Print(c.Remove())
-	} else if *t.rmPlus {
+	}
+	if *t.sensen || *t.rmPlus {
 		if c.Debug {
 			out.Bug("remove empty directories.")
 		}
