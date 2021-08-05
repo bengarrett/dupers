@@ -125,11 +125,15 @@ func main() {
 		}
 		taskSearch(t, flag.Args()...)
 	default:
-		out.ErrCont(ErrCmd)
-		fmt.Printf("Command: '%s'\n\nSee the help for the available commands and options:\n", selection)
-		out.Example("dupers --help")
-		out.ErrFatal(nil)
+		mainDefault(selection)
 	}
+}
+
+func mainDefault(selection string) {
+	out.ErrCont(ErrCmd)
+	fmt.Printf("Command: '%s'\n\nSee the help for the available commands and options:\n", selection)
+	out.Example("dupers --help")
+	out.ErrFatal(nil)
 }
 
 func taskDatabase(c *dupers.Config, quiet bool, args ...string) {

@@ -35,9 +35,12 @@ type (
 
 const (
 	FileMode   fs.FileMode = 0600
+	PrivateDir fs.FileMode = 0700
 	backupTime             = "20060102-150405"
 	dbName                 = "dupers.db"
 	dbPath                 = "dupers"
+	tabPadding             = 4
+	tabWidth               = 8
 )
 
 var (
@@ -395,7 +398,7 @@ func DB() (string, error) {
 	}
 	_, err = os.Stat(dir)
 	if os.IsNotExist(err) {
-		if err1 := os.MkdirAll(dir, 0700); err != nil {
+		if err1 := os.MkdirAll(dir, PrivateDir); err != nil {
 			return "", err1
 		}
 	}
@@ -410,7 +413,7 @@ func Info() (string, error) {
 	}
 	var b bytes.Buffer
 	w := new(tabwriter.Writer)
-	w.Init(&b, 0, 8, 0, '\t', 0)
+	w.Init(&b, 0, tabWidth, 0, '\t', 0)
 	fmt.Fprintf(w, "\tLocation:\t%s\n", path)
 	s, err := os.Stat(path)
 	if os.IsNotExist(err) {
@@ -475,7 +478,7 @@ func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, error) {
 		return nil, err
 	}
 	fmt.Fprintf(w, "Buckets:        %s\n\n", color.Primary.Sprint(cnt))
-	tab := tabwriter.NewWriter(w, 0, 0, 4, ' ', tabwriter.AlignRight)
+	tab := tabwriter.NewWriter(w, 0, 0, tabPadding, ' ', tabwriter.AlignRight)
 	fmt.Fprintf(tab, "Items\tSize\t\tBucket %s\n", color.Secondary.Sprint("(absolute path)"))
 	for i, b := range items {
 		fmt.Fprintf(tab, "%d\t%s\t\t%v\n", b.items, b.size, i)

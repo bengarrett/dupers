@@ -20,11 +20,13 @@ import (
 	"github.com/gookit/color"
 )
 
+const tabPadding = 4
+
 // Help, usage and examples.
 func help() string {
 	var f *flag.Flag
 	var b bytes.Buffer
-	w := tabwriter.NewWriter(&b, 0, 0, 4, ' ', 0)
+	w := tabwriter.NewWriter(&b, 0, 0, tabPadding, ' ', 0)
 	defer w.Flush()
 	fmt.Fprintf(w, "Dupers is the blazing-fast file duplicate checker and filename search.\n")
 	windowsNotice(w)
