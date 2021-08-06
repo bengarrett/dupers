@@ -67,17 +67,18 @@ func Abs(bucket string) ([]byte, error) {
 }
 
 // AllBuckets lists all the stored bucket names in the database.
-func AllBuckets() (names []string, err error) {
-	path, err := DB()
-	if err != nil {
-		return nil, err
+func AllBuckets(db *bolt.DB) (names []string, err error) {
+	if db == nil {
+		path, err := DB()
+		if err != nil {
+			return nil, err
+		}
+		db, err = bolt.Open(path, PrivateFile, &bolt.Options{ReadOnly: true})
+		if err != nil {
+			return nil, err
+		}
+		defer db.Close()
 	}
-	db, err := bolt.Open(path, PrivateFile, &bolt.Options{ReadOnly: true})
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
 	if errV := db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 			if v := tx.Bucket(name); v == nil {
@@ -125,7 +126,7 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo
 	}
 	if len(buckets) == 0 {
 		var err error
-		buckets, err = AllBuckets()
+		buckets, err = AllBuckets(nil)
 		if err != nil {
 			return err
 		}
@@ -320,7 +321,7 @@ func compare(term []byte, noCase, base bool, buckets ...string) (*Matches, error
 	defer db.Close()
 
 	if len(buckets) == 0 {
-		buckets, err = AllBuckets()
+		buckets, err = AllBuckets(nil)
 		if err != nil {
 			return nil, err
 		}

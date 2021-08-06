@@ -140,7 +140,7 @@ func (c *Config) WalkArchiver(name Bucket) error {
 	c.init()
 	skip := c.skipFiles()
 	if c.db == nil {
-		c.OpenDB()
+		c.OpenWrite()
 		defer c.db.Close()
 	}
 	// create a new bucket if needed

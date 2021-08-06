@@ -75,7 +75,7 @@ func TestAllBuckets(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotNames, err := AllBuckets()
+			gotNames, err := AllBuckets(nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("AllBuckets() error = %v, wantErr %v", err, tt.wantErr)
 				return

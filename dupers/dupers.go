@@ -63,7 +63,7 @@ var (
 
 // SetAllBuckets sets all the database backets for use with the dupe or search.
 func (i *internal) SetAllBuckets() {
-	names, err := database.AllBuckets()
+	names, err := database.AllBuckets(nil)
 	if err != nil {
 		out.ErrFatal(err)
 	}
@@ -123,8 +123,22 @@ func (i *internal) ToCheck() string {
 	return i.source
 }
 
-// OpenDB opens the Bolt database.
-func (i *internal) OpenDB() {
+// OpenRead opens the Bolt database for reading.
+func (i *internal) OpenRead() {
+	if i.db != nil {
+		return
+	}
+	name, err := database.DB()
+	if err != nil {
+		out.ErrFatal(err)
+	}
+	if i.db, err = bolt.Open(name, database.PrivateFile, &bolt.Options{ReadOnly: true}); err != nil {
+		out.ErrFatal(err)
+	}
+}
+
+// OpenWrite opens the Bolt database for reading and writing.
+func (i *internal) OpenWrite() {
 	if i.db != nil {
 		return
 	}
@@ -489,7 +503,7 @@ func (c *Config) Status() string {
 func (c *Config) WalkDirs() {
 	c.init()
 	if !c.Test && c.db == nil {
-		c.OpenDB()
+		c.OpenWrite()
 		defer c.db.Close()
 	}
 	// walk through the directories provided
@@ -522,7 +536,7 @@ func (c *Config) WalkDir(name Bucket) error {
 	skip := c.skipFiles()
 	// open database
 	if !c.Test && c.db == nil {
-		c.OpenDB()
+		c.OpenWrite()
 		defer c.db.Close()
 	}
 	// create a new bucket if needed
