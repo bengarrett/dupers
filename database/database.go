@@ -124,13 +124,6 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo
 	if debug {
 		out.Bug("running database clean")
 	}
-	if len(buckets) == 0 {
-		var err error
-		buckets, err = AllBuckets(nil)
-		if err != nil {
-			return err
-		}
-	}
 	if debug {
 		s := fmt.Sprintf("list of buckets:\n%s", strings.Join(buckets, "\n"))
 		out.Bug(s)
@@ -147,6 +140,13 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo
 		return err
 	}
 	defer db.Close()
+	if len(buckets) == 0 {
+		var err error
+		buckets, err = AllBuckets(db)
+		if err != nil {
+			return err
+		}
+	}
 	cnt, errs, finds, total := 0, 0, 0, 0
 	for _, bucket := range buckets {
 		abs, err := Abs(bucket)
@@ -178,7 +178,7 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo
 			err = b.ForEach(func(k, v []byte) error {
 				cnt++
 				if !debug && !quiet {
-					fmt.Printf("\rChecking %d of %d items", cnt, total)
+					fmt.Printf("\rChecking %d of %d items ", cnt, total)
 				}
 				if debug {
 					out.Bug("clean: " + string(k))
