@@ -29,7 +29,6 @@ func help() string {
 	w := tabwriter.NewWriter(&b, 0, 0, tabPadding, ' ', 0)
 	defer w.Flush()
 	fmt.Fprintf(w, "Dupers is the blazing-fast file duplicate checker and filename search.\n")
-	windowsNotice(w)
 	fmt.Fprintf(w, "\n%s\n  Scan for duplicate files, matching files that share the identical content.\n",
 		color.Primary.Sprint("Dupe:"))
 	fmt.Fprintln(w, "  The \"directory or file to check\" is never added to the database.")
@@ -222,19 +221,4 @@ func taskSearchErr(err error) {
 		out.ErrFatal(nil)
 	}
 	out.ErrFatal(err)
-}
-
-func windowsNotice(w *tabwriter.Writer) *tabwriter.Writer {
-	if runtime.GOOS != winOS {
-		return w
-	}
-	empty, err := database.IsEmpty()
-	if err != nil {
-		out.ErrCont(err)
-	}
-	if empty {
-		fmt.Fprintf(w, "\n%s\n", color.Danger.Sprint("To greatly improve performance,"+
-			" please apply Windows Security Exclusions to the directories to be scanned."))
-	}
-	return w
 }
