@@ -32,10 +32,13 @@ func ErrCont(err error) {
 	}
 	const nf = "bucket not found:"
 	s := err.Error()
-	if strings.HasPrefix(s, nf) {
+	switch {
+	case strings.HasPrefix(s, nf):
 		color.Info.Printf("%s\n",
 			strings.Replace(s, nf, "New database bucket:", 1))
 		return
+	case strings.HasPrefix(s, "bucket not found"):
+		s = "bucket does not exist"
 	}
 	color.Warn.Printf("The %s.\n", s)
 }
