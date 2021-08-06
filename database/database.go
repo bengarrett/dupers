@@ -76,17 +76,16 @@ func AllBuckets() (names []string, err error) {
 	}
 	defer db.Close()
 
-	if err1 := db.View(func(tx *bolt.Tx) error {
+	if errV := db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
-			v := tx.Bucket(name)
-			if v == nil {
+			if v := tx.Bucket(name); v == nil {
 				return fmt.Errorf("%w: %s", ErrBucketNotFound, string(name))
 			}
 			names = append(names, string(name))
 			return nil
 		})
-	}); err1 != nil {
-		return nil, err1
+	}); errV != nil {
+		return nil, errV
 	}
 	return names, nil
 }
@@ -122,8 +121,8 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo
 	if debug {
 		out.Bug("running database clean")
 	}
-	var err error
 	if len(buckets) == 0 {
+		var err error
 		buckets, err = AllBuckets()
 		if err != nil {
 			return err
@@ -170,7 +169,7 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo
 				if debug {
 					out.Bug("clean: " + string(k))
 				}
-				if _, err1 := os.Stat(string(k)); err1 != nil {
+				if _, errS := os.Stat(string(k)); errS != nil {
 					f := string(k)
 					if st, err2 := os.Stat(filepath.Dir(f)); err2 == nil {
 						if !st.IsDir() && st.Size() > 0 {
@@ -178,13 +177,13 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo
 						}
 					}
 					if debug {
-						s := fmt.Sprintf("%s: %s", k, err1)
+						s := fmt.Sprintf("%s: %s", k, errS)
 						out.Bug(s)
 					}
-					if err2 := db.Update(func(tx *bolt.Tx) error {
+					if errUp := db.Update(func(tx *bolt.Tx) error {
 						return tx.Bucket(abs).Delete(k)
-					}); err2 != nil {
-						return err2
+					}); errUp != nil {
+						return errUp
 					}
 					finds++
 					return nil
@@ -241,8 +240,8 @@ func Compact(debug bool) error {
 	if debug {
 		out.Bug("compress and copy databases")
 	}
-	if err1 := bolt.Compact(tmpDB, srcDB, 0); err1 != nil {
-		return err1
+	if errComp := bolt.Compact(tmpDB, srcDB, 0); errComp != nil {
+		return errComp
 	}
 	if debug {
 		sr, errS := os.Stat(src)
@@ -533,13 +532,13 @@ func IsEmpty() (bool, error) {
 	}
 	defer db.Close()
 	cnt := 0
-	if err1 := db.View(func(tx *bolt.Tx) error {
+	if errV := db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 			cnt++
 			return nil
 		})
-	}); err1 != nil {
-		return true, err1
+	}); errV != nil {
+		return true, errV
 	}
 	if cnt == 0 {
 		return true, nil
@@ -559,7 +558,7 @@ func List(bucket string) (ls Lists, err error) {
 	}
 	defer db.Close()
 	ls = make(Lists)
-	if err1 := db.View(func(tx *bolt.Tx) error {
+	if errV := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
 		if b == nil {
 			return ErrBucketNotFound
@@ -571,8 +570,8 @@ func List(bucket string) (ls Lists, err error) {
 			return nil
 		})
 		return err
-	}); err1 != nil {
-		return nil, err1
+	}); errV != nil {
+		return nil, errV
 	}
 	return ls, nil
 }
@@ -588,10 +587,8 @@ func RM(name string) error {
 		return err
 	}
 	defer db.Close()
-
 	return db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(name))
-		if b == nil {
+		if b := tx.Bucket([]byte(name)); b == nil {
 			return ErrBucketNotFound
 		}
 		return tx.DeleteBucket([]byte(name))
