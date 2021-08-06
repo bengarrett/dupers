@@ -499,13 +499,14 @@ func Info() (string, error) {
 		fmt.Fprintf(w, " (%v)", s.Mode())
 	}
 	fmt.Fprintf(w, "\n")
-	w, err = info(path, w)
+	sizes := 0
+	w, sizes, err = info(path, w)
 	if err != nil {
 		fmt.Fprintln(w)
 		fmt.Fprintf(w, "\tDatabase error:\t%s\n", err.Error())
 	}
-	const hundredMB = 100_000_000
-	if s.Size() > hundredMB {
+	const oneAndAHalf = 1.5
+	if s.Size() > int64(float64(sizes)*oneAndAHalf) {
 		fmt.Fprintln(w, color.Notice.Sprint("\nTo reduce the size of the database:"))
 		fmt.Fprintln(w, color.Debug.Sprint("duper backup && duper clean"))
 	}
@@ -513,7 +514,7 @@ func Info() (string, error) {
 	return b.String(), nil
 }
 
-func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, error) {
+func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, int, error) {
 	type (
 		vals struct {
 			items int
@@ -523,7 +524,7 @@ func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, error) {
 	)
 	db, err := bolt.Open(name, PrivateFile, &bolt.Options{ReadOnly: true})
 	if err != nil {
-		return w, err
+		return w, 0, err
 	}
 	defer db.Close()
 	ro := color.Green.Sprint("OK")
@@ -531,7 +532,7 @@ func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, error) {
 		ro = color.Danger.Sprint("NO")
 	}
 	fmt.Fprintf(w, "\tRead only mode:\t%s\n", ro)
-	items, cnt := make(item), 0
+	items, cnt, sizes := make(item), 0, 0
 	if err := db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 			v := tx.Bucket(name)
@@ -539,11 +540,12 @@ func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, error) {
 				return fmt.Errorf("%w: %s", ErrBucketNotFound, string(name))
 			}
 			cnt++
+			sizes += v.Stats().LeafAlloc
 			items[string(name)] = vals{v.Stats().KeyN, humanize.Bytes(uint64(v.Stats().LeafAlloc))}
 			return nil
 		})
 	}); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	fmt.Fprintf(w, "Buckets:        %s\n\n", color.Primary.Sprint(cnt))
 	tab := tabwriter.NewWriter(w, 0, 0, tabPadding, ' ', tabwriter.AlignRight)
@@ -552,9 +554,9 @@ func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, error) {
 		fmt.Fprintf(tab, "%d\t%s\t\t%v\n", b.items, b.size, i)
 	}
 	if err := tab.Flush(); err != nil {
-		return w, err
+		return w, 0, err
 	}
-	return w, nil
+	return w, sizes, nil
 }
 
 // XXX IsEmpty returns true if the database has no buckets.
