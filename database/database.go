@@ -572,11 +572,11 @@ func IsEmpty() (bool, error) {
 // List returns the file paths and SHA256 checksums stored in the bucket.
 func List(bucket string, db *bolt.DB) (ls Lists, err error) {
 	if db == nil {
-		path, err := DB()
-		if err != nil {
-			return nil, err
+		path, errDB := DB()
+		if errDB != nil {
+			return nil, errDB
 		}
-		db, err := bolt.Open(path, PrivateFile, &bolt.Options{ReadOnly: true})
+		db, err = bolt.Open(path, PrivateFile, &bolt.Options{ReadOnly: true})
 		if err != nil {
 			return nil, err
 		}
