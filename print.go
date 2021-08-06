@@ -182,22 +182,23 @@ func taskScanErr(args, buckets int) {
 	const minArgs = 2
 	if args < minArgs {
 		out.ErrCont(ErrNoArgs)
-		fmt.Println("\nThe dupe command requires both a source and target.")
-		fmt.Println("The source can be either a directory or file.")
+		fmt.Println("\nThe dupe command requires a directory or file to check.")
 		if runtime.GOOS == winOS {
-			fmt.Println("The target can be one or more directories or drive letters.")
+			fmt.Println("The optional bucket can be one or more directories or drive letters.")
 		} else {
-			fmt.Println("The target can be one or more directories.")
+			fmt.Println("The optional bucket can be one or more directory paths.")
 		}
-		out.Example("\ndupers dupe <source file or directory> <target one or more directories>")
+		out.Example("\ndupers dupe <directory or file to check> [buckets to lookup]")
 	}
 	if buckets == 0 && args == minArgs {
+		color.Warn.Println("The database is empty.\n")
 		if runtime.GOOS == winOS {
-			color.Warn.Println("the dupe request requires at least one target directory or drive letter")
+			fmt.Println("This dupe request requires at least one directory or drive letter to lookup.")
 		} else {
-			color.Warn.Println("the dupe request requires at least one target directory")
+			fmt.Println("This dupe request requires at least one directory to lookup.")
 		}
-		s := fmt.Sprintf("\ndupers dupe %s <target one or more directories>\n", flag.Args()[1])
+		fmt.Println("These lookup directories will be stored to the database as buckets.")
+		s := fmt.Sprintf("\ndupers dupe %s <one or more directories>\n", flag.Args()[1])
 		out.Example(s)
 	}
 	out.ErrFatal(nil)
