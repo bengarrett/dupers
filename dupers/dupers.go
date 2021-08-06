@@ -81,7 +81,7 @@ func (i *internal) SetBuckets(names ...string) {
 
 // SetCompares fetches items from the named bucket and sets them to c.compare.
 func (i *internal) SetCompares(name Bucket) {
-	ls, err := database.List(string(name))
+	ls, err := database.List(string(name), i.db)
 	if err != nil {
 		out.ErrCont(err)
 	}
@@ -493,13 +493,22 @@ func (c *Config) WalkDirs() {
 		defer c.db.Close()
 	}
 	// walk through the directories provided
+	redo := []Bucket{}
 	for _, bucket := range c.Buckets() {
 		if c.Debug {
 			out.Bug("walkdir bucket: " + string(bucket))
 		}
 		if err := c.WalkDir(bucket); err != nil {
+			redo = append(redo, bucket)
 			out.ErrCont(err)
 		}
+	}
+	// handle buckets that don't exist on the file system
+	for _, bucket := range redo {
+		if c.Debug {
+			out.Bug("redoing bucket: " + string(bucket))
+		}
+		c.SetCompares(bucket)
 	}
 }
 

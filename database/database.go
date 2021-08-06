@@ -47,9 +47,10 @@ const (
 
 var (
 	ErrBucketNotFound = bolt.ErrBucketNotFound
+	ErrBucketAsFile   = errors.New("bucket points to a file, not a directory")
 	ErrDBClean        = errors.New("database has nothing to clean")
 	ErrDBCompact      = errors.New("database compression has not reduced the size")
-	ERrDBEmpty        = errors.New("database is empty and contains no items")
+	ErrDBEmpty        = errors.New("database is empty and contains no items")
 	ErrDBNotFound     = errors.New("database file does not exist")
 	ErrDBZeroByte     = errors.New("database is a zero byte file")
 
@@ -153,6 +154,16 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo
 			continue
 		} else if debug {
 			out.Bug("bucket: " + string(abs))
+		}
+		// check the bucket directory exists on the file system
+		if i, errS := os.Stat(string(abs)); os.IsNotExist(errS) {
+			out.ErrCont(err)
+			errs++
+			continue
+		} else if !i.IsDir() {
+			out.ErrCont(fmt.Errorf("%w: %s", ErrBucketAsFile, abs))
+			errs++
+			continue
 		}
 		if err = db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket(abs)
@@ -315,7 +326,7 @@ func compare(term []byte, noCase, base bool, buckets ...string) (*Matches, error
 		}
 	}
 	if len(buckets) == 0 {
-		return nil, ERrDBEmpty
+		return nil, ErrDBEmpty
 	}
 
 	finds := make(Matches)
@@ -559,16 +570,18 @@ func IsEmpty() (bool, error) {
 }
 
 // List returns the file paths and SHA256 checksums stored in the bucket.
-func List(bucket string) (ls Lists, err error) {
-	path, err := DB()
-	if err != nil {
-		return nil, err
+func List(bucket string, db *bolt.DB) (ls Lists, err error) {
+	if db == nil {
+		path, err := DB()
+		if err != nil {
+			return nil, err
+		}
+		db, err := bolt.Open(path, PrivateFile, &bolt.Options{ReadOnly: true})
+		if err != nil {
+			return nil, err
+		}
+		defer db.Close()
 	}
-	db, err := bolt.Open(path, PrivateFile, &bolt.Options{ReadOnly: true})
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
 	ls = make(Lists)
 	if errV := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))

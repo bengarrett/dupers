@@ -248,7 +248,7 @@ func taskDBList(quiet bool, args [2]string) {
 	if err != nil {
 		out.ErrFatal(err)
 	}
-	ls, err := database.List(name)
+	ls, err := database.List(name, nil)
 	if err != nil {
 		out.ErrCont(err)
 	}

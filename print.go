@@ -205,7 +205,7 @@ func taskScanErr(args, buckets int) {
 }
 
 func taskSearchErr(err error) {
-	if errors.Is(err, database.ERrDBEmpty) {
+	if errors.Is(err, database.ErrDBEmpty) {
 		out.ErrCont(err)
 		return
 	}
