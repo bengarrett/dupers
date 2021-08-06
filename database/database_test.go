@@ -368,52 +368,6 @@ func TestList(t *testing.T) {
 	}
 }
 
-func TestSeek(t *testing.T) {
-	sum0 := [32]byte{}
-	sum1, err := mock.Read(mock.Item1())
-	if err != nil {
-		t.Error(err)
-	}
-	db, err := mock.Open()
-	if err != nil {
-		t.Error(err)
-	}
-	defer db.Close()
-	if err := mock.CreateItem(mock.Bucket1(), mock.Item1(), db); err != nil {
-		t.Error(err)
-	}
-	type args struct {
-		sum    [32]byte
-		bucket string
-	}
-	tests := []struct {
-		name        string
-		args        args
-		wantFinds   []string
-		wantRecords int
-		wantErr     bool
-	}{
-		{"empty", args{sum0, ""}, nil, 0, true},
-		{"no find", args{sum0, mock.Bucket1()}, nil, 1, false},
-		{"find", args{sum1, mock.Bucket1()}, []string{mock.Item1()}, 1, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotFinds, gotRecords, err := Seek(tt.args.sum, tt.args.bucket, db)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Seek() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(gotFinds, tt.wantFinds) {
-				t.Errorf("Seek() gotFinds = %v, want %v", gotFinds, tt.wantFinds)
-			}
-			if gotRecords != tt.wantRecords {
-				t.Errorf("Seek() gotRecords = %v, want %v", gotRecords, tt.wantRecords)
-			}
-		})
-	}
-}
-
 func TestInfo(t *testing.T) {
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)

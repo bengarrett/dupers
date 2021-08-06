@@ -140,7 +140,7 @@ func backupName() string {
 
 // Clean the stale items from database buckets.
 // Stale items are file pointers that no longer exist on the host file system.
-func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo
+func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funlen
 	if debug {
 		out.Bug("running database clean")
 		s := fmt.Sprintf("list of buckets:\n%s", strings.Join(buckets, "\n"))
@@ -623,24 +623,5 @@ func RM(name string) error {
 			return ErrBucketNotFound
 		}
 		return tx.DeleteBucket([]byte(name))
-	})
-}
-
-// XXX Seek searches a bucket for an exact SHA256 checksum match.
-func Seek(sum [32]byte, bucket string, db *bolt.DB) (finds []string, records int, err error) {
-	return finds, records, db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(bucket))
-		if b == nil {
-			return ErrBucketNotFound
-		}
-		// Cursor search is sorted and runs slightly (20ms) faster on my machine.
-		c, h := b.Cursor(), sum[:]
-		for k, v := c.First(); k != nil; k, v = c.Next() {
-			records++
-			if bytes.Equal(v, h) {
-				finds = append(finds, string(k))
-			}
-		}
-		return nil
 	})
 }

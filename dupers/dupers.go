@@ -13,12 +13,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"strings"
 	"sync"
-	"time"
 
-	"github.com/bengarrett/dupers/database"
 	"github.com/bengarrett/dupers/out"
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
@@ -45,116 +42,11 @@ type Config struct {
 	internal
 }
 
-type internal struct {
-	db      *bolt.DB  // Bolt database
-	buckets []Bucket  // buckets to lookup
-	compare checksums // hashes fetched from the database or file system
-	files   int       // nolint: structcheck
-	sources []string  // nolint: structcheck
-	source  string    // directory or file to compare
-	timer   time.Time
-}
-
 var (
 	ErrNoBucket    = errors.New("a named bucket is required")
 	ErrPathExist   = errors.New("path exists in the database bucket")
 	ErrPathNoFound = errors.New("path does not exist")
 )
-
-// SetAllBuckets sets all the database backets for use with the dupe or search.
-func (i *internal) SetAllBuckets() {
-	names, err := database.AllBuckets(nil)
-	if err != nil {
-		out.ErrFatal(err)
-	}
-	for _, name := range names {
-		i.buckets = append(i.buckets, Bucket(name))
-	}
-}
-
-// SetBuckets adds the bucket name to a list of buckets.
-func (i *internal) SetBuckets(names ...string) {
-	for _, name := range names {
-		i.buckets = append(i.buckets, Bucket(name))
-	}
-}
-
-// SetCompares fetches items from the named bucket and sets them to c.compare.
-func (i *internal) SetCompares(name Bucket) {
-	ls, err := database.List(string(name), i.db)
-	if err != nil {
-		out.ErrCont(err)
-	}
-	for fp, sum := range ls {
-		i.compare[sum] = string(fp)
-	}
-}
-
-// SetTimer starts a process timer.
-func (i *internal) SetTimer() {
-	i.timer = time.Now()
-}
-
-// SetToCheck sets the named string as the directory or file to check.
-func (i *internal) SetToCheck(name string) {
-	n, err := filepath.Abs(name)
-	if err != nil {
-		out.ErrFatal(err)
-	}
-	i.source = n
-}
-
-// Buckets returns a slice of Buckets.
-func (i *internal) Buckets() []Bucket {
-	return i.buckets
-}
-
-// PrintBuckets returns a list of buckets used by the database.
-func (i *internal) PrintBuckets() string {
-	var s []string
-	for _, b := range i.Buckets() {
-		s = append(s, string(b))
-	}
-	return strings.Join(s, " ")
-}
-
-// ToCheck returns the directory or file to check.
-func (i *internal) ToCheck() string {
-	return i.source
-}
-
-// OpenRead opens the Bolt database for reading.
-func (i *internal) OpenRead() {
-	if i.db != nil {
-		return
-	}
-	name, err := database.DB()
-	if err != nil {
-		out.ErrFatal(err)
-	}
-	if i.db, err = bolt.Open(name, database.PrivateFile, &bolt.Options{ReadOnly: true}); err != nil {
-		out.ErrFatal(err)
-	}
-}
-
-// OpenWrite opens the Bolt database for reading and writing.
-func (i *internal) OpenWrite() {
-	if i.db != nil {
-		return
-	}
-	name, err := database.DB()
-	if err != nil {
-		out.ErrFatal(err)
-	}
-	if i.db, err = bolt.Open(name, database.PrivateFile, nil); err != nil {
-		out.ErrFatal(err)
-	}
-}
-
-// Timer returns the time taken since the process timer was instigated.
-func (i *internal) Timer() time.Duration {
-	return time.Since(i.timer)
-}
 
 // CheckPaths counts the files in the directory to check and the buckets.
 func (c *Config) CheckPaths() (ok bool, checkCnt, bucketCnt int) { //nolint: gocyclo
@@ -245,57 +137,6 @@ func (c *Config) CheckPaths() (ok bool, checkCnt, bucketCnt int) { //nolint: goc
 		}
 	}
 	return check(), checkCnt, bucketCnt
-}
-
-// Print the results of the database comparisons.
-func Print(quiet bool, m *database.Matches) string {
-	if m == nil {
-		return ""
-	}
-	if len(*m) == 0 {
-		return ""
-	}
-	w := new(bytes.Buffer)
-	// collect the bucket names which will be used to sort the results
-	buckets, bucket := []string{}, ""
-	for _, bucket := range *m {
-		if !contains(string(bucket), buckets...) {
-			buckets = append(buckets, string(bucket))
-		}
-	}
-	sort.Strings(buckets)
-	for i, buck := range buckets {
-		cnt := 0
-		if i > 0 {
-			fmt.Fprintln(w)
-		}
-		// print the matches, the filenames are unsorted
-		for file, b := range *m {
-			if string(b) != buck {
-				continue
-			}
-			cnt++
-			if string(b) != bucket {
-				bucket = string(b)
-				if !quiet {
-					if cnt > 1 {
-						fmt.Fprintln(w)
-					}
-					fmt.Fprintf(w, "%s: %s\n", color.Info.Sprint("Results from"), b)
-				}
-			}
-			if quiet {
-				fmt.Fprintf(w, "%s\n", file)
-				continue
-			}
-			if cnt == 1 {
-				fmt.Fprintf(w, "%s%s\n", color.Success.Sprint("  ⤷\t"), file)
-				continue
-			}
-			fmt.Fprintf(w, "  %s%s\t%s\n", color.Primary.Sprint(cnt), color.Secondary.Sprint("."), file)
-		}
-	}
-	return w.String()
 }
 
 // Clean removes all empty directories from c.Source.
@@ -429,61 +270,6 @@ func (c *Config) RemoveAll() string {
 	return removeAll(root, files)
 }
 
-// Seek sources from the database and print out the matches.
-func (c *Config) Seek() string {
-	c.init()
-	// open DB here to improve performance
-	path, err := database.DB()
-	if err != nil {
-		out.ErrFatal(err)
-	}
-	db, err := bolt.Open(path, database.PrivateFile, &bolt.Options{ReadOnly: true})
-	if err != nil {
-		out.ErrFatal(err)
-	}
-	defer db.Close()
-	// parse over the sources
-	cnt, srcs, w := 0, len(c.sources), new(bytes.Buffer)
-	for _, path := range c.sources {
-		cnt++
-		if !c.Debug && !c.Quiet {
-			fmt.Printf("\rSeeking %d of %d items", cnt, srcs)
-		}
-		if c.Debug {
-			out.Bug("seeking source: " + path)
-		}
-		h, err := read(path)
-		if err != nil {
-			out.ErrCont(err)
-			return w.String()
-		}
-		if c.Debug {
-			s := fmt.Sprintf("source: %x: %s", h, path)
-			out.Bug(s)
-		}
-		var finds []string
-		now := time.Now()
-		for _, bucket := range c.Buckets() {
-			finds, c.files, err = database.Seek(h, string(bucket), db)
-			if err != nil {
-				out.ErrCont(err)
-				continue
-			}
-			if len(finds) == 0 {
-				continue
-			}
-			for _, find := range finds {
-				c.compare[h] = path
-				fmt.Fprintln(w, match(path, find))
-			}
-		}
-		if c.Debug {
-			fmt.Println(time.Since(now))
-		}
-	}
-	return w.String()
-}
-
 // Status summarizes the file total and time taken.
 func (c *Config) Status() string {
 	s := "\n"
@@ -527,7 +313,7 @@ func (c *Config) WalkDirs() {
 }
 
 // WalkDir walks the named bucket directory for any new files and saves their checksums to the bucket.
-func (c *Config) WalkDir(name Bucket) error {
+func (c *Config) WalkDir(name Bucket) error { //nolint:gocyclo
 	if name == "" {
 		return ErrNoBucket
 	}
@@ -751,16 +537,6 @@ func (c *Config) update(name, bucket string) {
 		out.ErrCont(err)
 	}
 	c.compare[sum] = name
-}
-
-// contains returns true if find exists in s.
-func contains(find string, s ...string) bool {
-	for _, item := range s {
-		if find == item {
-			return true
-		}
-	}
-	return false
 }
 
 // containsBin returns true if the root directory contains an MS-DOS or Windows program file.
