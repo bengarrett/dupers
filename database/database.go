@@ -57,6 +57,32 @@ var (
 	testMode = false // nolint: gochecknoglobals
 )
 
+// OpenRead opens the Bolt database for reading.
+func OpenRead() (db *bolt.DB, err error) {
+	path, err := DB()
+	if err != nil {
+		return nil, err
+	}
+	db, err = bolt.Open(path, PrivateFile, &bolt.Options{ReadOnly: true})
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}
+
+// OpenRead opens the Bolt database for writing and reading.
+func OpenWrite() (db *bolt.DB, err error) {
+	path, err := DB()
+	if err != nil {
+		return nil, err
+	}
+	db, err = bolt.Open(path, PrivateFile, nil)
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}
+
 // Abs returns an absolute representation of the named bucket.
 func Abs(bucket string) ([]byte, error) {
 	s, err := filepath.Abs(bucket)
@@ -69,11 +95,7 @@ func Abs(bucket string) ([]byte, error) {
 // AllBuckets lists all the stored bucket names in the database.
 func AllBuckets(db *bolt.DB) (names []string, err error) {
 	if db == nil {
-		path, err := DB()
-		if err != nil {
-			return nil, err
-		}
-		db, err = bolt.Open(path, PrivateFile, &bolt.Options{ReadOnly: true})
+		db, err = OpenRead()
 		if err != nil {
 			return nil, err
 		}
@@ -99,13 +121,11 @@ func Backup() (name string, written int64, err error) {
 	if err != nil {
 		return "", 0, err
 	}
-
 	dir, err := os.UserHomeDir()
 	if err != nil {
 		return "", 0, err
 	}
 	name = filepath.Join(dir, backupName())
-
 	written, err = CopyFile(src, name)
 	if err != nil {
 		return "", 0, err
@@ -123,8 +143,6 @@ func backupName() string {
 func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo
 	if debug {
 		out.Bug("running database clean")
-	}
-	if debug {
 		s := fmt.Sprintf("list of buckets:\n%s", strings.Join(buckets, "\n"))
 		out.Bug(s)
 	}
@@ -310,11 +328,7 @@ func CompareNoCase(s string, buckets ...string) (*Matches, error) {
 }
 
 func compare(term []byte, noCase, base bool, buckets ...string) (*Matches, error) {
-	path, err := DB()
-	if err != nil {
-		return nil, err
-	}
-	db, err := bolt.Open(path, PrivateFile, &bolt.Options{ReadOnly: true})
+	db, err := OpenRead()
 	if err != nil {
 		return nil, err
 	}
@@ -325,18 +339,16 @@ func compare(term []byte, noCase, base bool, buckets ...string) (*Matches, error
 		if err != nil {
 			return nil, err
 		}
+		if len(buckets) == 0 {
+			return nil, ErrDBEmpty
+		}
 	}
-	if len(buckets) == 0 {
-		return nil, ErrDBEmpty
-	}
-
 	finds := make(Matches)
 	for _, bucket := range buckets {
 		abs, err := Abs(bucket)
 		if err != nil {
 			out.ErrCont(err)
 		}
-
 		if err = db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket(abs)
 			if b == nil {
@@ -391,6 +403,7 @@ func CopyFile(name, dest string) (int64, error) {
 	return io.Copy(bu, f)
 }
 
+// XXX Count the number of records in the bucket.
 func Count(b *bolt.Bucket, db *bolt.DB) (int, error) {
 	records := 0
 	if err := db.View(func(tx *bolt.Tx) error {
@@ -544,7 +557,7 @@ func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, error) {
 	return w, nil
 }
 
-// IsEmpty returns true if the database has no buckets.
+// XXX IsEmpty returns true if the database has no buckets.
 func IsEmpty() (bool, error) {
 	path, err := DB()
 	if err != nil {
@@ -573,11 +586,7 @@ func IsEmpty() (bool, error) {
 // List returns the file paths and SHA256 checksums stored in the bucket.
 func List(bucket string, db *bolt.DB) (ls Lists, err error) {
 	if db == nil {
-		path, errDB := DB()
-		if errDB != nil {
-			return nil, errDB
-		}
-		db, err = bolt.Open(path, PrivateFile, &bolt.Options{ReadOnly: true})
+		db, err = OpenRead()
 		if err != nil {
 			return nil, err
 		}
@@ -604,11 +613,7 @@ func List(bucket string, db *bolt.DB) (ls Lists, err error) {
 
 // RM removes the named bucket from the database.
 func RM(name string) error {
-	path, err := DB()
-	if err != nil {
-		return err
-	}
-	db, err := bolt.Open(path, PrivateFile, nil)
+	db, err := OpenWrite()
 	if err != nil {
 		return err
 	}
@@ -621,7 +626,7 @@ func RM(name string) error {
 	})
 }
 
-// Seek searches a bucket for an exact SHA256 checksum match.
+// XXX Seek searches a bucket for an exact SHA256 checksum match.
 func Seek(sum [32]byte, bucket string, db *bolt.DB) (finds []string, records int, err error) {
 	return finds, records, db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
