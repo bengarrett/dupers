@@ -499,14 +499,15 @@ func Info() (string, error) {
 		fmt.Fprintf(w, " (%v)", s.Mode())
 	}
 	fmt.Fprintf(w, "\n")
-	sizes := 0
-	w, sizes, err = info(path, w)
+	bucketsB := 0
+	w, bucketsB, err = info(path, w)
 	if err != nil {
 		fmt.Fprintln(w)
 		fmt.Fprintf(w, "\tDatabase error:\t%s\n", err.Error())
 	}
-	const oneAndAHalf = 1.5
-	if s.Size() > int64(float64(sizes)*oneAndAHalf) {
+	const oneAndAHalf, oneMB = 1.5, 1_000_000
+	tooBig := int64(float64(bucketsB) * oneAndAHalf)
+	if s.Size() > oneMB && s.Size() > tooBig {
 		fmt.Fprintln(w, color.Notice.Sprint("\nTo reduce the size of the database:"))
 		fmt.Fprintln(w, color.Debug.Sprint("duper backup && duper clean"))
 	}
