@@ -208,10 +208,10 @@ func (c *Config) walkThread(bucket, path string, wg *sync.WaitGroup) error {
 	}
 	c.files++
 	if c.Debug {
-		s := fmt.Sprintf("walkDir #%d", c.files)
+		s := fmt.Sprintf("walkCompare #%d", c.files)
 		out.Bug(s)
 	}
-	if errD := walkDir(bucket, path, c); errD != nil {
+	if errD := walkCompare(bucket, path, c); errD != nil {
 		if !errors.Is(errD, ErrPathExist) {
 			out.ErrFatal(errD)
 		}

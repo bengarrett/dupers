@@ -536,7 +536,11 @@ func (c *Config) WalkDir(name Bucket) error {
 	}
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if c.Debug {
-			out.Bug("walk file: " + path)
+			s := "walk file"
+			if d.IsDir() {
+				s = "walk subdirectory"
+			}
+			out.Bug(fmt.Sprintf("%s: %s", s, path))
 		}
 		if err != nil {
 			if errors.Is(err, fs.ErrPermission) {
@@ -545,19 +549,31 @@ func (c *Config) WalkDir(name Bucket) error {
 			return err
 		}
 		if err1 := skipDir(d); err1 != nil {
+			if c.Debug {
+				out.Bug(" - skipping directory")
+			}
 			return err1
 		}
 		if skipFile(d.Name()) {
+			if c.Debug {
+				out.Bug(" - skipping file")
+			}
 			return nil
 		}
 		if !d.Type().IsRegular() {
+			if c.Debug {
+				out.Bug(" - skipping not regular file")
+			}
 			return nil
 		}
 		if skipSelf(path, skip...) {
+			if c.Debug {
+				out.Bug(" - skipping self item")
+			}
 			return nil
 		}
 		c.files++
-		if errW := walkDir(root, path, c); errW != nil {
+		if errW := walkCompare(root, path, c); errW != nil {
 			if errors.Is(errW, ErrPathExist) {
 				return nil
 			}
@@ -677,10 +693,13 @@ func (c *Config) init() {
 // lookup the checksum value in c.compare and return the file path.
 func (c *Config) lookupOne(sum checksum) string {
 	if c.Debug {
-		s := fmt.Sprintf("look up sum in compare (%d): %x", len(c.compare), sum)
+		s := fmt.Sprintf("look up checksum in the compare data, %d items total: %x", len(c.compare), sum)
 		out.Bug(s)
 	}
 	if f := c.compare[sum]; f != "" {
+		if c.Debug {
+			out.Bug("lookupOne match: " + f)
+		}
 		return f
 	}
 	return ""
@@ -897,8 +916,8 @@ func skipSelf(path string, skip ...string) bool {
 	return false
 }
 
-// walkDir walks the root directory and adds the checksums of the files to c.compare.
-func walkDir(root, path string, c *Config) error {
+// walkCompare walks the root directory and adds the checksums of the files to c.compare.
+func walkCompare(root, path string, c *Config) error {
 	if c.db == nil {
 		return bolt.ErrDatabaseNotOpen
 	}
@@ -917,9 +936,12 @@ func walkDir(root, path string, c *Config) error {
 		}
 		b := tx.Bucket([]byte(root))
 		if b == nil {
-			return nil
+			return ErrNoBucket
 		}
 		h := b.Get([]byte(path))
+		if c.Debug {
+			out.Bug(fmt.Sprintf(" - %d/%d items: %x", len(c.compare), c.files, h))
+		}
 		if len(h) > 0 {
 			var sum checksum
 			copy(sum[:], h)
