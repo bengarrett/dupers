@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/bengarrett/dupers/database"
 	"github.com/bengarrett/dupers/dupers"
@@ -36,15 +37,18 @@ var (
 )
 
 const (
-	winOS = "windows"
-	dbf   = "database"
-	dbs   = "db"
-	dbk   = "backup"
-	dcn   = "clean"
-	dls   = "ls"
-	drm   = "rm"
-	dup   = "up"
-	dupp  = "up+"
+	dbf  = "database"
+	dbs  = "db"
+	dbk  = "backup"
+	dcn  = "clean"
+	dls  = "ls"
+	drm  = "rm"
+	dup  = "up"
+	dupp = "up+"
+
+	winOS                   = "windows"
+	winShh                  = "To improve performance on Windows use the quiet flag"
+	winRemind time.Duration = 5 * time.Second
 )
 
 type tasks struct {
@@ -317,10 +321,6 @@ func taskDBUp(c *dupers.Config, plus bool, args [2]string) {
 		out.ErrFatal(err)
 	}
 	name := dupers.Bucket(path)
-	if runtime.GOOS == winOS && !c.Quiet {
-		fmt.Printf("To improve performance on Windows use the quiet flag: %s\n",
-			color.Debug.Sprintf("duper -quiet up ..."))
-	}
 	if plus {
 		if err := c.WalkArchiver(name); err != nil {
 			out.ErrFatal(err)
@@ -329,6 +329,9 @@ func taskDBUp(c *dupers.Config, plus bool, args [2]string) {
 		out.ErrFatal(err)
 	}
 	if runtime.GOOS == winOS || !c.Quiet {
+		if c.Timer() > winRemind {
+			fmt.Printf("\n%s: %s\n", winShh, color.Debug.Sprintf("duper -quiet up ..."))
+		}
 		fmt.Println(c.Status())
 	}
 }
@@ -367,17 +370,15 @@ func taskScan(c *dupers.Config, t tasks, args ...string) {
 	if c.Debug {
 		out.Bug("walksource complete.")
 	}
-	// windows notice
-	if runtime.GOOS == winOS && !*t.quiet {
-		fmt.Printf("To improve performance on Windows use the quiet flag: %s\n",
-			color.Debug.Sprintf("duper -quiet dupe ..."))
-	}
 	// walk, scan and save file paths and hashes to the database
 	taskLookup(c, t)
 	// print the found dupes & remove files
 	taskScanClean(c, t)
 	// summaries
 	if runtime.GOOS == winOS || !c.Quiet {
+		if c.Timer() > winRemind {
+			fmt.Printf("\n%s: %s\n", winShh, color.Debug.Sprintf("duper -quiet dupe ..."))
+		}
 		fmt.Println(c.Status())
 	}
 }
