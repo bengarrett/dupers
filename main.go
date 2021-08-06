@@ -83,6 +83,8 @@ func main() {
 	q := flag.Bool("q", false, "alias for quiet")
 	ver := flag.Bool("version", false, "version and information for this program")
 	v := flag.Bool("v", false, "alias for version")
+	hlp := flag.Bool("help", false, "print help")
+	h := flag.Bool("h", false, "alias for help")
 	// hidden flag
 	t.debug = flag.Bool("debug", false, "debug mode")
 	// help and parse flags
@@ -90,6 +92,10 @@ func main() {
 		help()
 	}
 	flag.Parse()
+	if *h || *hlp {
+		fmt.Print(help())
+		return
+	}
 	if *q || *t.quiet {
 		*t.quiet = true
 		c.Quiet = true
@@ -99,7 +105,7 @@ func main() {
 	}
 	if s := options(ver, v); s != "" {
 		fmt.Print(s)
-		os.Exit(0)
+		return
 	}
 	if runtime.GOOS == winOS && len(flag.Args()) > 1 {
 		for _, s := range flag.Args()[1:] {
