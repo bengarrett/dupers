@@ -205,10 +205,18 @@ func taskScanErr(args, buckets int) {
 }
 
 func taskSearchErr(err error) {
+	if errors.Is(err, database.ERrDBEmpty) {
+		out.ErrCont(err)
+		return
+	}
 	if errors.As(err, &database.ErrBucketNotFound) {
 		out.ErrCont(err)
 		fmt.Println("\nTo add this directory to the database, run:")
-		dir := strings.ReplaceAll(err.Error(), errors.Unwrap(err).Error()+": ", "")
+		dir := err.Error()
+		if errors.Unwrap(err) == nil {
+			s := fmt.Sprintf("%s: ", errors.Unwrap(err))
+			dir = strings.ReplaceAll(err.Error(), s, "")
+		}
 		s := fmt.Sprintf("dupers up %s\n", dir)
 		out.Example(s)
 		out.ErrFatal(nil)

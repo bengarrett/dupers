@@ -390,7 +390,7 @@ func taskLookup(c *dupers.Config, t tasks) {
 	for _, b := range c.Buckets() {
 		bkts = append(bkts, string(b))
 	}
-	if !*t.lookup {
+	if !*t.lookup && len(bkts) > 0 {
 		if err := database.Clean(c.Quiet, c.Debug, bkts...); err != nil {
 			out.ErrCont(err)
 		}

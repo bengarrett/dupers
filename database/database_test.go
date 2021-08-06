@@ -15,12 +15,8 @@ import (
 )
 
 const (
-	fileSrc  = "../test/files_to_check/ppFlTD6QQYlS"
-	fileDest = "../test/tmp/ppFlTD6QQYlS"
-)
-
-var (
-	ErrNoComp = errors.New("database compression has not reduced the size")
+	testSrc = "../test/files_to_check/ppFlTD6QQYlS"
+	testDst = "../test/tmp/ppFlTD6QQYlS"
 )
 
 func init() {
@@ -33,11 +29,11 @@ func TestCopyFile(t *testing.T) {
 		src  string
 		dest string
 	}
-	d, err := filepath.Abs(fileDest)
+	d, err := filepath.Abs(testDst)
 	if err != nil {
 		t.Error(err)
 	}
-	s, err := filepath.Abs(fileSrc)
+	s, err := filepath.Abs(testSrc)
 	if err != nil {
 		t.Error(err)
 	}
@@ -62,7 +58,7 @@ func TestCopyFile(t *testing.T) {
 			}
 		})
 	}
-	os.Remove(fileDest)
+	os.Remove(testDst)
 }
 
 func TestAllBuckets(t *testing.T) {
@@ -161,7 +157,7 @@ func TestCompact(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := Compact(false); (err != nil) != tt.wantErr {
-				if errors.As(err, &ErrNoComp) {
+				if errors.As(err, &ErrDBCompact) {
 					return
 				}
 				t.Errorf("Compact() error = %v, wantErr %t", err, tt.wantErr)

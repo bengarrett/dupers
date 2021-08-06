@@ -49,6 +49,7 @@ var (
 	ErrBucketNotFound = bolt.ErrBucketNotFound
 	ErrDBClean        = errors.New("database has nothing to clean")
 	ErrDBCompact      = errors.New("database compression has not reduced the size")
+	ERrDBEmpty        = errors.New("database is empty and contains no items")
 	ErrDBNotFound     = errors.New("database file does not exist")
 	ErrDBZeroByte     = errors.New("database is a zero byte file")
 
@@ -144,18 +145,19 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo
 		return err
 	}
 	defer db.Close()
-	cnt, finds, total := 0, 0, 0
+	cnt, errs, finds, total := 0, 0, 0, 0
 	for _, bucket := range buckets {
 		abs, err := Abs(bucket)
 		if err != nil {
 			out.ErrCont(err)
+			continue
 		} else if debug {
 			out.Bug("bucket: " + string(abs))
 		}
 		if err = db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket(abs)
 			if b == nil {
-				return ErrBucketNotFound
+				return fmt.Errorf("%w: %s", ErrBucketNotFound, abs)
 			}
 			total, err = Count(b, db)
 			if err != nil {
@@ -191,14 +193,19 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo
 				return nil
 			})
 			if err != nil {
+				errs++
 				out.ErrCont(err)
 			}
 			return nil
 		}); err != nil {
+			errs++
 			out.ErrCont(err)
 		}
 	}
 	if quiet {
+		return nil
+	}
+	if len(buckets) == errs {
 		return nil
 	}
 	if finds == 0 {
@@ -307,6 +314,10 @@ func compare(term []byte, noCase, base bool, buckets ...string) (*Matches, error
 			return nil, err
 		}
 	}
+	if len(buckets) == 0 {
+		return nil, ERrDBEmpty
+	}
+
 	finds := make(Matches)
 	for _, bucket := range buckets {
 		abs, err := Abs(bucket)
@@ -408,10 +419,11 @@ func DB() (string, error) {
 	// posix system returning the error a "bad file descriptor" when reading
 	path := filepath.Join(dir, boltName)
 	i, errP := os.Stat(path)
-	if os.IsNotExist(err) {
+	if os.IsNotExist(errP) {
 		if errDB := createDB(path); errDB != nil {
 			return "", errDB
 		}
+		return path, nil
 	} else if errP != nil {
 		return "", errP
 	}

@@ -628,7 +628,6 @@ func (c *Config) createBucket(name Bucket) error {
 	}
 	return c.db.Update(func(tx *bolt.Tx) error {
 		if b := tx.Bucket([]byte(name)); b == nil {
-			fmt.Printf("New database bucket: '%s'\n", name)
 			_, err1 := tx.CreateBucket([]byte(name))
 			return err1
 		}

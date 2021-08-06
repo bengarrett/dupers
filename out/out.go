@@ -25,12 +25,19 @@ func ErrAppend(err error) {
 	color.Warn.Printf("%s.\n", strings.TrimSpace(s))
 }
 
-// ErrFatal prints the error.
+// ErrCont prints the error.
 func ErrCont(err error) {
 	if err == nil {
 		return
 	}
-	color.Warn.Printf("The %s.\n", err.Error())
+	const nf = "bucket not found:"
+	s := err.Error()
+	if strings.HasPrefix(s, nf) {
+		color.Info.Printf("%s\n",
+			strings.Replace(s, nf, "New database bucket:", 1))
+		return
+	}
+	color.Warn.Printf("The %s.\n", s)
 }
 
 // ErrFatal prints the error and exits the program.
