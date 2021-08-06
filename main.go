@@ -142,7 +142,7 @@ func checkDatabase() {
 	i, err1 := os.Stat(path)
 	if os.IsNotExist(err1) {
 		out.ErrCont(database.ErrDBNotFound)
-		fmt.Printf("\n%s\nThe database will be located at: %s", database.NotFound, path)
+		fmt.Printf("\n%s\nThe database will be located at: %s\n", database.NotFound, path)
 		os.Exit(0)
 	} else if err1 != nil {
 		out.ErrFatal(err1)

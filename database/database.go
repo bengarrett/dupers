@@ -39,8 +39,8 @@ const (
 
 	NotFound   = "This is okay as one will be created when using the dupe or search commands."
 	backupTime = "20060102-150405"
-	dbName     = "dupers.db"
-	dbPath     = "dupers"
+	boltName   = "dupers.db"
+	subdir     = "dupers"
 	tabPadding = 4
 	tabWidth   = 8
 )
@@ -112,8 +112,8 @@ func Backup() (name string, written int64, err error) {
 }
 
 func backupName() string {
-	now, ext := time.Now().Format(backupTime), filepath.Ext(dbName)
-	return fmt.Sprintf("%s-backup-%s%s", strings.TrimSuffix(dbName, ext), now, ext)
+	now, ext := time.Now().Format(backupTime), filepath.Ext(boltName)
+	return fmt.Sprintf("%s-backup-%s%s", strings.TrimSuffix(boltName, ext), now, ext)
 }
 
 // Clean the stale items from database buckets.
@@ -395,17 +395,46 @@ func DB() (string, error) {
 			return "", err
 		}
 	}
-	dir = filepath.Join(dir, dbPath)
+	dir = filepath.Join(dir, subdir)
 	if testMode {
 		dir = filepath.Join(dir, "test")
 	}
-	_, err = os.Stat(dir)
-	if os.IsNotExist(err) {
-		if err1 := os.MkdirAll(dir, PrivateDir); err != nil {
-			return "", err1
+	// create database directory if it doesn't exist
+	if _, err = os.Stat(dir); os.IsNotExist(err) {
+		if errMk := os.MkdirAll(dir, PrivateDir); errMk != nil {
+			return "", fmt.Errorf("cannot create database directory: %w: %s", errMk, dir)
 		}
 	}
-	return filepath.Join(dir, dbName), nil
+	// create a new database if it doesn't exist, this prevents
+	// posix system returning the error a "bad file descriptor" when reading
+	path := filepath.Join(dir, boltName)
+	i, errP := os.Stat(path)
+	if os.IsNotExist(err) {
+		if errDB := createDB(path); errDB != nil {
+			return "", errDB
+		}
+	} else if errP != nil {
+		return "", errP
+	}
+	// recreate an empty database if it is a zero byte file
+	if i.Size() == 0 {
+		if errRM := os.Remove(path); errRM != nil {
+			return "", errRM
+		}
+		if errDB := createDB(path); errDB != nil {
+			return "", errDB
+		}
+	}
+	return path, nil
+}
+
+func createDB(path string) error {
+	db, err := bolt.Open(path, PrivateFile, nil)
+	if err != nil {
+		return fmt.Errorf("could not create a new database: %w: %s", err, path)
+	}
+	defer db.Close()
+	return nil
 }
 
 // Info returns a printout of the buckets and their statistics.
