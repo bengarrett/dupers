@@ -90,6 +90,8 @@ func Status(count, total int, m Mode) string {
 	)
 	pre := "\r"
 	if runtime.GOOS != "windows" {
+		// erasing the line makes for a less flickering counter.
+		// not all Windows terminals support ANSI controls.
 		pre = eraseLine + pre
 	}
 	switch m {
