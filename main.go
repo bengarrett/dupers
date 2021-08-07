@@ -37,17 +37,17 @@ var (
 )
 
 const (
-	dbf  = "database"
-	dbs  = "db"
-	dbk  = "backup"
-	dcn  = "clean"
-	dls  = "ls"
-	drm  = "rm"
-	dup  = "up"
-	dupp = "up+"
+	dbf   = "database"
+	dbs   = "db"
+	dbk   = "backup"
+	dcn   = "clean"
+	dls   = "ls"
+	drm   = "rm"
+	dup   = "up"
+	dupp  = "up+"
+	winOS = "windows"
 
-	winOS                   = "windows"
-	winShh                  = "To improve performance on Windows use the quiet flag"
+	perfMsg                 = "To improve performance use the quiet flag"
 	winRemind time.Duration = 5 * time.Second
 )
 
@@ -334,9 +334,9 @@ func taskDBUp(c *dupers.Config, plus bool, args [2]string) {
 	} else if err := c.WalkDir(name); err != nil {
 		out.ErrFatal(err)
 	}
-	if runtime.GOOS == winOS || !c.Quiet {
+	if !c.Quiet {
 		if c.Timer() > winRemind {
-			fmt.Printf("\n%s: %s\n", winShh, color.Debug.Sprintf("duper -quiet up ..."))
+			fmt.Printf("\n%s: %s\n", perfMsg, color.Debug.Sprintf("duper -quiet up ..."))
 		}
 		fmt.Println(c.Status())
 	}
@@ -381,9 +381,9 @@ func taskScan(c *dupers.Config, t tasks, args ...string) {
 	// print the found dupes & remove files
 	taskScanClean(c, t)
 	// summaries
-	if runtime.GOOS == winOS || !c.Quiet {
+	if !c.Quiet {
 		if c.Timer() > winRemind {
-			fmt.Printf("\n%s: %s\n", winShh, color.Debug.Sprintf("duper -quiet dupe ..."))
+			fmt.Printf("\n%s: %s\n", perfMsg, color.Debug.Sprintf("duper -quiet dupe ..."))
 		}
 		fmt.Println(c.Status())
 	}
