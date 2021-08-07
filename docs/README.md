@@ -90,6 +90,14 @@ duper search "2010" D:\photos
 
 Due to the nature of duplicate file checking, several unrelated issues can significantly affect duper's performance.
 
+#### Hardware and the Operating System
+
+With its constant opening and reading of files, hardware directly affects dupers' performance, both CPU used and the read/write speed of the hard drive. Fast multithreaded CPUs and SSD drives help here.
+
+Recent changes to modern operating systems harm dupers. Nowadays, terminal and command prompt applications receive 25-35% of the available CPU resources.
+
+You can improve this by adjusting the process priority of dupers in your operating system's activity/system processes tool, but it may not give the desired effect.
+
 #### Live status and command flags
 
 The terminal and command prompt apps are not designed for the rapid display of live text and can introduce a significant performance hit to dupers when processing large tasks. An easy fix is to use the `-quiet` flag with the duper commands.
@@ -115,10 +123,6 @@ duper dupe C:\Users\Me\Downloads D:\textfiles
 # Checking 51179 of 387859 items...
 # Scanned 191842 files, taking 46.3s
 ```
-
-#### Hardware
-
-to-do
 
 ## Limitations
 
