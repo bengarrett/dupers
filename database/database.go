@@ -196,7 +196,7 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 			err = b.ForEach(func(k, v []byte) error {
 				cnt++
 				if !debug && !quiet {
-					fmt.Printf("\rChecking %d of %d items ", cnt, total)
+					fmt.Print(out.Status(cnt, total, out.Check))
 				}
 				if debug {
 					out.Bug("clean: " + string(k))

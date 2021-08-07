@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/gookit/color"
@@ -65,6 +66,41 @@ func Response(s string, quiet bool) {
 		return
 	}
 	fmt.Println(s)
+}
+
+// Mode for the current processing count.
+type Mode uint
+
+const (
+	// Check returns Checking items.
+	Check Mode = iota
+	// Look returns Looking up items.
+	Look
+	// Scan returns Scanning files.
+	Scan
+)
+
+// Status prints out the current file or item processing count.
+func Status(count, total int, m Mode) string {
+	const (
+		check     = "%sChecking %d of %d items "
+		look      = "%sLooking up %d items     "
+		scan      = "%sScanning %d files       "
+		eraseLine = "\u001b[2K"
+	)
+	pre := "\r"
+	if runtime.GOOS != "windows" {
+		pre = eraseLine + pre
+	}
+	switch m {
+	case Check:
+		return fmt.Sprintf(check, pre, count, total)
+	case Look:
+		return fmt.Sprintf(look, pre, count)
+	case Scan:
+		return fmt.Sprintf(scan, pre, count)
+	}
+	return ""
 }
 
 // YN prints the question and prompts the user for a yes or no reply.

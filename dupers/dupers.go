@@ -611,21 +611,10 @@ func printWalk(lookup bool, c *Config) string {
 	if c.Test || c.Quiet || c.Debug {
 		return ""
 	}
-	w, s := new(bytes.Buffer), "  Scanning"
 	if lookup {
-		s = "Looking up"
+		return out.Status(c.files, -1, out.Look)
 	}
-	if runtime.GOOS == winOS {
-		// color output slows down large scans on Windows
-		fmt.Fprintf(w, "\r%s %d files", s, c.files)
-		return w.String()
-	}
-	if color.Enable {
-		fmt.Fprint(w, "\u001b[2K")
-	}
-	fmt.Fprint(w, "\r", color.Secondary.Sprintf("%s ", s),
-		color.Primary.Sprintf("%d files ", c.files))
-	return w.String()
+	return out.Status(c.files, -1, out.Scan)
 }
 
 // read opens the named file and returns a SHA256 checksum of the data.
@@ -716,13 +705,7 @@ func walkCompare(root, path string, c *Config) error {
 	}
 	return c.db.View(func(tx *bolt.Tx) error {
 		if !c.Test && !c.Quiet && !c.Debug {
-			if runtime.GOOS == winOS {
-				// color output slows down large scans on Windows
-				fmt.Printf("\r  Scanning %d files ", c.files)
-			} else {
-				fmt.Print("\u001b[2K\r", color.Secondary.Sprint("Looking up "),
-					color.Primary.Sprintf("%d files ", c.files))
-			}
+			fmt.Print(out.Status(c.files, -1, out.Scan))
 		}
 		b := tx.Bucket([]byte(root))
 		if b == nil {
