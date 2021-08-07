@@ -238,11 +238,13 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 	if len(buckets) == errs {
 		return nil
 	}
-	if finds == 0 {
+	if debug && finds == 0 {
 		fmt.Println()
 		return ErrDBClean
 	}
-	fmt.Printf("The database removed %d stale items\n", finds)
+	if finds > 0 {
+		fmt.Printf("The database removed %d stale items\n", finds)
+	}
 	return nil
 }
 

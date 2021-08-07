@@ -12,6 +12,22 @@ import (
 	"github.com/gookit/color"
 )
 
+// Mode for the current processing count.
+type Mode uint
+
+const (
+	// Check returns Checking items.
+	Check Mode = iota
+	// Look returns Looking up items.
+	Look
+	// Scan returns Scanning files.
+	Scan
+
+	eraseLine = "\u001b[2K"
+	cr        = "\r"
+	winOS     = "windows"
+)
+
 // Bug prints the string to a newline.
 func Bug(debug string) {
 	fmt.Printf("∙%s\n", debug)
@@ -68,28 +84,22 @@ func Response(s string, quiet bool) {
 	fmt.Println(s)
 }
 
-// Mode for the current processing count.
-type Mode uint
-
-const (
-	// Check returns Checking items.
-	Check Mode = iota
-	// Look returns Looking up items.
-	Look
-	// Scan returns Scanning files.
-	Scan
-)
+func RMLine() string {
+	if runtime.GOOS == winOS {
+		return ""
+	}
+	return fmt.Sprintf("%s%s", eraseLine, cr)
+}
 
 // Status prints out the current file or item processing count.
 func Status(count, total int, m Mode) string {
 	const (
-		check     = "%sChecking %d of %d items "
-		look      = "%sLooking up %d items     "
-		scan      = "%sScanning %d files       "
-		eraseLine = "\u001b[2K"
+		check = "%sChecking %d of %d items "
+		look  = "%sLooking up %d items     "
+		scan  = "%sScanning %d files       "
 	)
-	pre := "\r"
-	if runtime.GOOS != "windows" {
+	pre := cr
+	if runtime.GOOS != winOS {
 		// erasing the line makes for a less flickering counter.
 		// not all Windows terminals support ANSI controls.
 		pre = eraseLine + pre

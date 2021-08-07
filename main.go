@@ -48,7 +48,7 @@ const (
 	winOS = "windows"
 
 	perfMsg                 = "To improve performance use the quiet flag"
-	winRemind time.Duration = 5 * time.Second
+	winRemind time.Duration = 10 * time.Second
 )
 
 type tasks struct {
@@ -378,7 +378,12 @@ func taskScan(c *dupers.Config, t tasks, args ...string) {
 	}
 	// walk, scan and save file paths and hashes to the database
 	taskLookup(c, t)
-	// print the found dupes & remove files
+	if !c.Quiet {
+		fmt.Print(out.RMLine())
+	}
+	// print the found dupes
+	fmt.Print(c.Print())
+	// remove files
 	taskScanClean(c, t)
 	// summaries
 	if !c.Quiet {
@@ -409,7 +414,6 @@ func taskLookup(c *dupers.Config, t tasks) {
 }
 
 func taskScanClean(c *dupers.Config, t tasks) {
-	fmt.Print(c.Print())
 	if *t.rm || *t.rmPlus {
 		if c.Debug {
 			out.Bug("remove duplicate files.")

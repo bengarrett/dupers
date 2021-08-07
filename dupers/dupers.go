@@ -191,6 +191,7 @@ func (c *Config) Print() string {
 		out.Bug("print duplicate results")
 	}
 	w := new(bytes.Buffer)
+	finds := 0
 	for _, path := range c.sources {
 		sum, err := read(path)
 		if err != nil {
@@ -203,7 +204,11 @@ func (c *Config) Print() string {
 		if l == path {
 			continue
 		}
+		finds++
 		fmt.Fprintln(w, match(path, l))
+	}
+	if finds == 0 {
+		fmt.Fprintln(w, color.Info.Sprint("No duplicate files found."))
 	}
 	return w.String()
 }
