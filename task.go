@@ -6,9 +6,11 @@ package main
 import (
 	"bytes"
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 
@@ -47,6 +49,15 @@ func checkDB() {
 		s := "This error occures when dupers cannot save any data to the file system."
 		fmt.Printf("\n%s\nThe database is located at: %s\n", s, path)
 		os.Exit(1)
+	}
+}
+
+// chkWinDirs checks the arguments for invalid escaped quoted paths when using using Windows cmd.exe.
+func chkWinDirs() {
+	if runtime.GOOS == winOS && len(flag.Args()) > 1 {
+		for _, s := range flag.Args()[1:] {
+			chkWinDir(s)
+		}
 	}
 }
 

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"runtime"
 	"strings"
 	"time"
 
@@ -86,7 +85,6 @@ func main() {
 	v := flag.Bool("v", false, "alias for version")
 	hlp := flag.Bool("help", false, "print help")
 	ver := flag.Bool("version", false, "version and information for this program")
-	// help and parse flags
 	flag.Usage = func() {
 		help()
 	}
@@ -106,11 +104,7 @@ func main() {
 		fmt.Print(s)
 		return
 	}
-	if runtime.GOOS == winOS && len(flag.Args()) > 1 {
-		for _, s := range flag.Args()[1:] {
-			chkWinDir(s)
-		}
-	}
+	chkWinDirs()
 	selection := strings.ToLower(flag.Args()[0])
 	if c.Debug {
 		out.Bug("command selection: " + selection)
