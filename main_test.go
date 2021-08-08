@@ -1,10 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"testing"
 
-	"github.com/bengarrett/dupers/dupers"
 	"github.com/gookit/color"
 )
 
@@ -16,66 +14,6 @@ const (
 
 func init() {
 	color.Enable = false
-}
-
-func BenchmarkRM(*testing.B) {
-	args := [2]string{"rm", bucket2}
-	c := dupers.Config{Quiet: true, Test: true}
-	taskDBUp(&c, false, args)
-	taskDBRM(false, args)
-}
-
-func BenchmarkScan1(*testing.B) {
-	args := []string{"dupe", match, bucket1}
-	c := dupers.Config{Quiet: true, Test: true}
-	var arr [2]string
-	copy(arr[:], args)
-	taskDBUp(&c, false, arr)
-	f := false
-	ts := tasks{
-		lookup: &f,
-		quiet:  &f,
-		rm:     &f,
-		sensen: &f,
-	}
-	taskScan(&c, ts, args...)
-}
-
-func BenchmarkScan2(*testing.B) {
-	args := []string{"dupe", match, bucket1}
-	c := dupers.Config{Quiet: true, Test: true}
-	f, t := false, true
-	ts := tasks{
-		lookup: &f,
-		quiet:  &t,
-		rm:     &f,
-		sensen: &f,
-	}
-	var arr [2]string
-	copy(arr[:], args)
-	taskDBUp(&c, false, arr)
-	taskScan(&c, ts, args...)
-}
-
-func BenchmarkSearch(*testing.B) {
-	terms := []string{"TzgPJuhfPJlg", "hello worlld"}
-	const bucket = bucket1
-	for _, term := range terms {
-		args := []string{"search", fmt.Sprintf("'%s'", term), bucket}
-		c := dupers.Config{Quiet: true, Test: true}
-		f := false
-		ts := tasks{
-			exact:    &f,
-			filename: &f,
-			quiet:    &f,
-		}
-		var arr [2]string
-		copy(arr[:], args)
-		taskDBUp(&c, false, arr)
-		for i := 0; i <= 3; i++ {
-			taskSearch(ts, args...)
-		}
-	}
 }
 
 func Test_self(t *testing.T) {
@@ -118,8 +56,8 @@ func Test_searchSummary(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := searchSummary(tt.args.total, tt.args.term, tt.args.exact, tt.args.filename); got != tt.want {
-				t.Errorf("searchSummary() = %v, want %v", got, tt.want)
+			if got := searchCmdSummary(tt.args.total, tt.args.term, tt.args.exact, tt.args.filename); got != tt.want {
+				t.Errorf("searchCmdSummary() = %v, want %v", got, tt.want)
 			}
 		})
 	}
