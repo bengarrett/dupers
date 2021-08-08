@@ -9,9 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"runtime"
-	"sort"
 	"strings"
 	"time"
 
@@ -42,6 +40,7 @@ const (
 	dbs   = "db"
 	dbk   = "backup"
 	dcn   = "clean"
+	dex   = "export"
 	dls   = "ls"
 	dmv   = "mv"
 	drm   = "rm"
@@ -120,7 +119,7 @@ func main() {
 		out.Bug("command selection: " + selection)
 	}
 	switch selection {
-	case dbf, dbs, dbk, dcn, dls, dmv, drm, dup, dupp:
+	case dbf, dbs, dbk, dcn, dex, dls, dmv, drm, dup, dupp:
 		taskDatabase(&c, *t.quiet, flag.Args()...)
 	case "dupe":
 		if *f {
@@ -171,6 +170,7 @@ func checkDatabase() {
 func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
 	checkDatabase()
 	arr := [2]string{}
+	copy(arr[:], args)
 	switch args[0] {
 	case dbk:
 		n, w, err := database.Backup()
@@ -179,7 +179,6 @@ func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
 		}
 		s := fmt.Sprintf("A new copy of the database (%s) is at: %s", humanize.Bytes(uint64(w)), n)
 		out.Response(s, quiet)
-		return
 	case dcn:
 		if err := database.Clean(quiet, c.Debug); err != nil {
 			if b := errors.Is(err, database.ErrDBClean); !b {
@@ -192,33 +191,26 @@ func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
 				out.ErrFatal(err)
 			}
 		}
-		return
 	case dbs, dbf:
 		s, err := database.Info()
 		if err != nil {
 			out.ErrCont(err)
 		}
 		fmt.Println(s)
-		return
+	case dex:
+		exportBucket(quiet, arr)
 	case dls:
-		copy(arr[:], args)
-		taskDBList(quiet, arr)
+		listBucket(quiet, arr)
 	case dmv:
 		arr := [3]string{}
 		copy(arr[:], args)
-		taskDBMV(quiet, arr)
+		moveBucket(quiet, arr)
 	case drm:
-		copy(arr[:], args)
-		taskDBRM(quiet, arr)
-		return
+		removeBucket(quiet, arr)
 	case dup:
-		copy(arr[:], args)
-		taskDBUp(c, false, arr)
-		return
+		rescanBucket(c, false, arr)
 	case dupp:
-		copy(arr[:], args)
-		taskDBUp(c, true, arr)
-		return
+		rescanBucket(c, true, arr)
 	default:
 		out.ErrFatal(ErrCmd)
 	}
@@ -252,145 +244,6 @@ func chkWinDir(s string) {
 		fmt.Fprintf(w, "\"%s\\\"", usr)
 	}
 	out.ErrFatal(fmt.Errorf("%w\n%s", ErrWindowsDir, w.String()))
-}
-
-func taskDBList(quiet bool, args [2]string) {
-	if args[1] == "" {
-		out.ErrCont(ErrDatabaseName)
-		fmt.Println("Cannot list the bucket as no bucket name was provided.")
-		out.Example("\ndupers ls <bucket name>")
-		out.ErrFatal(nil)
-	}
-	name, err := filepath.Abs(args[1])
-	if err != nil {
-		out.ErrFatal(err)
-	}
-	ls, err := database.List(name, nil)
-	if err != nil {
-		out.ErrCont(err)
-	}
-	// sort the filenames
-	var names []string
-	for name := range ls {
-		names = append(names, string(name))
-	}
-	sort.Strings(names)
-	for _, name := range names {
-		sum := ls[database.Filepath(name)]
-		fmt.Printf("%x %s\n", sum, name)
-	}
-	if cnt := len(ls); !quiet && cnt > 0 {
-		fmt.Printf("%s %s\n", color.Primary.Sprint(cnt),
-			color.Secondary.Sprint("items listed. Checksums are 32 byte, SHA-256 (FIPS 180-4)."))
-	}
-}
-
-func taskDBMV(quiet bool, args [3]string) {
-	b, dir := args[1], args[2]
-	if b == "" {
-		out.ErrCont(ErrDatabaseName)
-		fmt.Println("Cannot move and rename bucket in the database as no bucket name was provided.")
-		out.Example("\ndupers mv <bucket name> <new directory>")
-		out.ErrFatal(nil)
-	}
-	name, err := filepath.Abs(b)
-	if err != nil {
-		out.ErrFatal(err)
-	}
-	if errEx := database.Exist(name, nil); errors.Is(errEx, database.ErrBucketNotFound) {
-		out.ErrCont(errEx)
-		fmt.Printf("Bucket name: %s\n", name)
-		out.Example("\ndupers mv <bucket name> <new directory>")
-		out.ErrFatal(nil)
-	} else if errEx != nil {
-		out.ErrFatal(errEx)
-	}
-	if dir == "" {
-		fmt.Println("Cannot move and rename bucket in the database as no new directory was provided.")
-		out.Example(fmt.Sprintf("\ndupers mv %s <new directory>", b))
-		out.ErrFatal(nil)
-	}
-	newName, err := filepath.Abs(dir)
-	if err != nil {
-		out.ErrFatal(err)
-	}
-	if newName == "" {
-		out.ErrFatal(ErrNewName)
-	}
-	if !quiet {
-		fmt.Printf("Current:\t%s\nNew path:\t%s\n", name, newName)
-		fmt.Println("This only renames the bucket, it does not move files on your system.")
-		if !out.YN("Rename bucket") {
-			return
-		}
-	}
-	if err := database.Rename(name, newName); err != nil {
-		out.ErrFatal(err)
-	}
-}
-
-func taskDBRM(quiet bool, args [2]string) {
-	if args[1] == "" {
-		out.ErrCont(ErrDatabaseName)
-		fmt.Println("Cannot remove a bucket from the database as no bucket name was provided.")
-		out.Example("\ndupers rm <bucket name>")
-		out.ErrFatal(nil)
-	}
-	name, err := filepath.Abs(args[1])
-	if err != nil {
-		out.ErrFatal(err)
-	}
-	if err := database.RM(name); err != nil {
-		if errors.Is(err, database.ErrBucketNotFound) {
-			// retry with the original argument
-			if err1 := database.RM(args[1]); err1 != nil {
-				if errors.Is(err1, database.ErrBucketNotFound) {
-					out.ErrCont(err1)
-					fmt.Printf("Bucket to remove: %s\n", color.Danger.Sprint(name))
-					buckets, err2 := database.AllBuckets(nil)
-					if err2 != nil {
-						out.ErrFatal(err2)
-					}
-					fmt.Printf("Buckets in use:   %s\n", strings.Join(buckets, "\n\t\t  "))
-					out.ErrFatal(nil)
-				}
-				out.ErrFatal(err1)
-			}
-		}
-	}
-	s := fmt.Sprintf("Removed bucket from the database: '%s'\n", name)
-	out.Response(s, quiet)
-}
-
-func taskDBUp(c *dupers.Config, plus bool, args [2]string) {
-	if args[1] == "" {
-		out.ErrCont(database.ErrBucketNotFound)
-		fmt.Println("Cannot add or update a bucket to the database as no bucket name was provided.")
-		if plus {
-			out.Example("\ndupers up+ <bucket name>")
-			out.ErrFatal(nil)
-		}
-		out.Example("\ndupers up <bucket name>")
-		out.ErrFatal(nil)
-	}
-	path, err := filepath.Abs(args[1])
-	if err != nil {
-		out.ErrFatal(err)
-	}
-	name := dupers.Bucket(path)
-	if plus {
-		if err := c.WalkArchiver(name); err != nil {
-			out.ErrFatal(err)
-		}
-	} else if err := c.WalkDir(name); err != nil {
-		out.ErrFatal(err)
-	}
-	if !c.Quiet {
-		if c.Timer() > winRemind {
-			fmt.Printf("\n%s: %s\n", perfMsg, color.Debug.Sprintf("duper -quiet up ..."))
-		}
-		fmt.Println(c.Status())
-	}
 }
 
 func taskScan(c *dupers.Config, t tasks, args ...string) {

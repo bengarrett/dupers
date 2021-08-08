@@ -74,7 +74,7 @@ func help() string {
 		"\n\tthe scan reads all the files stored within file archives")
 	fmt.Fprintf(w, "\n    dupers %s  <bucket>\t%s\n", drm, "remove the bucket from the database")
 	fmt.Fprintf(w, "    dupers %s  <bucket> <new directory>\t%s\n", dmv, "move the bucket to a new directory path")
-
+	fmt.Fprintf(w, "    dupers %s  <bucket>\t%s\n", dex, "export the bucket to a text file in: "+home())
 	fmt.Fprintln(w, "\nOptions:")
 	f = flag.Lookup("quiet")
 	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)

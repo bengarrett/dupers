@@ -5,6 +5,7 @@ package database
 
 import (
 	"bytes"
+	"encoding/csv"
 	"errors"
 	"fmt"
 	"io"
@@ -40,6 +41,7 @@ const (
 	NotFound   = "This is okay as one will be created when using the dupe or search commands."
 	backupTime = "20060102-150405"
 	boltName   = "dupers.db"
+	csvName    = "dupers-export.csv"
 	subdir     = "dupers"
 	tabPadding = 4
 	tabWidth   = 8
@@ -607,6 +609,51 @@ func IsEmpty() (bool, error) {
 	return false, nil
 }
 
+// ExportCSV saves the bucket data to a RFC 4180, comma-separated values (CSV) file.
+func ExportCSV(bucket string, db *bolt.DB) (name string, err error) {
+	if db == nil {
+		db, err = OpenRead()
+		if err != nil {
+			return "", err
+		}
+		defer db.Close()
+	}
+
+	dir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	name = filepath.Join(dir, exportName())
+	f, err := os.Create(name)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	meta := strings.Join([]string{"path", bucket}, "#")
+	r := [][]string{
+		{"sha256_sum", meta},
+	}
+	ls, errLS := List(bucket, db)
+	if errLS != nil {
+		return "", err
+	}
+	for file, sum := range ls {
+		rel := strings.TrimPrefix(string(file), bucket)
+		r = append(r, []string{fmt.Sprintf("%x", sum), rel})
+	}
+	w := csv.NewWriter(f)
+	if err := w.WriteAll(r); err != nil {
+		return "", err
+	}
+	return name, nil
+}
+
+func exportName() string {
+	now, ext := time.Now().Format(backupTime), filepath.Ext(csvName)
+	return fmt.Sprintf("%s-%s%s", strings.TrimSuffix(csvName, ext), now, ext)
+}
+
 // List returns the file paths and SHA256 checksums stored in the bucket.
 func List(bucket string, db *bolt.DB) (ls Lists, err error) {
 	if db == nil {
@@ -616,7 +663,7 @@ func List(bucket string, db *bolt.DB) (ls Lists, err error) {
 		}
 		defer db.Close()
 	}
-	ls = make(Lists)
+	lists := make(Lists)
 	if errV := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
 		if b == nil {
@@ -625,14 +672,14 @@ func List(bucket string, db *bolt.DB) (ls Lists, err error) {
 		h := [32]byte{}
 		err = b.ForEach(func(k, v []byte) error {
 			copy(h[:], v)
-			ls[Filepath(k)] = h
+			lists[Filepath(k)] = h
 			return nil
 		})
 		return err
 	}); errV != nil {
 		return nil, errV
 	}
-	return ls, nil
+	return lists, nil
 }
 
 // Rename the named bucket in the database to use a new directory path.

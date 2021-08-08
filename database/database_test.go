@@ -356,6 +356,28 @@ func TestIsEmpty(t *testing.T) {
 	})
 }
 
+func TestExportCSV(t *testing.T) {
+	color.Enable = false
+	if err := mock.TestOpen(); err != nil {
+		t.Error(err)
+	}
+	t.Run("csv export", func(t *testing.T) {
+		gotName, err := ExportCSV(mock.Bucket1(), nil)
+		if err != nil {
+			t.Errorf("Backup() error = %v, want nil", err)
+			return
+		}
+		if gotName == "" {
+			t.Errorf("Backup() gotName = \"\"")
+		}
+		if gotName != "" {
+			if err := os.Remove(gotName); err != nil {
+				log.Println(err)
+			}
+		}
+	})
+}
+
 func TestList(t *testing.T) {
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
