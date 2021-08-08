@@ -24,11 +24,18 @@ const tabPadding = 4
 
 // Help, usage and examples.
 func help() string {
-	var f *flag.Flag
-	var b bytes.Buffer
+	b, f := bytes.Buffer{}, flag.Flag{}
 	w := tabwriter.NewWriter(&b, 0, 0, tabPadding, ' ', 0)
 	defer w.Flush()
 	fmt.Fprintf(w, "Dupers is the blazing-fast file duplicate checker and filename search.\n")
+	helpDupe(f, w)
+	helpSearch(f, w)
+	helpDB(f, w)
+	fmt.Fprintln(w)
+	return b.String()
+}
+
+func helpDupe(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintf(w, "\n%s\n  Scan for duplicate files, matching files that share the identical content.\n",
 		color.Primary.Sprint("Dupe:"))
 	fmt.Fprintln(w, "  The \"directory or file to check\" is never added to the database.")
@@ -40,27 +47,32 @@ func help() string {
 	fmt.Fprintln(w, "\n  Usage:")
 	fmt.Fprintln(w, "    dupers [options] dupe <directory or file to check> [buckets to lookup]")
 	fmt.Fprintln(w, "\n  Options:")
-	f = flag.Lookup("fast")
+	f = *flag.Lookup("fast")
 	fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
-	f = flag.Lookup("delete")
+	f = *flag.Lookup("delete")
 	fmt.Fprintf(w, "        -%v\t\t%v\n", f.Name, f.Usage)
-	f = flag.Lookup("delete+")
+	f = *flag.Lookup("delete+")
 	fmt.Fprintf(w, "        -%v\t\t%v\n", f.Name, f.Usage)
-	f = flag.Lookup("sensen")
+	f = *flag.Lookup("sensen")
 	fmt.Fprintf(w, "        -%v\t\t%v\n", f.Name, f.Usage)
 	exampleDupe(w)
+}
+
+func helpSearch(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintf(w, "\n%s\n  Lookup a file or a directory name in the database.\n",
 		color.Primary.Sprint("Search:"))
 	fmt.Fprintf(w, "  The <search expression> can be a partial or complete, file or directory name.\n")
 	fmt.Fprintln(w, "\n  Usage:")
 	fmt.Fprintln(w, "    dupers [options] search <search expression> [optional, buckets to search]")
 	fmt.Fprintln(w, "\n  Options:")
-	f = flag.Lookup("exact")
+	f = *flag.Lookup("exact")
 	fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
-	f = flag.Lookup("name")
+	f = *flag.Lookup("name")
 	fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
 	exampleSearch(w)
+}
 
+func helpDB(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintf(w, "\n%s\n  View information and run optional maintenance on the internal database.\n",
 		color.Primary.Sprint("Database:"))
 	fmt.Fprintln(w, "\n  Usage:")
@@ -77,13 +89,11 @@ func help() string {
 	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", dex, "export the bucket to a text file in: "+home())
 	fmt.Fprintf(w, "    dupers %s <export file>\t%s\n", dim, "import the bucket text file into the database")
 	fmt.Fprintln(w, "\nOptions:")
-	f = flag.Lookup("quiet")
+	f = *flag.Lookup("quiet")
 	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
-	f = flag.Lookup("version")
+	f = *flag.Lookup("version")
 	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
 	fmt.Fprintln(w, "    -h, -help\tshow this list of options")
-	fmt.Fprintln(w)
-	return b.String()
 }
 
 func exampleDupe(w *tabwriter.Writer) *tabwriter.Writer {

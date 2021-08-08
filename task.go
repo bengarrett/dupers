@@ -29,7 +29,7 @@ func checkBkt(term, cmd, name string) {
 	out.ErrFatal(nil)
 }
 
-func checkDb() {
+func checkDB() {
 	path, err := database.DB()
 	if err != nil {
 		out.ErrFatal(err)
@@ -81,7 +81,7 @@ func chkWinDir(s string) {
 }
 
 func databaseCmd(c *dupers.Config, quiet bool, args ...string) {
-	checkDb()
+	checkDB()
 	arr := [2]string{}
 	copy(arr[:], args)
 	switch args[0] {
