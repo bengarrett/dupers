@@ -128,10 +128,10 @@ func vers() string {
 	}
 	w := new(bytes.Buffer)
 	fmt.Fprintf(w, "dupers v%s\n%s 2021 Ben Garrett\n", version, copyright)
-	fmt.Fprintf(w, "https://github.com/bengarrett/dupers\n\n")
-	fmt.Fprintf(w, "build: %s (%s)\n", commit, date)
-	fmt.Fprintf(w, "go:    %s\n", strings.Replace(runtime.Version(), "go", "v", 1))
-	fmt.Fprintf(w, "path:  %s\n", exe)
+	fmt.Fprintf(w, "%s\n\n", color.Primary.Sprint("https://github.com/bengarrett/dupers"))
+	fmt.Fprintf(w, "%s %s (%s)\n", color.Secondary.Sprint("build:"), commit, date)
+	fmt.Fprintf(w, "%s    %s\n", color.Secondary.Sprint("go:"), strings.Replace(runtime.Version(), "go", "v", 1))
+	fmt.Fprintf(w, "%s  %s\n", color.Secondary.Sprint("path:"), exe)
 	return w.String()
 }
 
