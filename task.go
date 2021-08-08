@@ -4,8 +4,10 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -13,6 +15,7 @@ import (
 	"github.com/bengarrett/dupers/database"
 	"github.com/bengarrett/dupers/dupers"
 	"github.com/bengarrett/dupers/out"
+	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
 )
 
@@ -24,6 +27,275 @@ func checkBkt(term, cmd, name string) {
 	fmt.Printf("Cannot %s the bucket as no bucket name was provided.\n", term)
 	out.Example(fmt.Sprintf("\ndupers %s <bucket name>", cmd))
 	out.ErrFatal(nil)
+}
+
+func checkDb() {
+	path, err := database.DB()
+	if err != nil {
+		out.ErrFatal(err)
+	}
+	i, err1 := os.Stat(path)
+	if os.IsNotExist(err1) {
+		out.ErrCont(database.ErrDBNotFound)
+		fmt.Printf("\n%s\nThe database will be located at: %s\n", database.NotFound, path)
+		os.Exit(0)
+	} else if err1 != nil {
+		out.ErrFatal(err1)
+	}
+	if i.Size() == 0 {
+		out.ErrCont(database.ErrDBZeroByte)
+		s := "This error occures when dupers cannot save any data to the file system."
+		fmt.Printf("\n%s\nThe database is located at: %s\n", s, path)
+		os.Exit(1)
+	}
+}
+
+func chkWinDir(s string) {
+	if s == "" {
+		return
+	}
+	const dblQuote rune = 34
+	r := []rune(s)
+	l := len(r)
+	first, last := r[0:1][0], r[l-1 : l][0]
+	if first == dblQuote && last == dblQuote {
+		return // okay as the string is fully quoted
+	}
+	if first != dblQuote && last != dblQuote {
+		return // okay as the string is not quoted
+	}
+	// otherwise there is a problem, as only the start or end of the string is quoted.
+	// this is caused by flag.Parse() treating the \" prefix on a quoted directory path as an escaped quote.
+	// so "C:\Example\" will be incorrectly parsed as C:\Example"
+	w := new(bytes.Buffer)
+	fmt.Fprint(w, "please remove the trailing backslash \\ character from any quoted directory paths")
+	if usr, err := os.UserHomeDir(); err == nil {
+		fmt.Fprint(w, "\n")
+		fmt.Fprint(w, color.Success.Sprint("Good: "))
+		fmt.Fprintf(w, "\"%s\" ", usr)
+		fmt.Fprint(w, "\n")
+		fmt.Fprint(w, color.Warn.Sprint("Bad: "))
+		fmt.Fprintf(w, "\"%s\\\"", usr)
+	}
+	out.ErrFatal(fmt.Errorf("%w\n%s", ErrWindowsDir, w.String()))
+}
+
+func databaseCmd(c *dupers.Config, quiet bool, args ...string) {
+	checkDb()
+	arr := [2]string{}
+	copy(arr[:], args)
+	switch args[0] {
+	case dbk:
+		n, w, err := database.Backup()
+		if err != nil {
+			out.ErrFatal(err)
+		}
+		s := fmt.Sprintf("A new copy of the database (%s) is at: %s", humanize.Bytes(uint64(w)), n)
+		out.Response(s, quiet)
+	case dcn:
+		if err := database.Clean(quiet, c.Debug); err != nil {
+			if b := errors.Is(err, database.ErrDBClean); !b {
+				out.ErrFatal(err)
+			}
+			out.ErrCont(err)
+		}
+		if err := database.Compact(c.Debug); err != nil {
+			if b := errors.Is(err, database.ErrDBCompact); !b {
+				out.ErrFatal(err)
+			}
+		}
+	case dbs, dbf:
+		s, err := database.Info()
+		if err != nil {
+			out.ErrCont(err)
+		}
+		fmt.Println(s)
+	case dex:
+		exportBucket(quiet, arr)
+	case dls:
+		listBucket(quiet, arr)
+	case dmv:
+		arr := [3]string{}
+		copy(arr[:], args)
+		moveBucket(quiet, arr)
+	case drm:
+		removeBucket(quiet, arr)
+	case dup:
+		rescanBucket(c, false, arr)
+	case dupp:
+		rescanBucket(c, true, arr)
+	default:
+		out.ErrFatal(ErrCmd)
+	}
+}
+
+func dupeCmd(c *dupers.Config, t tasks, args ...string) {
+	if c.Debug {
+		s := fmt.Sprintf("dupeCmd: %s", strings.Join(args, " "))
+		out.Bug(s)
+	}
+	l := len(args)
+	b, err := database.AllBuckets(nil)
+	if err != nil {
+		out.ErrFatal(err)
+	}
+	const minArgs = 3
+	if l < minArgs && len(b) == 0 {
+		dupeCmdErr(l, len(b))
+	}
+	// directory or a file to match
+	c.SetToCheck(args[1])
+	// directories and files to scan, a bucket is the name given to database tables
+	arr := args[2:]
+	c.SetBuckets(arr...)
+	if arr == nil {
+		c.SetAllBuckets()
+	}
+	if c.Debug {
+		s := fmt.Sprintf("buckets: %s", c.PrintBuckets())
+		out.Bug(s)
+	}
+	taskCheckPaths(c)
+	// files or directories to compare (these are not saved to database)
+	if err := c.WalkSource(); err != nil {
+		out.ErrFatal(err)
+	}
+	if c.Debug {
+		out.Bug("walksource complete.")
+	}
+	// walk, scan and save file paths and hashes to the database
+	dupeLookup(c, t)
+	if !c.Quiet {
+		fmt.Print(out.RMLine())
+	}
+	// print the found dupes
+	fmt.Print(c.Print())
+	// remove files
+	dupeCleanup(c, t)
+	// summaries
+	if !c.Quiet {
+		if c.Timer() > winRemind {
+			fmt.Printf("\n%s: %s\n", perfMsg, color.Debug.Sprintf("duper -quiet %s ...", "dupe"))
+		}
+		fmt.Println(c.Status())
+	}
+}
+
+func dupeCleanup(c *dupers.Config, t tasks) {
+	if *t.rm || *t.rmPlus {
+		if c.Debug {
+			out.Bug("remove duplicate files.")
+		}
+		fmt.Print(c.Remove())
+	}
+	if *t.sensen {
+		if c.Debug {
+			out.Bug("remove all non unique Windows and MS-DOS files.")
+		}
+		fmt.Print(c.RemoveAll())
+		fmt.Print(c.Remove())
+		fmt.Print(c.Clean())
+	}
+	if *t.rmPlus {
+		if c.Debug {
+			out.Bug("remove empty directories.")
+		}
+		fmt.Print(c.Clean())
+	}
+}
+
+func dupeLookup(c *dupers.Config, t tasks) {
+	if c.Debug {
+		out.Bug("database cleanup.")
+	}
+	var bkts []string
+	for _, b := range c.Buckets() {
+		bkts = append(bkts, string(b))
+	}
+	if !*t.lookup && len(bkts) > 0 {
+		if err := database.Clean(c.Quiet, c.Debug, bkts...); err != nil {
+			out.ErrCont(err)
+		}
+	}
+	if c.Debug {
+		out.Bug("walk the buckets.")
+	}
+	c.WalkDirs()
+}
+
+func searchCmd(t tasks, args ...string) {
+	l := len(args)
+	searchCmdErr(l)
+	term := args[1]
+	var (
+		buckets = []string{}
+		m       *database.Matches
+		err     error
+	)
+	const minArgs = 2
+	if l > minArgs {
+		buckets = args[2:]
+	}
+	if *t.filename {
+		if !*t.exact {
+			if m, err = database.CompareBaseNoCase(term, buckets...); err != nil {
+				taskSearchErr(err)
+			}
+		}
+		if *t.exact {
+			if m, err = database.CompareBase(term, buckets...); err != nil {
+				taskSearchErr(err)
+			}
+		}
+	}
+	if !*t.filename {
+		if !*t.exact {
+			if m, err = database.CompareNoCase(term, buckets...); err != nil {
+				taskSearchErr(err)
+			}
+		}
+		if *t.exact {
+			if m, err = database.Compare(term, buckets...); err != nil {
+				taskSearchErr(err)
+			}
+		}
+	}
+	fmt.Print(dupers.Print(*t.quiet, m))
+	if !*t.quiet {
+		l := 0
+		if m != nil {
+			l = len(*m)
+		}
+		fmt.Println(searchCmdSummary(l, term, *t.exact, *t.filename))
+	}
+}
+
+func searchCmdSummary(total int, term string, exact, filename bool) string {
+	str := func(t, s, term string) string {
+		return fmt.Sprintf("%s%s exist for '%s'.", t, color.Secondary.Sprint(s), color.Bold.Sprint(term))
+	}
+	s, r := "", "results"
+	if total == 0 {
+		return fmt.Sprintf("No results exist for '%s'.", term)
+	}
+	if total == 1 {
+		r = "result"
+	}
+	t := color.Primary.Sprint(total)
+	if exact && filename {
+		s += fmt.Sprintf(" exact filename %s", r)
+		return str(t, s, term)
+	}
+	if exact {
+		s += fmt.Sprintf(" exact %s", r)
+		return str(t, s, term)
+	}
+	if filename {
+		s += fmt.Sprintf(" filename %s", r)
+		return str(t, s, term)
+	}
+	s += fmt.Sprintf(" %s", r)
+	return str(t, s, term)
 }
 
 func exportBucket(quiet bool, args [2]string) {

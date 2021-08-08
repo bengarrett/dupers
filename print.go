@@ -169,7 +169,7 @@ func taskCheckPaths(c *dupers.Config) {
 	}
 }
 
-func taskExpErr(l int) {
+func searchCmdErr(l int) {
 	if l <= 1 {
 		out.ErrCont(ErrSearch)
 		fmt.Println("A search expression can be a partial or complete filename,")
@@ -179,7 +179,7 @@ func taskExpErr(l int) {
 	}
 }
 
-func taskScanErr(args, buckets int) {
+func dupeCmdErr(args, buckets int) {
 	const minArgs = 2
 	if args < minArgs {
 		out.ErrCont(ErrNoArgs)
