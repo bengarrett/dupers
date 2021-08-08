@@ -112,6 +112,8 @@ func databaseCmd(c *dupers.Config, quiet bool, args ...string) {
 		fmt.Println(s)
 	case dex:
 		exportBucket(quiet, arr)
+	case dim:
+		importBucket(quiet, arr)
 	case dls:
 		listBucket(quiet, arr)
 	case dmv:
@@ -317,6 +319,26 @@ func exportBucket(quiet bool, args [2]string) {
 		out.ErrFatal(errEx)
 	}
 	s := fmt.Sprintf("The exported bucket file is at: %s", exp)
+	out.Response(s, quiet)
+}
+
+func importBucket(quiet bool, args [2]string) {
+	f := args[1]
+	if f == "" {
+		out.ErrCont(ErrImport)
+		fmt.Println("Cannot import file as no filepath was provided.")
+		out.Example(fmt.Sprintf("\ndupers %s <filepath>", dim))
+		out.ErrFatal(nil)
+	}
+	name, err := filepath.Abs(args[1])
+	if err != nil {
+		out.ErrFatal(err)
+	}
+	r, errIm := database.ImportCSV(name, nil)
+	if errIm != nil {
+		out.ErrFatal(errIm)
+	}
+	s := fmt.Sprintf("Successfully imported %d records", r)
 	out.Response(s, quiet)
 }
 

@@ -24,6 +24,7 @@ var (
 var (
 	ErrCmd          = errors.New("command is unknown")
 	ErrDatabaseName = errors.New("database has no bucket name")
+	ErrImport       = errors.New("import filepath is missing")
 	ErrNewName      = errors.New("a new directory is required")
 	ErrNoArgs       = errors.New("request is missing arguments")
 	ErrSearch       = errors.New("search request needs an expression")
@@ -36,6 +37,7 @@ const (
 	dbk   = "backup"
 	dcn   = "clean"
 	dex   = "export"
+	dim   = "import"
 	dls   = "ls"
 	dmv   = "mv"
 	drm   = "rm"
@@ -114,7 +116,7 @@ func main() {
 		out.Bug("command selection: " + selection)
 	}
 	switch selection {
-	case dbf, dbs, dbk, dcn, dex, dls, dmv, drm, dup, dupp:
+	case dbf, dbs, dbk, dcn, dex, dim, dls, dmv, drm, dup, dupp:
 		databaseCmd(&c, *t.quiet, flag.Args()...)
 	case "dupe":
 		if *f {

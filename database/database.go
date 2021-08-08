@@ -654,6 +654,11 @@ func exportName() string {
 	return fmt.Sprintf("%s-%s%s", strings.TrimSuffix(csvName, ext), now, ext)
 }
 
+// ImportCSV opens the named RFC 4180, comma-separated values (CSV) file and writes the data to the database.
+func ImportCSV(name string, db *bolt.DB) (records int, err error) {
+	return records, nil
+}
+
 // List returns the file paths and SHA256 checksums stored in the bucket.
 func List(bucket string, db *bolt.DB) (ls Lists, err error) {
 	if db == nil {
