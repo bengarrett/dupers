@@ -68,11 +68,12 @@ func help() string {
 	fmt.Fprintf(w, "    dupers %s\t%s\n", dbk, "make a copy of the database to: "+home())
 	fmt.Fprintf(w, "    dupers %s\t%s\n", dcn, "compact and remove all items in the database that point to missing files")
 	fmt.Fprintf(w, "    dupers %s  <bucket>\t%s\n", dls, "list the hashes and files in the bucket")
-	fmt.Fprintf(w, "    dupers %s  <bucket>\t%s\n", drm, "remove the bucket from the database")
 	fmt.Fprintf(w, "    dupers %s  <bucket>\t%s\n", dup, "add or update the bucket to the database")
 	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", dupp, "add or update the bucket using an archive scan "+
 		color.Danger.Sprint("(SLOW)")+
 		"\n\tthe scan reads all the files stored within file archives")
+	fmt.Fprintf(w, "\n    dupers %s  <bucket>\t%s\n", drm, "remove the bucket from the database")
+	fmt.Fprintf(w, "    dupers %s  <bucket> <new directory>\t%s\n", dmv, "move the bucket to a new directory path")
 
 	fmt.Fprintln(w, "\nOptions:")
 	f = flag.Lookup("quiet")

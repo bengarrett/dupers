@@ -31,6 +31,7 @@ var (
 var (
 	ErrCmd          = errors.New("command is unknown")
 	ErrDatabaseName = errors.New("database has no bucket name")
+	ErrNewName      = errors.New("a new directory is required")
 	ErrNoArgs       = errors.New("request is missing arguments")
 	ErrSearch       = errors.New("search request needs an expression")
 	ErrWindowsDir   = errors.New("cannot parse the directory path")
@@ -42,6 +43,7 @@ const (
 	dbk   = "backup"
 	dcn   = "clean"
 	dls   = "ls"
+	dmv   = "mv"
 	drm   = "rm"
 	dup   = "up"
 	dupp  = "up+"
@@ -62,33 +64,32 @@ type tasks struct {
 	sensen   *bool
 }
 
+func flags(t *tasks) {
+	t.exact = flag.Bool("exact", false, "match case")
+	t.debug = flag.Bool("debug", false, "debug mode") // hidden flag
+	t.filename = flag.Bool("name", false, "search for filenames, and ignore directories")
+	t.lookup = flag.Bool("fast", false, "query the database for a much faster match,"+
+		"\n\t\tthe results maybe stale as it does not look for any file changes on your system")
+	t.quiet = flag.Bool("quiet", false, "quiet mode hides all but essential feedback"+
+		"\n\tthis improves performance with slow, default terminal programs")
+	t.sensen = flag.Bool("sensen", false, "delete everything in the <directory to check>;"+
+		"\n\t\texcept for directories containing unique Windows programs and assets")
+	t.rm = flag.Bool("delete", false, "delete the duplicate files found in the <directory to check>")
+	t.rmPlus = flag.Bool("delete+", false, "delete the duplicate files and remove empty directories from the <directory to check>")
+}
+
 func main() {
 	c, t := dupers.Config{}, tasks{}
 	c.SetTimer()
-	// dupe options
-	t.lookup = flag.Bool("fast", false, "query the database for a much faster match,"+
-		"\n\t\tthe results maybe stale as it does not look for any file changes on your system")
-	f := flag.Bool("f", false, "alias for fast")
-	t.rm = flag.Bool("delete", false, "delete the duplicate files found in the <directory to check>")
-	t.rmPlus = flag.Bool("delete+", false, "delete the duplicate files and remove empty directories from the <directory to check>")
-	// delete all files & directories other than unique .exe, .com programs in the <directory to check>
-	t.sensen = flag.Bool("sensen", false, "delete everything in the <directory to check>;"+
-		"\n\t\texcept for directories containing unique Windows programs and assets")
-	// search options
-	t.exact = flag.Bool("exact", false, "match case")
+	flags(&t)
 	ex := flag.Bool("e", false, "alias for exact")
-	t.filename = flag.Bool("name", false, "search for filenames, and ignore directories")
+	f := flag.Bool("f", false, "alias for fast")
 	fn := flag.Bool("n", false, "alias for name")
-	// general options
-	t.quiet = flag.Bool("quiet", false, "quiet mode hides all but essential feedback"+
-		"\n\tthis improves performance with slow, default terminal programs")
+	h := flag.Bool("h", false, "alias for help")
 	q := flag.Bool("q", false, "alias for quiet")
-	ver := flag.Bool("version", false, "version and information for this program")
 	v := flag.Bool("v", false, "alias for version")
 	hlp := flag.Bool("help", false, "print help")
-	h := flag.Bool("h", false, "alias for help")
-	// hidden flag
-	t.debug = flag.Bool("debug", false, "debug mode")
+	ver := flag.Bool("version", false, "version and information for this program")
 	// help and parse flags
 	flag.Usage = func() {
 		help()
@@ -119,7 +120,7 @@ func main() {
 		out.Bug("command selection: " + selection)
 	}
 	switch selection {
-	case dbf, dbs, dbk, dcn, dls, drm, dup, dupp:
+	case dbf, dbs, dbk, dcn, dls, dmv, drm, dup, dupp:
 		taskDatabase(&c, *t.quiet, flag.Args()...)
 	case "dupe":
 		if *f {
@@ -202,6 +203,10 @@ func taskDatabase(c *dupers.Config, quiet bool, args ...string) {
 	case dls:
 		copy(arr[:], args)
 		taskDBList(quiet, arr)
+	case dmv:
+		arr := [3]string{}
+		copy(arr[:], args)
+		taskDBMV(quiet, arr)
 	case drm:
 		copy(arr[:], args)
 		taskDBRM(quiet, arr)
@@ -277,6 +282,50 @@ func taskDBList(quiet bool, args [2]string) {
 	if cnt := len(ls); !quiet && cnt > 0 {
 		fmt.Printf("%s %s\n", color.Primary.Sprint(cnt),
 			color.Secondary.Sprint("items listed. Checksums are 32 byte, SHA-256 (FIPS 180-4)."))
+	}
+}
+
+func taskDBMV(quiet bool, args [3]string) {
+	b, dir := args[1], args[2]
+	if b == "" {
+		out.ErrCont(ErrDatabaseName)
+		fmt.Println("Cannot move and rename bucket in the database as no bucket name was provided.")
+		out.Example("\ndupers mv <bucket name> <new directory>")
+		out.ErrFatal(nil)
+	}
+	name, err := filepath.Abs(b)
+	if err != nil {
+		out.ErrFatal(err)
+	}
+	if errEx := database.Exist(name, nil); errors.Is(errEx, database.ErrBucketNotFound) {
+		out.ErrCont(errEx)
+		fmt.Printf("Bucket name: %s\n", name)
+		out.Example("\ndupers mv <bucket name> <new directory>")
+		out.ErrFatal(nil)
+	} else if errEx != nil {
+		out.ErrFatal(errEx)
+	}
+	if dir == "" {
+		fmt.Println("Cannot move and rename bucket in the database as no new directory was provided.")
+		out.Example(fmt.Sprintf("\ndupers mv %s <new directory>", b))
+		out.ErrFatal(nil)
+	}
+	newName, err := filepath.Abs(dir)
+	if err != nil {
+		out.ErrFatal(err)
+	}
+	if newName == "" {
+		out.ErrFatal(ErrNewName)
+	}
+	if !quiet {
+		fmt.Printf("Current:\t%s\nNew path:\t%s\n", name, newName)
+		fmt.Println("This only renames the bucket, it does not move files on your system.")
+		if !out.YN("Rename bucket") {
+			return
+		}
+	}
+	if err := database.Rename(name, newName); err != nil {
+		out.ErrFatal(err)
 	}
 }
 

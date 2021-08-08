@@ -301,6 +301,26 @@ func TestCompareNoCase(t *testing.T) {
 	}
 }
 
+func TestExist(t *testing.T) {
+	if err := mock.TestOpen(); err != nil {
+		t.Error(err)
+	}
+	t.Run("exist", func(t *testing.T) {
+		if err := Exist(mock.Bucket1(), nil); err != nil {
+			t.Errorf("Exist() bucket1 error = %v, want nil", err)
+		}
+		if err := Exist(mock.Bucket2(), nil); err == nil {
+			t.Error("Exist() bucket2 error = nil, want error")
+		}
+		if err := Exist("", nil); err == nil {
+			t.Error("Exist() empty bucket error = nil, want error")
+		}
+	})
+	if err := mock.TestRemove(); err != nil {
+		log.Fatal(err)
+	}
+}
+
 func TestIsEmpty(t *testing.T) {
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
@@ -380,6 +400,35 @@ func TestInfo(t *testing.T) {
 	if !strings.Contains(info, want) {
 		t.Errorf("Info() should display the mock database path, %v\ngot:\n%v", want, info)
 	}
+	if err := mock.TestRemove(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func TestRename(t *testing.T) {
+	if err := mock.TestOpen(); err != nil {
+		t.Error(err)
+	}
+	t.Run("rename", func(t *testing.T) {
+		if err := Rename(mock.Bucket2(), mock.Bucket1()); err == nil {
+			t.Error("Rename() bucket2 to bucket1 error = nil, want error")
+		}
+		if err := Rename(mock.Bucket1(), mock.Bucket2()); err != nil {
+			t.Errorf("Rename() bucket1 to bucket1 error = %v, want nil", err)
+		}
+		if err := Rename(mock.Bucket2(), mock.Bucket1()); err != nil {
+			t.Errorf("Rename() bucket2 back to bucket1 error = %v, want nil", err)
+		}
+		if err := Rename("", ""); err == nil {
+			t.Error("Rename() empty buckets error = nil, want error")
+		}
+		if err := Rename(mock.Bucket1(), ""); err == nil {
+			t.Error("Rename() empty new bucket error = nil, want error")
+		}
+		if err := Rename("", mock.Bucket2()); err == nil {
+			t.Error("Rename() empty bucket error = nil, want error")
+		}
+	})
 	if err := mock.TestRemove(); err != nil {
 		log.Fatal(err)
 	}

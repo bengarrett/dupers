@@ -138,6 +138,25 @@ func backupName() string {
 	return fmt.Sprintf("%s-backup-%s%s", strings.TrimSuffix(boltName, ext), now, ext)
 }
 
+// Exist returns an nil value if the bucket exists in the database.
+func Exist(bucket string, db *bolt.DB) error {
+	var err error
+	if db == nil {
+		db, err = OpenRead()
+		if err != nil {
+			return err
+		}
+		defer db.Close()
+	}
+	return db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(bucket))
+		if b == nil {
+			return ErrBucketNotFound
+		}
+		return nil
+	})
+}
+
 // Clean the stale items from database buckets.
 // Stale items are file pointers that no longer exist on the host file system.
 func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funlen
@@ -614,6 +633,31 @@ func List(bucket string, db *bolt.DB) (ls Lists, err error) {
 		return nil, errV
 	}
 	return ls, nil
+}
+
+// Rename the named bucket in the database to use a new directory path.
+func Rename(name, newName string) error {
+	db, err := OpenWrite()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	return db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(name))
+		if b == nil {
+			return ErrBucketNotFound
+		}
+		ren, errRen := tx.CreateBucket([]byte(newName))
+		if errRen != nil {
+			return errRen
+		}
+		if errPut := b.ForEach(func(k, v []byte) error {
+			return ren.Put(k, v)
+		}); errPut != nil {
+			return errPut
+		}
+		return tx.DeleteBucket([]byte(name))
+	})
 }
 
 // RM removes the named bucket from the database.
