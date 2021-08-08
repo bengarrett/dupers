@@ -71,7 +71,9 @@ func main() {
 	f := flag.Bool("f", false, "alias for fast")
 	t.rm = flag.Bool("delete", false, "delete the duplicate files found in the <directory to check>")
 	t.rmPlus = flag.Bool("delete+", false, "delete the duplicate files and remove empty directories from the <directory to check>")
-	t.sensen = flag.Bool("sensen", false, "delete all files & directories other than unique .exe, .com programs in the <directory to check>")
+	// delete all files & directories other than unique .exe, .com programs in the <directory to check>
+	t.sensen = flag.Bool("sensen", false, "delete everything in the <directory to check>;"+
+		"\n\t\texcept for directories containing unique Windows programs and assets")
 	// search options
 	t.exact = flag.Bool("exact", false, "match case")
 	ex := flag.Bool("e", false, "alias for exact")

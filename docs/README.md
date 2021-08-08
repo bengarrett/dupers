@@ -96,7 +96,7 @@ With its constant opening and reading of files, hardware directly affects dupers
 
 Recent changes to modern operating systems harm dupers. Nowadays, terminal and command prompt applications receive 25-35% of the available CPU resources.
 
-You can improve this by adjusting the process priority of dupers in your operating system's activity/system processes tool, but it may not give the desired effect.
+You can improve this by adjusting the process priority of dupers in your operating system's activity or processes tool, but it may not give the desired effect.
 
 #### Live status and command flags
 
