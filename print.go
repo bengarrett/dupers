@@ -87,13 +87,15 @@ func helpDB(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintf(w, "\n    dupers %s  <bucket>\t%s\n", drm, "remove the bucket from the database")
 	fmt.Fprintf(w, "    dupers %s  <bucket> <new directory>\t%s\n", dmv, "move the bucket to a new directory path")
 	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", dex, "export the bucket to a text file in: "+home())
-	fmt.Fprintf(w, "    dupers %s <export file>\t%s\n", dim, "import the bucket text file into the database")
+	fmt.Fprintf(w, "    dupers %s <export file>\t%s\n", dim, "import a bucket text file into the database")
 	fmt.Fprintln(w, "\nOptions:")
+	f = *flag.Lookup("mono")
+	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
 	f = *flag.Lookup("quiet")
 	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
 	f = *flag.Lookup("version")
 	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
-	fmt.Fprintln(w, "    -h, -help\tshow this list of options")
+	fmt.Fprintf(w, "    -h, %s\tshow this list of options\n", fhlp)
 }
 
 func exampleDupe(w *tabwriter.Writer) *tabwriter.Writer {
@@ -117,38 +119,20 @@ func exampleDupe(w *tabwriter.Writer) *tabwriter.Writer {
 	return w
 }
 
-// Info prints out the program information and version.
-func info() string {
+// Vers prints out the program information and version.
+func vers() string {
 	const copyright = "\u00A9"
 	exe, err := self()
 	if err != nil {
 		out.ErrCont(err)
 	}
-	var w = new(bytes.Buffer)
+	w := new(bytes.Buffer)
 	fmt.Fprintf(w, "dupers v%s\n%s 2021 Ben Garrett\n", version, copyright)
 	fmt.Fprintf(w, "https://github.com/bengarrett/dupers\n\n")
 	fmt.Fprintf(w, "build: %s (%s)\n", commit, date)
 	fmt.Fprintf(w, "go:    %s\n", strings.Replace(runtime.Version(), "go", "v", 1))
 	fmt.Fprintf(w, "path:  %s\n", exe)
 	return w.String()
-}
-
-func home() string {
-	h, err := os.UserHomeDir()
-	if err != nil {
-		if h, err = os.Getwd(); err != nil {
-			out.ErrCont(err)
-		}
-	}
-	return h
-}
-
-func self() (string, error) {
-	exe, err := os.Executable()
-	if err != nil {
-		return "", fmt.Errorf("self error: %w", err)
-	}
-	return exe, nil
 }
 
 func exampleSearch(w *tabwriter.Writer) *tabwriter.Writer {
@@ -234,4 +218,25 @@ func taskSearchErr(err error) {
 		out.ErrFatal(nil)
 	}
 	out.ErrFatal(err)
+}
+
+// Home returns the user's home directory.
+// Or if that fails, returns the current working directory.
+func home() string {
+	h, err := os.UserHomeDir()
+	if err != nil {
+		if h, err = os.Getwd(); err != nil {
+			out.ErrCont(err)
+		}
+	}
+	return h
+}
+
+// Self returns the path to this dupers executable file.
+func self() (string, error) {
+	exe, err := os.Executable()
+	if err != nil {
+		return "", fmt.Errorf("self error: %w", err)
+	}
+	return exe, nil
 }

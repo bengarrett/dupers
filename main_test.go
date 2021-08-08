@@ -57,10 +57,10 @@ func Test_searchSummary(t *testing.T) {
 	}
 }
 
-func Test_info(t *testing.T) {
-	t.Run("info", func(t *testing.T) {
-		if info() == "" {
-			t.Error("info() = \"\", want strings")
+func Test_vers(t *testing.T) {
+	t.Run("vers", func(t *testing.T) {
+		if vers() == "" {
+			t.Error("vers() = \"\", want strings")
 		}
 	})
 }

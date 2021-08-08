@@ -97,24 +97,9 @@ func databaseCmd(c *dupers.Config, quiet bool, args ...string) {
 	copy(arr[:], args)
 	switch args[0] {
 	case dbk:
-		n, w, err := database.Backup()
-		if err != nil {
-			out.ErrFatal(err)
-		}
-		s := fmt.Sprintf("A new copy of the database (%s) is at: %s", humanize.Bytes(uint64(w)), n)
-		out.Response(s, quiet)
+		backupDB(quiet)
 	case dcn:
-		if err := database.Clean(quiet, c.Debug); err != nil {
-			if b := errors.Is(err, database.ErrDBClean); !b {
-				out.ErrFatal(err)
-			}
-			out.ErrCont(err)
-		}
-		if err := database.Compact(c.Debug); err != nil {
-			if b := errors.Is(err, database.ErrDBCompact); !b {
-				out.ErrFatal(err)
-			}
-		}
+		cleanupDB(quiet, c.Debug)
 	case dbs, dbf:
 		s, err := database.Info()
 		if err != nil {
@@ -142,7 +127,7 @@ func databaseCmd(c *dupers.Config, quiet bool, args ...string) {
 	}
 }
 
-func dupeCmd(c *dupers.Config, t tasks, args ...string) {
+func dupeCmd(c *dupers.Config, t *tasks, args ...string) {
 	if c.Debug {
 		s := fmt.Sprintf("dupeCmd: %s", strings.Join(args, " "))
 		out.Bug(s)
@@ -194,7 +179,7 @@ func dupeCmd(c *dupers.Config, t tasks, args ...string) {
 	}
 }
 
-func dupeCleanup(c *dupers.Config, t tasks) {
+func dupeCleanup(c *dupers.Config, t *tasks) {
 	if *t.rm || *t.rmPlus {
 		if c.Debug {
 			out.Bug("remove duplicate files.")
@@ -217,7 +202,7 @@ func dupeCleanup(c *dupers.Config, t tasks) {
 	}
 }
 
-func dupeLookup(c *dupers.Config, t tasks) {
+func dupeLookup(c *dupers.Config, t *tasks) {
 	if c.Debug {
 		out.Bug("database cleanup.")
 	}
@@ -236,7 +221,7 @@ func dupeLookup(c *dupers.Config, t tasks) {
 	c.WalkDirs()
 }
 
-func searchCmd(t tasks, args ...string) {
+func searchCmd(t *tasks, args ...string) {
 	l := len(args)
 	searchCmdErr(l)
 	term := args[1]
@@ -469,5 +454,28 @@ func rescanBucket(c *dupers.Config, plus bool, args [2]string) {
 			fmt.Printf("\n%s: %s\n", perfMsg, color.Debug.Sprintf("duper -quiet %s ...", cmd))
 		}
 		fmt.Println(c.Status())
+	}
+}
+
+func backupDB(quiet bool) {
+	n, w, err := database.Backup()
+	if err != nil {
+		out.ErrFatal(err)
+	}
+	s := fmt.Sprintf("A new copy of the database (%s) is at: %s", humanize.Bytes(uint64(w)), n)
+	out.Response(s, quiet)
+}
+
+func cleanupDB(quiet, debug bool) {
+	if err := database.Clean(quiet, debug); err != nil {
+		if b := errors.Is(err, database.ErrDBClean); !b {
+			out.ErrFatal(err)
+		}
+		out.ErrCont(err)
+	}
+	if err := database.Compact(debug); err != nil {
+		if b := errors.Is(err, database.ErrDBCompact); !b {
+			out.ErrFatal(err)
+		}
 	}
 }
