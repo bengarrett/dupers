@@ -23,6 +23,7 @@ import (
 const (
 	tabPadding  = 4
 	description = "Dupers is the blazing-fast file duplicate checker and filename search."
+	performance = "To improve performance use the quiet flag"
 )
 
 // Help, usage and examples.

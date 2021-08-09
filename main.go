@@ -47,7 +47,6 @@ const (
 	fhlp  = "-help"
 	winOS = "windows"
 
-	perfMsg                 = "To improve performance use the quiet flag"
 	winRemind time.Duration = 10 * time.Second
 )
 

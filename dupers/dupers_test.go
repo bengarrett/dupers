@@ -327,7 +327,7 @@ func Test_printWalk(t *testing.T) {
 		t.Errorf("printWalk() returned: %s, want %s", s, want)
 	}
 	s = strings.TrimSpace(printWalk(true, &c))
-	want = "Looking up 15 files"
+	want = "Looking up 15 items"
 	if s != want {
 		t.Errorf("printWalk() returned: %s, want %s", s, want)
 	}
