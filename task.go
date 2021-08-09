@@ -127,7 +127,7 @@ func databaseCmd(c *dupers.Config, quiet bool, args ...string) {
 	}
 }
 
-func dupeCmd(c *dupers.Config, t *tasks, args ...string) {
+func dupeCmd(c *dupers.Config, f *cmdFlags, args ...string) {
 	if c.Debug {
 		s := fmt.Sprintf("dupeCmd: %s", strings.Join(args, " "))
 		out.Bug(s)
@@ -162,14 +162,14 @@ func dupeCmd(c *dupers.Config, t *tasks, args ...string) {
 		out.Bug("walksource complete.")
 	}
 	// walk, scan and save file paths and hashes to the database
-	dupeLookup(c, t)
+	dupeLookup(c, f)
 	if !c.Quiet {
 		fmt.Print(out.RMLine())
 	}
 	// print the found dupes
 	fmt.Print(c.Print())
 	// remove files
-	dupeCleanup(c, t)
+	dupeCleanup(c, f)
 	// summaries
 	if !c.Quiet {
 		if c.Timer() > winRemind {
@@ -179,14 +179,14 @@ func dupeCmd(c *dupers.Config, t *tasks, args ...string) {
 	}
 }
 
-func dupeCleanup(c *dupers.Config, t *tasks) {
-	if *t.rm || *t.rmPlus {
+func dupeCleanup(c *dupers.Config, f *cmdFlags) {
+	if *f.rm || *f.rmPlus {
 		if c.Debug {
 			out.Bug("remove duplicate files.")
 		}
 		fmt.Print(c.Remove())
 	}
-	if *t.sensen {
+	if *f.sensen {
 		if c.Debug {
 			out.Bug("remove all non unique Windows and MS-DOS files.")
 		}
@@ -194,7 +194,7 @@ func dupeCleanup(c *dupers.Config, t *tasks) {
 		fmt.Print(c.Remove())
 		fmt.Print(c.Clean())
 	}
-	if *t.rmPlus {
+	if *f.rmPlus {
 		if c.Debug {
 			out.Bug("remove empty directories.")
 		}
@@ -202,7 +202,7 @@ func dupeCleanup(c *dupers.Config, t *tasks) {
 	}
 }
 
-func dupeLookup(c *dupers.Config, t *tasks) {
+func dupeLookup(c *dupers.Config, f *cmdFlags) {
 	if c.Debug {
 		out.Bug("database cleanup.")
 	}
@@ -210,7 +210,7 @@ func dupeLookup(c *dupers.Config, t *tasks) {
 	for _, b := range c.Buckets() {
 		bkts = append(bkts, string(b))
 	}
-	if !*t.lookup && len(bkts) > 0 {
+	if !*f.lookup && len(bkts) > 0 {
 		if err := database.Clean(c.Quiet, c.Debug, bkts...); err != nil {
 			out.ErrCont(err)
 		}
@@ -221,7 +221,7 @@ func dupeLookup(c *dupers.Config, t *tasks) {
 	c.WalkDirs()
 }
 
-func searchCmd(t *tasks, args ...string) {
+func searchCmd(f *cmdFlags, args ...string) {
 	l := len(args)
 	searchCmdErr(l)
 	term := args[1]
@@ -234,37 +234,37 @@ func searchCmd(t *tasks, args ...string) {
 	if l > minArgs {
 		buckets = args[2:]
 	}
-	if *t.filename {
-		if !*t.exact {
+	if *f.filename {
+		if !*f.exact {
 			if m, err = database.CompareBaseNoCase(term, buckets...); err != nil {
 				taskSearchErr(err)
 			}
 		}
-		if *t.exact {
+		if *f.exact {
 			if m, err = database.CompareBase(term, buckets...); err != nil {
 				taskSearchErr(err)
 			}
 		}
 	}
-	if !*t.filename {
-		if !*t.exact {
+	if !*f.filename {
+		if !*f.exact {
 			if m, err = database.CompareNoCase(term, buckets...); err != nil {
 				taskSearchErr(err)
 			}
 		}
-		if *t.exact {
+		if *f.exact {
 			if m, err = database.Compare(term, buckets...); err != nil {
 				taskSearchErr(err)
 			}
 		}
 	}
-	fmt.Print(dupers.Print(*t.quiet, m))
-	if !*t.quiet {
+	fmt.Print(dupers.Print(*f.quiet, m))
+	if !*f.quiet {
 		l := 0
 		if m != nil {
 			l = len(*m)
 		}
-		fmt.Println(searchCmdSummary(l, term, *t.exact, *t.filename))
+		fmt.Println(searchCmdSummary(l, term, *f.exact, *f.filename))
 	}
 }
 

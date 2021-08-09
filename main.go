@@ -51,7 +51,8 @@ const (
 	winRemind time.Duration = 10 * time.Second
 )
 
-type tasks struct {
+// cmdFlags are options for commands.
+type cmdFlags struct {
 	debug    *bool
 	exact    *bool
 	filename *bool
@@ -65,6 +66,7 @@ type tasks struct {
 	version  *bool
 }
 
+// aliases are single letter options for commands.
 type aliases struct {
 	exact    *bool
 	filename *bool
@@ -75,23 +77,25 @@ type aliases struct {
 	version  *bool
 }
 
-func flags(t *tasks) {
-	t.exact = flag.Bool("exact", false, "match case")
-	t.debug = flag.Bool("debug", false, "debug mode") // hidden flag
-	t.filename = flag.Bool("name", false, "search for filenames, and ignore directories")
-	t.help = flag.Bool("help", false, "print help") // only used in certain circumstances
-	t.lookup = flag.Bool("fast", false, "query the database for a much faster match,"+
+// flags defines options for the commands.
+func flags(f *cmdFlags) {
+	f.exact = flag.Bool("exact", false, "match case")
+	f.debug = flag.Bool("debug", false, "debug mode") // hidden flag
+	f.filename = flag.Bool("name", false, "search for filenames, and ignore directories")
+	f.help = flag.Bool("help", false, "print help") // only used in certain circumstances
+	f.lookup = flag.Bool("fast", false, "query the database for a much faster match,"+
 		"\n\t\tthe results maybe stale as it does not look for any file changes on your system")
-	t.mono = flag.Bool("mono", false, "monochrome mode to remove all color output")
-	t.quiet = flag.Bool("quiet", false, "quiet mode hides all but essential feedback"+
+	f.mono = flag.Bool("mono", false, "monochrome mode to remove all color output")
+	f.quiet = flag.Bool("quiet", false, "quiet mode hides all but essential feedback"+
 		"\n\tthis improves performance with slow, default terminal programs")
-	t.sensen = flag.Bool("sensen", false, "delete everything in the <directory to check>;"+
+	f.sensen = flag.Bool("sensen", false, "delete everything in the <directory to check>;"+
 		"\n\t\texcept for directories containing unique Windows programs and assets")
-	t.rm = flag.Bool("delete", false, "delete the duplicate files found in the <directory to check>")
-	t.rmPlus = flag.Bool("delete+", false, "delete the duplicate files and remove empty directories from the <directory to check>")
-	t.version = flag.Bool("version", false, "version and information for this program")
+	f.rm = flag.Bool("delete", false, "delete the duplicate files found in the <directory to check>")
+	f.rmPlus = flag.Bool("delete+", false, "delete the duplicate files and remove empty directories from the <directory to check>")
+	f.version = flag.Bool("version", false, "version and information for this program")
 }
 
+// shortFlags defines options for the command aliases.
 func shortFlags(a *aliases) {
 	a.exact = flag.Bool("e", false, "alias for exact")
 	a.lookup = flag.Bool("f", false, "alias for fast")
@@ -102,47 +106,44 @@ func shortFlags(a *aliases) {
 	a.version = flag.Bool("v", false, "alias for version")
 }
 
-func parse(a *aliases, c *dupers.Config, t *tasks) (exit bool) {
-	if *a.mono || *t.mono {
+// parse the command aliases and flags and returns true if the program should exit.
+func parse(a *aliases, c *dupers.Config, f *cmdFlags) (exit bool) {
+	if *a.mono || *f.mono {
 		color.Enable = false
 	}
-	if *a.help || *t.help {
-		fmt.Print(help())
-		return true
-	}
-	if *a.quiet || *t.quiet {
-		*t.quiet = true
-		c.Quiet = true
-	}
-	if *t.debug {
-		c.Debug = true
-	}
-	if *a.lookup {
-		*t.lookup = true
-	}
-	if *a.exact {
-		t.exact = a.exact
-	}
-	if *a.filename {
-		t.filename = a.filename
-	}
-	if s := options(t.version, a.version); s != "" {
+	if s := options(a, f); s != "" {
 		fmt.Print(s)
 		return true
+	}
+	if *f.debug {
+		c.Debug = true
+	}
+	if *a.quiet || *f.quiet {
+		*f.quiet = true
+		c.Quiet = true
+	}
+	if *a.exact {
+		*f.exact = true
+	}
+	if *a.filename {
+		*f.filename = true
+	}
+	if *a.lookup {
+		*f.lookup = true
 	}
 	return false
 }
 
 func main() {
-	a, c, t := aliases{}, dupers.Config{}, tasks{}
+	a, c, f := aliases{}, dupers.Config{}, cmdFlags{}
 	c.SetTimer()
-	flags(&t)
+	flags(&f)
 	shortFlags(&a)
 	flag.Usage = func() {
 		help()
 	}
 	flag.Parse()
-	if parse(&a, &c, &t) {
+	if parse(&a, &c, &f) {
 		os.Exit(0)
 	}
 	chkWinDirs()
@@ -151,12 +152,12 @@ func main() {
 		out.Bug("command selection: " + selection)
 	}
 	switch selection {
-	case dbf, dbs, dbk, dcn, dex, dim, dls, dmv, drm, dup, dupp:
-		databaseCmd(&c, *t.quiet, flag.Args()...)
 	case "dupe":
-		dupeCmd(&c, &t, flag.Args()...)
+		dupeCmd(&c, &f, flag.Args()...)
 	case "search":
-		searchCmd(&t, flag.Args()...)
+		searchCmd(&f, flag.Args()...)
+	case dbf, dbs, dbk, dcn, dex, dim, dls, dmv, drm, dup, dupp:
+		databaseCmd(&c, *f.quiet, flag.Args()...)
 	default:
 		defaultCmd(selection)
 	}
@@ -169,8 +170,12 @@ func defaultCmd(selection string) {
 	out.ErrFatal(nil)
 }
 
-func options(ver, v *bool) string {
-	// convenience for when a flag is passed as an argument
+// options parses universal aliases, flags and any misuse.
+func options(a *aliases, f *cmdFlags) string {
+	if *a.help || *f.help {
+		return help()
+	}
+	// handle misuse when a flag is passed as an argument
 	for _, arg := range flag.Args() {
 		switch strings.ToLower(arg) {
 		case "-h", fhlp, "--help":
@@ -179,7 +184,7 @@ func options(ver, v *bool) string {
 			return vers()
 		}
 	}
-	if *ver || *v {
+	if *a.version || *f.version {
 		return vers()
 	}
 	if len(flag.Args()) == 0 {
