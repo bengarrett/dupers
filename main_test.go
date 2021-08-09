@@ -10,6 +10,22 @@ func init() {
 	color.Enable = false
 }
 
+func Test_flags(t *testing.T) {
+	f := cmdFlags{}
+	flags(&f)
+	if *f.version != false {
+		t.Errorf("flags() version error = %v, want false", *f.version)
+	}
+}
+
+func Test_shortFlags(t *testing.T) {
+	a := aliases{}
+	shortFlags(&a)
+	if *a.version != false {
+		t.Errorf("shortFlags() version error = %v, want false", *a.version)
+	}
+}
+
 func Test_self(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -71,4 +87,34 @@ func Test_home(t *testing.T) {
 			t.Error("home() = \"\", want a directory path")
 		}
 	})
+}
+
+func Test_chkWinDir(t *testing.T) {
+	err := chkWinDir("")
+	if err != nil {
+		t.Errorf("chkWinDir empty should return nil, got %v", err)
+	}
+	err = chkWinDir("\"\"")
+	if err != nil {
+		t.Errorf("chkWinDir empty quotes should return nil, got %v", err)
+	}
+	err = chkWinDir("\"E:\"")
+	if err != nil {
+		t.Errorf("chkWinDir drive letter should return nil, got %v", err)
+	}
+	const letter = "C:\""
+	err = chkWinDir(letter)
+	if err == nil {
+		t.Errorf("chkWinDir drive letter with backslash should return an error")
+	}
+	const path = "C:\\My Files"
+	err = chkWinDir(path)
+	if err != nil {
+		t.Errorf("chkWinDir path should return nil, got %v", err)
+	}
+	const cmdPath = "C:\\My Files\\"
+	err = chkWinDir(cmdPath)
+	if err != nil {
+		t.Errorf("chkWinDir path should return nil, got %v", err)
+	}
 }

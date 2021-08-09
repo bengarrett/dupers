@@ -20,14 +20,17 @@ import (
 	"github.com/gookit/color"
 )
 
-const tabPadding = 4
+const (
+	tabPadding  = 4
+	description = "Dupers is the blazing-fast file duplicate checker and filename search."
+)
 
 // Help, usage and examples.
 func help() string {
 	b, f := bytes.Buffer{}, flag.Flag{}
 	w := tabwriter.NewWriter(&b, 0, 0, tabPadding, ' ', 0)
 	defer w.Flush()
-	fmt.Fprintf(w, "Dupers is the blazing-fast file duplicate checker and filename search.\n")
+	fmt.Fprintf(w, "%s\n", description)
 	helpDupe(f, w)
 	helpSearch(f, w)
 	helpDB(f, w)

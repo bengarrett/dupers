@@ -56,24 +56,26 @@ func checkDB() {
 func chkWinDirs() {
 	if runtime.GOOS == winOS && len(flag.Args()) > 1 {
 		for _, s := range flag.Args()[1:] {
-			chkWinDir(s)
+			if err := chkWinDir(s); err != nil {
+				out.ErrFatal(err)
+			}
 		}
 	}
 }
 
-func chkWinDir(s string) {
+func chkWinDir(s string) error {
 	if s == "" {
-		return
+		return nil
 	}
 	const dblQuote rune = 34
 	r := []rune(s)
 	l := len(r)
 	first, last := r[0:1][0], r[l-1 : l][0]
 	if first == dblQuote && last == dblQuote {
-		return // okay as the string is fully quoted
+		return nil // okay as the string is fully quoted
 	}
 	if first != dblQuote && last != dblQuote {
-		return // okay as the string is not quoted
+		return nil // okay as the string is not quoted
 	}
 	// otherwise there is a problem, as only the start or end of the string is quoted.
 	// this is caused by flag.Parse() treating the \" prefix on a quoted directory path as an escaped quote.
@@ -88,7 +90,7 @@ func chkWinDir(s string) {
 		fmt.Fprint(w, color.Warn.Sprint("Bad: "))
 		fmt.Fprintf(w, "\"%s\\\"", usr)
 	}
-	out.ErrFatal(fmt.Errorf("%w\n%s", ErrWindowsDir, w.String()))
+	return fmt.Errorf("%w\n%s", ErrWindowsDir, w.String())
 }
 
 func databaseCmd(c *dupers.Config, quiet bool, args ...string) {
