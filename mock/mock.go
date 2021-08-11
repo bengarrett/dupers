@@ -17,6 +17,7 @@ const (
 	PrivateFile fs.FileMode = 0600
 	PrivateDir  fs.FileMode = 0700
 
+	CSV1     = "../test/export-bucket1.csv"
 	Test1    = "../test/bucket1"
 	Test2    = "../test/bucket2"
 	SevenZip = "../test/randomfiles.7z"
@@ -66,6 +67,15 @@ func CreateItem(bucket, file string, db *bolt.DB) error {
 		}
 		return b.Put([]byte(file), sum256[:])
 	})
+}
+
+// Export1 returns the absolute path of export csv file 1.
+func Export1() string {
+	f, err := filepath.Abs(CSV1)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return f
 }
 
 // Item1 returns the absolute path of test source file 1.

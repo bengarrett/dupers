@@ -3,7 +3,6 @@ package database
 import (
 	"errors"
 	"log"
-	"os"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -22,43 +21,6 @@ const (
 func init() {
 	color.Enable = false
 	testMode = true
-}
-
-func TestCopyFile(t *testing.T) {
-	type args struct {
-		src  string
-		dest string
-	}
-	d, err := filepath.Abs(testDst)
-	if err != nil {
-		t.Error(err)
-	}
-	s, err := filepath.Abs(testSrc)
-	if err != nil {
-		t.Error(err)
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    int64
-		wantErr bool
-	}{
-		{"empty", args{}, 0, true},
-		{"exe", args{src: s, dest: d}, 5120, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := CopyFile(tt.args.src, tt.args.dest)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("CopyFile() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("CopyFile() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-	os.Remove(testDst)
 }
 
 func TestAllBuckets(t *testing.T) {
@@ -83,39 +45,6 @@ func TestAllBuckets(t *testing.T) {
 			sort.Strings(gotNames)
 			if sort.SearchStrings(gotNames, tt.wantName) > len(gotNames) {
 				t.Errorf("AllBuckets() = %v, want %v", gotNames, tt.wantName)
-			}
-		})
-	}
-}
-
-func TestBackup(t *testing.T) {
-	color.Enable = false
-	tests := []struct {
-		name    string
-		wantErr bool
-	}{
-		{"backup", false},
-	}
-	if err := mock.TestOpen(); err != nil {
-		t.Error(err)
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotName, gotWritten, err := Backup()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Backup() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if gotName == "" {
-				t.Errorf("Backup() gotName = \"\"")
-			}
-			if gotWritten == 0 {
-				t.Errorf("Backup() gotWritten = %v, want something higher", gotWritten)
-			}
-			if gotName != "" {
-				if err := os.Remove(gotName); err != nil {
-					log.Println(err)
-				}
 			}
 		})
 	}
@@ -352,28 +281,6 @@ func TestIsEmpty(t *testing.T) {
 		}
 		if err := mock.TestRemove(); err != nil {
 			log.Fatal(err)
-		}
-	})
-}
-
-func TestExportCSV(t *testing.T) {
-	color.Enable = false
-	if err := mock.TestOpen(); err != nil {
-		t.Error(err)
-	}
-	t.Run("csv export", func(t *testing.T) {
-		gotName, err := ExportCSV(mock.Bucket1(), nil)
-		if err != nil {
-			t.Errorf("Backup() error = %v, want nil", err)
-			return
-		}
-		if gotName == "" {
-			t.Errorf("Backup() gotName = \"\"")
-		}
-		if gotName != "" {
-			if err := os.Remove(gotName); err != nil {
-				log.Println(err)
-			}
 		}
 	})
 }

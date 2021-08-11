@@ -13,6 +13,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
@@ -24,7 +26,10 @@ import (
 const loops = 150
 
 const (
-	whichBkt = "What bucket name do you wish to use"
+	backslash = "\u005C"
+	fwdslash  = "\u002F"
+	uncPath   = backslash + backslash
+	whichBkt  = "What bucket name do you wish to use"
 )
 
 var (
@@ -32,6 +37,8 @@ var (
 	ErrBucketNotDir = errors.New("bucket path is not a directory")
 	ErrBucketPath   = errors.New("directory used by the bucket does not exist on your system")
 	ErrChecksumLen  = errors.New("hexadecimal value is invalid")
+	ErrFileNoDesc   = errors.New("no file descriptor")
+	ErrImportList   = errors.New("import list is empty")
 	ErrImportSyntax = errors.New("import item has incorrect syntax")
 	ErrImportPath   = errors.New("import item has an invalid file path")
 )
@@ -204,10 +211,10 @@ func ImportCSV(name string, db *bolt.DB) (records int, err error) {
 	s = color.Secondary.Sprint("These will be added to the bucket: ")
 	s += color.Debug.Sprint(bucket)
 	fmt.Println(s)
-	os.Exit(1)
 	return Import(Bucket(bucket), lists, db)
 }
 
+// bucketChk checks the validity and usage of the named bucket in the database.
 func bucketChk(name string, db *bolt.DB) (bucket string, err error) {
 	if db == nil {
 		db, err = OpenRead()
@@ -240,6 +247,7 @@ func bucketChk(name string, db *bolt.DB) (bucket string, err error) {
 	}
 }
 
+// bucketRename prompts for confirmation for the use of the named bucket.
 func bucketRename(name string) string {
 	out.ErrCont(ErrBucketExists)
 	fmt.Printf("\nImport bucket name: %s\n\n", color.Debug.Sprint(name))
@@ -251,6 +259,7 @@ func bucketRename(name string) string {
 	return out.Prompt(whichBkt)
 }
 
+// bucketStat checks the validity of the named bucket and prompts for user confirmation on errors.
 func bucketStat(name string) string {
 	printName := func() {
 		fmt.Printf("\nImport bucket directory: %s\n\n", color.Debug.Sprint(name))
@@ -288,8 +297,11 @@ func bucketStat(name string) string {
 
 // csvChecker reads the first line in the export csv file and returns nil if it uses the expected syntax.
 func csvChecker(file *os.File) error {
+	if file == nil {
+		return ErrFileNoDesc
+	}
 	l := len(csvHeader)
-	_, err := file.Seek(0, l)
+	_, err := file.Seek(0, io.SeekStart)
 	if err != nil {
 		return fmt.Errorf("%w: %s", err, file.Name())
 	}
@@ -301,15 +313,19 @@ func csvChecker(file *os.File) error {
 	if !bytes.Equal(b, []byte(csvHeader)) {
 		return fmt.Errorf("%w, missing header: %s", ErrImportFile, csvHeader)
 	}
-	_, err = file.Seek(0, l)
+	_, err = file.Seek(0, io.SeekStart)
 	if err != nil {
 		return fmt.Errorf("%w: %s", err, file.Name())
 	}
 	return nil
 }
 
-// csvScanner reads the content of an export csv file and returns the data as a List.
+// csvScanner reads the content of an export csv file.
+// It returns the stored bucket and csv data as a List ready for import.
 func csvScanner(file *os.File) (string, *Lists, error) {
+	if file == nil {
+		return "", nil, ErrFileNoDesc
+	}
 	const firstItem = 2
 	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanLines)
@@ -346,10 +362,35 @@ func bucketName(s string) string {
 	if len(ss) != expected {
 		return ""
 	}
-	if p := ss[1]; filepath.IsAbs(p) {
-		return p
+	path := ss[1]
+	if runtime.GOOS != "windows" {
+		path = winPosix(path)
+	}
+	if filepath.IsAbs(path) {
+		return path
 	}
 	return ""
+}
+
+// winPosix transforms a Windows or UNC path into a POSIX path.
+func winPosix(path string) string {
+	if len(path) < 2 {
+		return path
+	}
+	if path[0:2] == uncPath {
+		return fmt.Sprintf("%s%s", fwdslash,
+			strings.ReplaceAll(path[2:], backslash, fwdslash))
+	}
+	ps := strings.SplitN(path, ":", 2)
+	drive, valid := ps[0], regexp.MustCompile(`^[a-z|A-Z]$`)
+	if valid.MatchString(drive) {
+		path = strings.ReplaceAll(ps[1], backslash, fwdslash)
+		fmt.Println("path", path)
+		if path == "" {
+			path = fwdslash
+		}
+	}
+	return path
 }
 
 // importCSV reads, validates and returns a line of data from an export csv file.
@@ -389,6 +430,9 @@ func checksum(s string) ([32]byte, error) {
 // Import the list of data and save it to the database.
 // If the named bucket does not exist, it is created.
 func Import(name Bucket, ls *Lists, db *bolt.DB) (imported int, err error) {
+	if ls == nil {
+		return 0, ErrImportList
+	}
 	if db == nil {
 		var err error
 		db, err = OpenWrite()
