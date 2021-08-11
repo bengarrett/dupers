@@ -12,6 +12,14 @@ import (
 	"github.com/gookit/color"
 )
 
+type YesNo uint
+
+const (
+	Nil YesNo = iota
+	Yes
+	No
+)
+
 // Mode for the current processing count.
 type Mode uint
 
@@ -22,6 +30,8 @@ const (
 	Look
 	// Scan returns Scanning files.
 	Scan
+	// Enter ASCII keyboard code.
+	EnterKey byte = 13
 
 	eraseLine = "\u001b[2K"
 	cr        = "\r"
@@ -117,12 +127,22 @@ func Status(count, total int, m Mode) string {
 
 // YN prints the question and prompts the user for a yes or no reply.
 // The prompt will loop unless a y or n value is given or Ctrl-C is pressed.
-func YN(question string) bool {
-	fmt.Println()
-	r := bufio.NewReader(os.Stdin)
+func YN(question string, recommend YesNo) bool {
 	const no, yes = "n", "y"
+	r := bufio.NewReader(os.Stdin)
+	p, rec := "", " "
+	switch recommend {
+	case Nil:
+		p = "Y/N"
+	case Yes:
+		p = "Y/n"
+		rec = " (default: yes) "
+	case No:
+		p = "N/y"
+		rec = " (default: no) "
+	}
 	for {
-		fmt.Printf("\r%s? [Y/N]: ", question)
+		fmt.Printf("\r%s?%s[%s]: ", question, rec, p)
 		b, err := r.ReadByte()
 		if err != nil {
 			ErrFatal(err)
@@ -133,6 +153,32 @@ func YN(question string) bool {
 			return true
 		case no:
 			return false
+		}
+		if b == EnterKey {
+			switch recommend {
+			case Yes:
+				return true
+			case No:
+				return false
+			case Nil:
+				continue
+			}
+		}
+	}
+}
+
+func Prompt(question string) string {
+	r := bufio.NewReader(os.Stdin)
+	fmt.Printf("\r%s?: ", question)
+	for {
+		s, err := r.ReadString(EnterKey)
+		if err != nil {
+			ErrFatal(err)
+		}
+		if s != "" {
+			// remove the Enter key newline from the string
+			// as this character will break directory and filepaths
+			return strings.TrimSuffix(s, string(EnterKey))
 		}
 	}
 }

@@ -5,17 +5,14 @@ package database
 
 import (
 	"bytes"
-	"encoding/csv"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"text/tabwriter"
-	"time"
 
 	"github.com/bengarrett/dupers/out"
 	"github.com/dustin/go-humanize"
@@ -43,6 +40,7 @@ const (
 	boltName   = "dupers.db"
 	csvName    = "dupers-export.csv"
 	subdir     = "dupers"
+	csvHeader  = "sha256_sum,path#"
 	tabPadding = 4
 	tabWidth   = 8
 )
@@ -55,35 +53,10 @@ var (
 	ErrDBEmpty        = errors.New("database is empty and contains no items")
 	ErrDBNotFound     = errors.New("database file does not exist")
 	ErrDBZeroByte     = errors.New("database is a zero byte file")
+	ErrImportFile     = errors.New("not a valid duper export file")
 
 	testMode = false // nolint: gochecknoglobals
 )
-
-// OpenRead opens the Bolt database for reading.
-func OpenRead() (db *bolt.DB, err error) {
-	path, err := DB()
-	if err != nil {
-		return nil, err
-	}
-	db, err = bolt.Open(path, PrivateFile, &bolt.Options{ReadOnly: true})
-	if err != nil {
-		return nil, err
-	}
-	return db, nil
-}
-
-// OpenRead opens the Bolt database for writing and reading.
-func OpenWrite() (db *bolt.DB, err error) {
-	path, err := DB()
-	if err != nil {
-		return nil, err
-	}
-	db, err = bolt.Open(path, PrivateFile, nil)
-	if err != nil {
-		return nil, err
-	}
-	return db, nil
-}
 
 // Abs returns an absolute representation of the named bucket.
 func Abs(bucket string) ([]byte, error) {
@@ -115,29 +88,6 @@ func AllBuckets(db *bolt.DB) (names []string, err error) {
 		return nil, errV
 	}
 	return names, nil
-}
-
-// Backup makes a copy of the database to the named location.
-func Backup() (name string, written int64, err error) {
-	src, err := DB()
-	if err != nil {
-		return "", 0, err
-	}
-	dir, err := os.UserHomeDir()
-	if err != nil {
-		return "", 0, err
-	}
-	name = filepath.Join(dir, backupName())
-	written, err = CopyFile(src, name)
-	if err != nil {
-		return "", 0, err
-	}
-	return name, written, nil
-}
-
-func backupName() string {
-	now, ext := time.Now().Format(backupTime), filepath.Ext(boltName)
-	return fmt.Sprintf("%s-backup-%s%s", strings.TrimSuffix(boltName, ext), now, ext)
 }
 
 // Exist returns an nil value if the bucket exists in the database.
@@ -280,7 +230,7 @@ func Compact(debug bool) error {
 		return err
 	}
 	// make a temporary database
-	tmp := filepath.Join(os.TempDir(), backupName())
+	tmp := filepath.Join(os.TempDir(), backup())
 	// open both databases
 	srcDB, err := bolt.Open(src, PrivateFile, nil)
 	if err != nil {
@@ -406,24 +356,6 @@ func compare(term []byte, noCase, base bool, buckets ...string) (*Matches, error
 		}
 	}
 	return &finds, nil
-}
-
-// CopyFile duplicates the named file to the destination filepath.
-func CopyFile(name, dest string) (int64, error) {
-	// read source
-	f, err := os.Open(name)
-	if err != nil {
-		return 0, err
-	}
-	defer f.Close()
-	// create backup file
-	bu, err := os.Create(dest)
-	if err != nil {
-		return 0, err
-	}
-	defer bu.Close()
-	// duplicate data
-	return io.Copy(bu, f)
 }
 
 // XXX Count the number of records in the bucket.
@@ -607,56 +539,6 @@ func IsEmpty() (bool, error) {
 		return true, nil
 	}
 	return false, nil
-}
-
-// ExportCSV saves the bucket data to a RFC 4180, comma-separated values (CSV) file.
-func ExportCSV(bucket string, db *bolt.DB) (name string, err error) {
-	if db == nil {
-		db, err = OpenRead()
-		if err != nil {
-			return "", err
-		}
-		defer db.Close()
-	}
-
-	dir, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	name = filepath.Join(dir, exportName())
-	f, err := os.Create(name)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-
-	meta := strings.Join([]string{"path", bucket}, "#")
-	r := [][]string{
-		{"sha256_sum", meta},
-	}
-	ls, errLS := List(bucket, db)
-	if errLS != nil {
-		return "", err
-	}
-	for file, sum := range ls {
-		rel := strings.TrimPrefix(string(file), bucket)
-		r = append(r, []string{fmt.Sprintf("%x", sum), rel})
-	}
-	w := csv.NewWriter(f)
-	if err := w.WriteAll(r); err != nil {
-		return "", err
-	}
-	return name, nil
-}
-
-func exportName() string {
-	now, ext := time.Now().Format(backupTime), filepath.Ext(csvName)
-	return fmt.Sprintf("%s-%s%s", strings.TrimSuffix(csvName, ext), now, ext)
-}
-
-// ImportCSV opens the named RFC 4180, comma-separated values (CSV) file and writes the data to the database.
-func ImportCSV(name string, db *bolt.DB) (records int, err error) {
-	return records, nil
 }
 
 // List returns the file paths and SHA256 checksums stored in the bucket.

@@ -162,7 +162,7 @@ func taskCheckPaths(c *dupers.Config) {
 		fmt.Printf("Buckets to lookup in for duplicates: %s (%d files)\n\n", c.PrintBuckets(), bc)
 		color.Notice.Println("Please confirm the directories are correct.")
 		color.Info.Println("The dictory to check is not stored to the database.")
-		if !out.YN("Is this what you want") {
+		if !out.YN("Is this what you want", out.Nil) {
 			os.Exit(0)
 		}
 	}

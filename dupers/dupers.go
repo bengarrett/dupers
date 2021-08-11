@@ -267,7 +267,7 @@ func (c *Config) RemoveAll() string {
 	if !c.Test {
 		color.Info.Println("\nRemove ALL files, except for unique Windows/MS-DOS programs ?")
 		fmt.Printf("%s %s", color.Secondary.Sprint("target directory:"), root)
-		if input := out.YN("Please confirm"); !input {
+		if input := out.YN("Please confirm", out.Nil); !input {
 			os.Exit(0)
 		}
 		fmt.Println()

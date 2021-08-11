@@ -396,7 +396,7 @@ func moveBucket(quiet bool, args [3]string) {
 	if !quiet {
 		fmt.Printf("Current:\t%s\nNew path:\t%s\n", name, newName)
 		fmt.Println("This only renames the bucket, it does not move files on your system.")
-		if !out.YN("Rename bucket") {
+		if !out.YN("Rename bucket", out.Nil) {
 			return
 		}
 	}
