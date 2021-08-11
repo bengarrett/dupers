@@ -291,7 +291,7 @@ func csvChecker(file *os.File) error {
 	l := len(csvHeader)
 	_, err := file.Seek(0, l)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %s", err, file.Name())
 	}
 	b := make([]byte, l)
 	_, err = io.ReadAtLeast(file, b, len(csvHeader))
@@ -303,7 +303,7 @@ func csvChecker(file *os.File) error {
 	}
 	_, err = file.Seek(0, l)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %s", err, file.Name())
 	}
 	return nil
 }
