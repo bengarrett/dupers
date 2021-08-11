@@ -264,7 +264,6 @@ func Test_importCSV(t *testing.T) {
 	)
 	abs := strings.Join([]string{path, file}, fwdslash)
 	line := strings.Join([]string{sum, file}, ",")
-	//invalid := strings.Join([]string{sum, ""}, ",")
 	bsum, err := checksum(sum)
 	if err != nil {
 		t.Error(err)

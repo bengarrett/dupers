@@ -363,7 +363,7 @@ func bucketName(s string) string {
 		return ""
 	}
 	path := ss[1]
-	if runtime.GOOS != "windows" {
+	if runtime.GOOS != winOS {
 		path = winPosix(path)
 	}
 	if filepath.IsAbs(path) {
@@ -374,14 +374,15 @@ func bucketName(s string) string {
 
 // winPosix transforms a Windows or UNC path into a POSIX path.
 func winPosix(path string) string {
-	if len(path) < 2 {
+	const driveLen, subStr = 2, 2
+	if len(path) < driveLen {
 		return path
 	}
-	if path[0:2] == uncPath {
+	if path[0:driveLen] == uncPath {
 		return fmt.Sprintf("%s%s", fwdslash,
-			strings.ReplaceAll(path[2:], backslash, fwdslash))
+			strings.ReplaceAll(path[driveLen:], backslash, fwdslash))
 	}
-	ps := strings.SplitN(path, ":", 2)
+	ps := strings.SplitN(path, ":", subStr)
 	drive, valid := ps[0], regexp.MustCompile(`^[a-z|A-Z]$`)
 	if valid.MatchString(drive) {
 		path = strings.ReplaceAll(ps[1], backslash, fwdslash)

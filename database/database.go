@@ -41,6 +41,7 @@ const (
 	csvName    = "dupers-export.csv"
 	subdir     = "dupers"
 	csvHeader  = "sha256_sum,path#"
+	winOS      = "windows"
 	tabPadding = 4
 	tabWidth   = 8
 )
@@ -450,7 +451,7 @@ func Info() (string, error) {
 	fmt.Fprintf(w, "\tModified:\t%s\n", s.ModTime().Local().Format("Jan 2 15:04:05"))
 	fmt.Fprintf(w, "\tFile:\t%s",
 		color.Primary.Sprint(humanize.Bytes(uint64(s.Size()))))
-	if runtime.GOOS != "windows" {
+	if runtime.GOOS != winOS {
 		fmt.Fprintf(w, " (%v)", s.Mode())
 	}
 	fmt.Fprintf(w, "\n")
