@@ -32,10 +32,11 @@ const (
 	Scan
 	// Enter ASCII keyboard code.
 	EnterKey byte = 13
+	// ANSI control code to erase the active terminal line.
+	EraseLine = "\u001b[2K"
 
-	eraseLine = "\u001b[2K"
-	cr        = "\r"
-	winOS     = "windows"
+	cr    = "\r"
+	winOS = "windows"
 )
 
 // Bug prints the string to a newline.
@@ -98,7 +99,7 @@ func RMLine() string {
 	if runtime.GOOS == winOS {
 		return ""
 	}
-	return fmt.Sprintf("%s%s", eraseLine, cr)
+	return fmt.Sprintf("%s%s", EraseLine, cr)
 }
 
 // Status prints out the current file or item processing count.
@@ -112,7 +113,7 @@ func Status(count, total int, m Mode) string {
 	if runtime.GOOS != winOS {
 		// erasing the line makes for a less flickering counter.
 		// not all Windows terminals support ANSI controls.
-		pre = eraseLine + pre
+		pre = EraseLine + pre
 	}
 	switch m {
 	case Check:

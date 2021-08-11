@@ -8,11 +8,13 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/bengarrett/dupers/database"
 	"github.com/bengarrett/dupers/mock"
+	"github.com/bengarrett/dupers/out"
 	"github.com/gookit/color"
 )
 
@@ -316,18 +318,30 @@ func TestConfig_WalkSource(t *testing.T) {
 func Test_printWalk(t *testing.T) {
 	c := Config{Test: false, Quiet: false, Debug: false}
 	s := strings.TrimSpace(printWalk(false, &c))
-	want := "Scanning 0 files"
+	want := "\r"
+	if runtime.GOOS != winOS {
+		want = out.EraseLine + want
+	}
+	want += "Scanning 0 files"
 	if s != want {
 		t.Errorf("printWalk() returned: %s, want %s", s, want)
 	}
 	c.files = 15
 	s = strings.TrimSpace(printWalk(false, &c))
-	want = "Scanning 15 files"
+	want = "\r"
+	if runtime.GOOS != winOS {
+		want = out.EraseLine + want
+	}
+	want += "Scanning 15 files"
 	if s != want {
 		t.Errorf("printWalk() returned: %s, want %s", s, want)
 	}
 	s = strings.TrimSpace(printWalk(true, &c))
-	want = "Looking up 15 items"
+	want = "\r"
+	if runtime.GOOS != winOS {
+		want = out.EraseLine + want
+	}
+	want += "Looking up 15 items"
 	if s != want {
 		t.Errorf("printWalk() returned: %s, want %s", s, want)
 	}
