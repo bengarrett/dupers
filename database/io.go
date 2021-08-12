@@ -274,6 +274,7 @@ func bucketStat(name string) string {
 		fmt.Printf("\nImport bucket directory: %s\n\n", color.Debug.Sprint(name))
 	}
 	for {
+		name = strings.TrimSpace(name)
 		abs, err := filepath.Abs(name)
 		if err != nil {
 			out.ErrCont(fmt.Errorf("%w: %s", err, name))
