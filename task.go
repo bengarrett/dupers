@@ -19,6 +19,9 @@ import (
 	"github.com/bengarrett/dupers/out"
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
+	"golang.org/x/text/number"
 )
 
 // checkBkt prints the missing bucket name error.
@@ -347,7 +350,8 @@ func importBucket(quiet bool, args [2]string) {
 	if errIm != nil {
 		out.ErrFatal(errIm)
 	}
-	s := fmt.Sprintf("Successfully imported %d records", r)
+	p := message.NewPrinter(language.English)
+	s := p.Sprintf("Successfully imported %d records.", number.Decimal(r))
 	out.Response(s, quiet)
 }
 
