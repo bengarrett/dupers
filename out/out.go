@@ -30,8 +30,6 @@ const (
 	Look
 	// Scan returns Scanning files.
 	Scan
-	// Enter ASCII keyboard code.
-	EnterKey byte = 13
 	// ANSI control code to erase the active terminal line.
 	EraseLine = "\u001b[2K"
 
@@ -42,6 +40,15 @@ const (
 // Bug prints the string to a newline.
 func Bug(debug string) {
 	fmt.Printf("∙%s\n", debug)
+}
+
+// EnterKey returns the Enter keyboard code.
+func EnterKey() byte {
+	const lf, cr = '\u000A', '\u000D'
+	if runtime.GOOS == winOS {
+		return cr
+	}
+	return lf
 }
 
 // ErrAppend prints the error to an active line.
@@ -130,7 +137,6 @@ func Status(count, total int, m Mode) string {
 // The prompt will loop unless a y or n value is given or Ctrl-C is pressed.
 func YN(question string, recommend YNDefault) bool {
 	const no, yes = "n", "y"
-	r := bufio.NewReader(os.Stdin)
 	p, rec := "", " "
 	switch recommend {
 	case Nil:
@@ -142,8 +148,9 @@ func YN(question string, recommend YNDefault) bool {
 		p = "N/y"
 		rec = " (default: no) "
 	}
+	fmt.Printf("\r%s?%s[%s]: ", question, rec, p)
 	for {
-		fmt.Printf("\r%s?%s[%s]: ", question, rec, p)
+		r := bufio.NewReader(os.Stdin)
 		b, err := r.ReadByte()
 		if err != nil {
 			ErrFatal(err)
@@ -155,7 +162,8 @@ func YN(question string, recommend YNDefault) bool {
 		case no:
 			return false
 		}
-		if b == EnterKey {
+		fmt.Printf("--> %d %x\n", b, b)
+		if b == EnterKey() {
 			switch recommend {
 			case Yes:
 				return true
@@ -174,14 +182,14 @@ func Prompt(question string) string {
 	r := bufio.NewReader(os.Stdin)
 	fmt.Printf("\r%s?: ", question)
 	for {
-		s, err := r.ReadString(EnterKey)
+		s, err := r.ReadString(EnterKey())
 		if err != nil {
 			ErrFatal(err)
 		}
 		if s != "" {
 			// remove the Enter key newline from the string
 			// as this character will break directory and filepaths
-			return strings.TrimSuffix(s, string(EnterKey))
+			return strings.TrimSuffix(s, "\n")
 		}
 	}
 }
