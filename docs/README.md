@@ -7,7 +7,7 @@ Dupers is the blazing-fast file duplicate checker and filename search.
 - Multithreaded file reads and scans.
 - Instant filename and directory path search from the database.
 - Automated database maintenance with optional user tools.
-- **TODO:** Import and export database stores as [CSV text](https://en.wikipedia.org/wiki/Comma-separated_values) for sharing.
+- Import and export database stores as [CSV text](https://en.wikipedia.org/wiki/Comma-separated_values) for sharing.
 
 ## Downloads
 
@@ -17,9 +17,9 @@ Dupers is the blazing-fast file duplicate checker and filename search.
 - [macOS](https://github.com/bengarrett/dupers/releases/latest/download/dupers_macOS_Intel.tar.gz
 ); [or for the Apple M chip](https://github.com/bengarrett/dupers/releases/latest/download/dupers_macOS_M-series.tar.gz
 )
-- [FreeBSD](https://github.com/bengarrett/dupers/releases/latest/download/dupers_FreeBSD_Intel.tar.gz
-)
 - [Linux](https://github.com/bengarrett/dupers/releases/latest/download/dupers_Linux_Intel.tar.gz
+)
+- [FreeBSD](https://github.com/bengarrett/dupers/releases/latest/download/dupers_FreeBSD_Intel.tar.gz
 )
 
 #### Packages

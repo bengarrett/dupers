@@ -21,6 +21,7 @@ import (
 	"github.com/gookit/color"
 )
 
+// checkBkt prints the missing bucket name error.
 func checkBkt(term, cmd, name string) {
 	if name != "" {
 		return
@@ -31,6 +32,7 @@ func checkBkt(term, cmd, name string) {
 	out.ErrFatal(nil)
 }
 
+// checkDB checks the database file.
 func checkDB() {
 	path, err := database.DB()
 	if err != nil {
@@ -63,6 +65,7 @@ func chkWinDirs() {
 	}
 }
 
+// chkWinDir checks the string for invalid escaped quoted paths when using using Windows cmd.exe.
 func chkWinDir(s string) error {
 	if s == "" {
 		return nil
@@ -93,6 +96,7 @@ func chkWinDir(s string) error {
 	return fmt.Errorf("%w\n%s", ErrWindowsDir, w.String())
 }
 
+// databaseCmd parses the database commands.
 func databaseCmd(c *dupers.Config, quiet bool, args ...string) {
 	checkDB()
 	arr := [2]string{}
@@ -129,6 +133,7 @@ func databaseCmd(c *dupers.Config, quiet bool, args ...string) {
 	}
 }
 
+// dupeCmd parses the dupe command.
 func dupeCmd(c *dupers.Config, f *cmdFlags, args ...string) {
 	if c.Debug {
 		s := fmt.Sprintf("dupeCmd: %s", strings.Join(args, " "))
@@ -155,7 +160,7 @@ func dupeCmd(c *dupers.Config, f *cmdFlags, args ...string) {
 		s := fmt.Sprintf("buckets: %s", c.PrintBuckets())
 		out.Bug(s)
 	}
-	taskCheckPaths(c)
+	checkDupePaths(c)
 	// files or directories to compare (these are not saved to database)
 	if err := c.WalkSource(); err != nil {
 		out.ErrFatal(err)
@@ -181,6 +186,7 @@ func dupeCmd(c *dupers.Config, f *cmdFlags, args ...string) {
 	}
 }
 
+// dupeCleanup runs the cleanup commands when the appropriate flags are set.
 func dupeCleanup(c *dupers.Config, f *cmdFlags) {
 	if *f.rm || *f.rmPlus {
 		if c.Debug {
@@ -204,6 +210,7 @@ func dupeCleanup(c *dupers.Config, f *cmdFlags) {
 	}
 }
 
+// dupeLookup cleans and updates buckets for changes on the file system.
 func dupeLookup(c *dupers.Config, f *cmdFlags) {
 	if c.Debug {
 		out.Bug("database cleanup.")
@@ -223,6 +230,7 @@ func dupeLookup(c *dupers.Config, f *cmdFlags) {
 	c.WalkDirs()
 }
 
+// searchCmd runs the search command.
 func searchCmd(f *cmdFlags, args ...string) {
 	l := len(args)
 	searchCmdErr(l)
@@ -239,24 +247,24 @@ func searchCmd(f *cmdFlags, args ...string) {
 	if *f.filename {
 		if !*f.exact {
 			if m, err = database.CompareBaseNoCase(term, buckets...); err != nil {
-				taskSearchErr(err)
+				searchErr(err)
 			}
 		}
 		if *f.exact {
 			if m, err = database.CompareBase(term, buckets...); err != nil {
-				taskSearchErr(err)
+				searchErr(err)
 			}
 		}
 	}
 	if !*f.filename {
 		if !*f.exact {
 			if m, err = database.CompareNoCase(term, buckets...); err != nil {
-				taskSearchErr(err)
+				searchErr(err)
 			}
 		}
 		if *f.exact {
 			if m, err = database.Compare(term, buckets...); err != nil {
-				taskSearchErr(err)
+				searchErr(err)
 			}
 		}
 	}
@@ -270,6 +278,7 @@ func searchCmd(f *cmdFlags, args ...string) {
 	}
 }
 
+// searchCmdSummary formats the results of the search command.
 func searchCmdSummary(total int, term string, exact, filename bool) string {
 	str := func(t, s, term string) string {
 		return fmt.Sprintf("%s%s exist for '%s'.", t, color.Secondary.Sprint(s), color.Bold.Sprint(term))
@@ -298,6 +307,7 @@ func searchCmdSummary(total int, term string, exact, filename bool) string {
 	return str(t, s, term)
 }
 
+// exportBucket saves the bucket to a csv file.
 func exportBucket(quiet bool, args [2]string) {
 	checkBkt(dex, dex, args[1])
 	name, err := filepath.Abs(args[1])
@@ -320,6 +330,7 @@ func exportBucket(quiet bool, args [2]string) {
 	out.Response(s, quiet)
 }
 
+// importBucket saves a csv file to the database.
 func importBucket(quiet bool, args [2]string) {
 	f := args[1]
 	if f == "" {
@@ -340,6 +351,7 @@ func importBucket(quiet bool, args [2]string) {
 	out.Response(s, quiet)
 }
 
+// listBucket lists the content of a bucket to the stdout.
 func listBucket(quiet bool, args [2]string) {
 	checkBkt("list", dls, args[1])
 	name, err := filepath.Abs(args[1])
@@ -366,6 +378,7 @@ func listBucket(quiet bool, args [2]string) {
 	}
 }
 
+// moveBucket renames a bucket by duplicating it to a new bucket location.
 func moveBucket(quiet bool, args [3]string) {
 	b, dir := args[1], args[2]
 	checkBkt("move and rename", dmv, b)
@@ -405,6 +418,7 @@ func moveBucket(quiet bool, args [3]string) {
 	}
 }
 
+// removeBucket removes the bucket from the database.
 func removeBucket(quiet bool, args [2]string) {
 	checkBkt("remove", drm, args[1])
 	name, err := filepath.Abs(args[1])
@@ -433,6 +447,7 @@ func removeBucket(quiet bool, args [2]string) {
 	out.Response(s, quiet)
 }
 
+// rescanBucket rescans the bucket for any changes on the file system.
 func rescanBucket(c *dupers.Config, plus bool, args [2]string) {
 	cmd := dup
 	if plus {
@@ -459,6 +474,7 @@ func rescanBucket(c *dupers.Config, plus bool, args [2]string) {
 	}
 }
 
+// backupDB saves the database to a binary file.
 func backupDB(quiet bool) {
 	n, w, err := database.Backup()
 	if err != nil {
@@ -468,6 +484,7 @@ func backupDB(quiet bool) {
 	out.Response(s, quiet)
 }
 
+// cleanupDB cleans and compacts the database.
 func cleanupDB(quiet, debug bool) {
 	if err := database.Clean(quiet, debug); err != nil {
 		if b := errors.Is(err, database.ErrDBClean); !b {

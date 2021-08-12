@@ -39,6 +39,7 @@ func help() string {
 	return b.String()
 }
 
+// helpDupe creates the dupe command help.
 func helpDupe(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintf(w, "\n%s\n  Scan for duplicate files, matching files that share the identical content.\n",
 		color.Primary.Sprint("Dupe:"))
@@ -62,6 +63,7 @@ func helpDupe(f flag.Flag, w *tabwriter.Writer) {
 	exampleDupe(w)
 }
 
+// helpSearch creates the search command help.
 func helpSearch(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintf(w, "\n%s\n  Lookup a file or a directory name in the database.\n",
 		color.Primary.Sprint("Search:"))
@@ -76,6 +78,7 @@ func helpSearch(f flag.Flag, w *tabwriter.Writer) {
 	exampleSearch(w)
 }
 
+// helpDB creates the database commands help.
 func helpDB(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintf(w, "\n%s\n  View information and run optional maintenance on the internal database.\n",
 		color.Primary.Sprint("Database:"))
@@ -102,6 +105,7 @@ func helpDB(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintf(w, "    -h, %s\tshow this list of options\n", fhlp)
 }
 
+// exampleDupe creates the dupe command examples.
 func exampleDupe(w *tabwriter.Writer) *tabwriter.Writer {
 	fmt.Fprintln(w, "\n  Examples:")
 	fmt.Fprint(w, color.Secondary.Sprint("    # find identical copies of file.txt in the Downloads directory\n"))
@@ -123,22 +127,7 @@ func exampleDupe(w *tabwriter.Writer) *tabwriter.Writer {
 	return w
 }
 
-// Vers prints out the program information and version.
-func vers() string {
-	const copyright = "\u00A9"
-	exe, err := self()
-	if err != nil {
-		out.ErrCont(err)
-	}
-	w := new(bytes.Buffer)
-	fmt.Fprintf(w, "dupers v%s\n%s 2021 Ben Garrett\n", version, copyright)
-	fmt.Fprintf(w, "%s\n\n", color.Primary.Sprint("https://github.com/bengarrett/dupers"))
-	fmt.Fprintf(w, "%s %s (%s)\n", color.Secondary.Sprint("build:"), commit, date)
-	fmt.Fprintf(w, "%s    %s\n", color.Secondary.Sprint("go:"), strings.Replace(runtime.Version(), "go", "v", 1))
-	fmt.Fprintf(w, "%s  %s\n", color.Secondary.Sprint("path:"), exe)
-	return w.String()
-}
-
+// exampleSearch creates the example command examples.
 func exampleSearch(w *tabwriter.Writer) *tabwriter.Writer {
 	fmt.Fprintln(w, "\n  Examples:")
 	fmt.Fprint(w, color.Secondary.Sprint("    # search for the expression foo in your home directory\n"))
@@ -156,7 +145,8 @@ func exampleSearch(w *tabwriter.Writer) *tabwriter.Writer {
 	return w
 }
 
-func taskCheckPaths(c *dupers.Config) {
+// checkDupePaths checks the path arguments supplied to the dupe command.
+func checkDupePaths(c *dupers.Config) {
 	if ok, cc, bc := c.CheckPaths(); !ok {
 		fmt.Printf("Directory to check:                  %s (%s)\n", c.ToCheck(), color.Red.Sprintf("%d files", cc))
 		fmt.Printf("Buckets to lookup in for duplicates: %s (%d files)\n\n", c.PrintBuckets(), bc)
@@ -168,16 +158,23 @@ func taskCheckPaths(c *dupers.Config) {
 	}
 }
 
-func searchCmdErr(l int) {
-	if l <= 1 {
-		out.ErrCont(ErrSearch)
-		fmt.Println("A search expression can be a partial or complete filename,")
-		fmt.Println("or a partial or complete directory.")
-		out.Example("\ndupers search <search expression> [optional, directories to search]")
-		out.ErrFatal(nil)
+// vers prints out the program information and version.
+func vers() string {
+	const copyright = "\u00A9"
+	exe, err := self()
+	if err != nil {
+		out.ErrCont(err)
 	}
+	w := new(bytes.Buffer)
+	fmt.Fprintf(w, "dupers v%s\n%s 2021 Ben Garrett\n", version, copyright)
+	fmt.Fprintf(w, "%s\n\n", color.Primary.Sprint("https://github.com/bengarrett/dupers"))
+	fmt.Fprintf(w, "%s %s (%s)\n", color.Secondary.Sprint("build:"), commit, date)
+	fmt.Fprintf(w, "%s    %s\n", color.Secondary.Sprint("go:"), strings.Replace(runtime.Version(), "go", "v", 1))
+	fmt.Fprintf(w, "%s  %s\n", color.Secondary.Sprint("path:"), exe)
+	return w.String()
 }
 
+// dupeCmdErr parses the arguments of the dupe command.
 func dupeCmdErr(args, buckets int) {
 	const minArgs = 2
 	if args < minArgs {
@@ -204,7 +201,19 @@ func dupeCmdErr(args, buckets int) {
 	out.ErrFatal(nil)
 }
 
-func taskSearchErr(err error) {
+// searchCmdErr parses the arguments of the search command.
+func searchCmdErr(l int) {
+	if l <= 1 {
+		out.ErrCont(ErrSearch)
+		fmt.Println("A search expression can be a partial or complete filename,")
+		fmt.Println("or a partial or complete directory.")
+		out.Example("\ndupers search <search expression> [optional, directories to search]")
+		out.ErrFatal(nil)
+	}
+}
+
+// searchErr parses the errors from search compares.
+func searchErr(err error) {
 	if errors.Is(err, database.ErrDBEmpty) {
 		out.ErrCont(err)
 		return
