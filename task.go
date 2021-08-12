@@ -351,7 +351,7 @@ func importBucket(quiet bool, args [2]string) {
 		out.ErrFatal(errIm)
 	}
 	p := message.NewPrinter(language.English)
-	s := p.Sprintf("Successfully imported %d records.", number.Decimal(r))
+	s := p.Sprintf("\rSuccessfully imported %d records.", number.Decimal(r))
 	out.Response(s, quiet)
 }
 

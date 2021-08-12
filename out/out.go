@@ -10,6 +10,9 @@ import (
 	"strings"
 
 	"github.com/gookit/color"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
+	"golang.org/x/text/number"
 )
 
 // YND is the YN default value to use when there is no input given.
@@ -34,11 +37,13 @@ const (
 	Look
 	// Scan returns Scanning files.
 	Scan
+	// Read returns Reading items.
+	Read
+
 	// ANSI control code to erase the active terminal line.
 	EraseLine = "\u001b[2K"
-
-	cr    = "\r"
-	winOS = "windows"
+	cr        = "\r"
+	winOS     = "windows"
 )
 
 // Bug prints the string to a newline.
@@ -115,12 +120,19 @@ func RMLine() string {
 
 // Status prints out the current file or item processing count.
 func Status(count, total int, m Mode) string {
+	// to significantly improved terminal performance
+	// only update the status every 1000th count
+	const mod = 1000
+	if count > mod && count%mod != 0 {
+		return ""
+	}
 	const (
 		check = "%sChecking %d of %d items "
 		look  = "%sLooking up %d items     "
 		scan  = "%sScanning %d files       "
+		read  = "%sReading %d of %d items  "
 	)
-	pre := cr
+	pre, p := cr, message.NewPrinter(language.English)
 	if runtime.GOOS != winOS {
 		// erasing the line makes for a less flickering counter.
 		// not all Windows terminals support ANSI controls.
@@ -128,11 +140,13 @@ func Status(count, total int, m Mode) string {
 	}
 	switch m {
 	case Check:
-		return fmt.Sprintf(check, pre, count, total)
+		return p.Sprintf(check, pre, number.Decimal(count), number.Decimal(total))
 	case Look:
-		return fmt.Sprintf(look, pre, count)
+		return p.Sprintf(look, pre, number.Decimal(count))
 	case Scan:
-		return fmt.Sprintf(scan, pre, count)
+		return p.Sprintf(scan, pre, number.Decimal(count))
+	case Read:
+		return p.Sprintf(read, pre, number.Decimal(count), number.Decimal(total))
 	}
 	return ""
 }

@@ -173,8 +173,6 @@ func Home() (string, error) {
 	return s, err
 }
 
-// import is skipping the occasional record
-
 // ImportCSV reads the named export csv file and imports its content to the database.
 func ImportCSV(name string, db *bolt.DB) (records int, err error) {
 	if db == nil {
@@ -493,7 +491,10 @@ func Import(name Bucket, ls *Lists, db *bolt.DB) (imported int, err error) {
 		}
 		defer db.Close()
 	}
+	items, total := 0, len(*ls)
 	for path, sum := range *ls {
+		items++
+		fmt.Print(out.Status(items, total, out.Read))
 		if err := db.Update(func(tx *bolt.Tx) error {
 			b, err := tx.CreateBucketIfNotExists([]byte(name))
 			if err != nil {

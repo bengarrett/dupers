@@ -21,6 +21,9 @@ import (
 	"github.com/gookit/color"
 	"github.com/karrick/godirwalk"
 	bolt "go.etcd.io/bbolt"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
+	"golang.org/x/text/number"
 )
 
 type (
@@ -277,9 +280,9 @@ func (c *Config) RemoveAll() string {
 
 // Status summarizes the file total and time taken.
 func (c *Config) Status() string {
-	s := "\n"
+	p, s := message.NewPrinter(language.English), "\r"
 	s += color.Secondary.Sprint("Scanned ") +
-		color.Primary.Sprintf("%d files", c.files)
+		color.Primary.Sprintf("%s files", p.Sprint(number.Decimal(c.files)))
 	if !c.Test {
 		s += color.Secondary.Sprint(", taking ") +
 			color.Primary.Sprintf("%s", c.Timer())
