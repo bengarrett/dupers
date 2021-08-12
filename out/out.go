@@ -12,10 +12,10 @@ import (
 	"github.com/gookit/color"
 )
 
-type YesNo uint
+type YNDefault uint
 
 const (
-	Nil YesNo = iota
+	Nil YNDefault = iota
 	Yes
 	No
 )
@@ -126,9 +126,9 @@ func Status(count, total int, m Mode) string {
 	return ""
 }
 
-// YN prints the question and prompts the user for a yes or no reply.
+// YN prints the question to stdout and prompts for a yes or no reply.
 // The prompt will loop unless a y or n value is given or Ctrl-C is pressed.
-func YN(question string, recommend YesNo) bool {
+func YN(question string, recommend YNDefault) bool {
 	const no, yes = "n", "y"
 	r := bufio.NewReader(os.Stdin)
 	p, rec := "", " "
@@ -168,6 +168,8 @@ func YN(question string, recommend YesNo) bool {
 	}
 }
 
+// Prompt prints the question to stdout and prompts for a string reply.
+// The prompt will loop until Enter key or Ctrl-C are pressed.
 func Prompt(question string) string {
 	r := bufio.NewReader(os.Stdin)
 	fmt.Printf("\r%s?: ", question)

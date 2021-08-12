@@ -227,7 +227,12 @@ func bucketChk(name string, db *bolt.DB) (bucket string, err error) {
 		if err := db.View(func(tx *bolt.Tx) error {
 			if b := tx.Bucket([]byte(name)); b == nil {
 				bucket = name
-				return nil
+				for {
+					fmt.Println()
+					if bucket = bucketStat(bucket); bucket != "" {
+						return nil
+					}
+				}
 			}
 			if bucket = bucketRename(name); bucket != "" {
 				for {
