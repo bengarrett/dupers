@@ -377,7 +377,8 @@ func listBucket(quiet bool, args [2]string) {
 		fmt.Printf("%x %s\n", sum, name)
 	}
 	if cnt := len(ls); !quiet && cnt > 0 {
-		fmt.Printf("%s %s\n", color.Primary.Sprint(cnt),
+		p := message.NewPrinter(language.English)
+		fmt.Printf("%s %s\n", color.Primary.Sprint(p.Sprint(number.Decimal(cnt))),
 			color.Secondary.Sprint("items listed. Checksums are 32 byte, SHA-256 (FIPS 180-4)."))
 	}
 }
