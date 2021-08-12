@@ -18,6 +18,9 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
+	"golang.org/x/text/number"
 )
 
 type (
@@ -507,8 +510,9 @@ func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, int, error) {
 	fmt.Fprintf(w, "Buckets:        %s\n\n", color.Primary.Sprint(cnt))
 	tab := tabwriter.NewWriter(w, 0, 0, tabPadding, ' ', tabwriter.AlignRight)
 	fmt.Fprintf(tab, "Items\tSize\t\tBucket %s\n", color.Secondary.Sprint("(absolute path)"))
+	p := message.NewPrinter(language.English)
 	for i, b := range items {
-		fmt.Fprintf(tab, "%d\t%s\t\t%v\n", b.items, b.size, i)
+		p.Fprintf(tab, "%d\t%s\t\t%v\n", number.Decimal(b.items), b.size, i)
 	}
 	if err := tab.Flush(); err != nil {
 		return w, 0, err

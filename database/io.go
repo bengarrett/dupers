@@ -21,6 +21,9 @@ import (
 	"github.com/bengarrett/dupers/out"
 	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
+	"golang.org/x/text/number"
 )
 
 const loops = 0
@@ -203,9 +206,10 @@ func ImportCSV(name string, db *bolt.DB) (records int, err error) {
 	for range *lists {
 		items++
 	}
+	p := message.NewPrinter(language.English)
 	s := "\n"
 	s += color.Secondary.Sprint("Found ") +
-		color.Primary.Sprintf("%d valid items", items) +
+		color.Primary.Sprintf("%s valid items", p.Sprint(number.Decimal(items))) +
 		color.Secondary.Sprint(" in the CSV file.")
 	fmt.Println(s)
 	s = color.Secondary.Sprint("These will be added to the bucket: ")
