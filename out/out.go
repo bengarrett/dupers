@@ -12,11 +12,15 @@ import (
 	"github.com/gookit/color"
 )
 
-type YNDefault uint
+// YND is the YN default value to use when there is no input given.
+type YND uint
 
 const (
-	Nil YNDefault = iota
+	// Nil does not set a default value.
+	Nil YND = iota
+	// Yes sets the default value.
 	Yes
+	// No sets the default value.
 	No
 )
 
@@ -135,34 +139,32 @@ func Status(count, total int, m Mode) string {
 
 // YN prints the question to stdout and prompts for a yes or no reply.
 // The prompt will loop unless a y or n value is given or Ctrl-C is pressed.
-func YN(question string, recommend YNDefault) bool {
+func YN(question string, recommend YND) bool {
 	const no, yes = "n", "y"
-	p, rec := "", " "
+	p, def := "", " "
 	switch recommend {
 	case Nil:
 		p = "Y/N"
 	case Yes:
 		p = "Y/n"
-		rec = " (default: yes) "
+		def = " (default: yes) "
 	case No:
 		p = "N/y"
-		rec = " (default: no) "
+		def = " (default: no) "
 	}
-	fmt.Printf("\r%s?%s[%s]: ", question, rec, p)
+	fmt.Printf("\r%s?%s[%s]: ", question, def, p)
 	for {
 		r := bufio.NewReader(os.Stdin)
 		b, err := r.ReadByte()
 		if err != nil {
 			ErrFatal(err)
 		}
-		input := strings.ToLower(string(b))
-		switch input {
+		switch strings.ToLower(string(b)) {
 		case yes:
 			return true
 		case no:
 			return false
 		}
-		fmt.Printf("--> %d %x\n", b, b)
 		if b == EnterKey() {
 			switch recommend {
 			case Yes:
