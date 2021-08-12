@@ -430,19 +430,25 @@ func removeBucket(quiet bool, args [2]string) {
 	if err != nil {
 		out.ErrFatal(err)
 	}
+	items, err := database.Count(name, nil)
+	if errors.Is(err, database.ErrBucketNotFound) {
+		bucketNoFound(name, err)
+		return
+	}
+	if !quiet {
+		fmt.Printf("%s\t%s\n", color.Secondary.Sprint("Bucket:"), color.Debug.Sprint(name))
+		p := message.NewPrinter(language.English)
+		fmt.Printf("%s\t%s\n", color.Secondary.Sprint("Items:"), color.Debug.Sprint(p.Sprint(items)))
+		if !out.YN("Remove this bucket", out.No) {
+			return
+		}
+	}
 	if err := database.RM(name); err != nil {
 		if errors.Is(err, database.ErrBucketNotFound) {
 			// retry with the original argument
 			if err1 := database.RM(args[1]); err1 != nil {
 				if errors.Is(err1, database.ErrBucketNotFound) {
-					out.ErrCont(err1)
-					fmt.Printf("Bucket to remove: %s\n", color.Danger.Sprint(name))
-					buckets, err2 := database.AllBuckets(nil)
-					if err2 != nil {
-						out.ErrFatal(err2)
-					}
-					fmt.Printf("Buckets in use:   %s\n", strings.Join(buckets, "\n\t\t  "))
-					out.ErrFatal(nil)
+					bucketNoFound(name, err1)
 				}
 				out.ErrFatal(err1)
 			}
@@ -450,6 +456,17 @@ func removeBucket(quiet bool, args [2]string) {
 	}
 	s := fmt.Sprintf("Removed bucket from the database: '%s'\n", name)
 	out.Response(s, quiet)
+}
+
+func bucketNoFound(name string, err error) {
+	out.ErrCont(err)
+	fmt.Printf("Bucket to remove: %s\n", color.Danger.Sprint(name))
+	buckets, err2 := database.AllBuckets(nil)
+	if err2 != nil {
+		out.ErrFatal(err2)
+	}
+	fmt.Printf("Buckets in use:   %s\n", strings.Join(buckets, "\n\t\t  "))
+	out.ErrFatal(nil)
 }
 
 // rescanBucket rescans the bucket for any changes on the file system.

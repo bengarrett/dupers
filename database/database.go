@@ -164,7 +164,7 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 			if b == nil {
 				return fmt.Errorf("%w: %s", ErrBucketNotFound, abs)
 			}
-			total, err = Count(b, db)
+			total, err = count(b, db)
 			if err != nil {
 				return err
 			}
@@ -362,8 +362,29 @@ func compare(term []byte, noCase, base bool, buckets ...string) (*Matches, error
 	return &finds, nil
 }
 
-// XXX Count the number of records in the bucket.
-func Count(b *bolt.Bucket, db *bolt.DB) (int, error) {
+// Count the number of records in the bucket.
+func Count(name string, db *bolt.DB) (items int, err error) {
+	if db == nil {
+		db, err = OpenRead()
+		if err != nil {
+			return 0, err
+		}
+		defer db.Close()
+	}
+	if errV := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(name))
+		if b == nil {
+			return bolt.ErrBucketNotFound
+		}
+		items, err = count(b, db)
+		return nil
+	}); errV != nil {
+		return 0, errV
+	}
+	return items, nil
+}
+
+func count(b *bolt.Bucket, db *bolt.DB) (int, error) {
 	records := 0
 	if err := db.View(func(tx *bolt.Tx) error {
 		if b == nil {
