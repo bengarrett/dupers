@@ -400,7 +400,8 @@ func moveBucket(quiet bool, args [3]string) {
 		out.ErrFatal(errEx)
 	}
 	if dir == "" {
-		fmt.Println("Cannot move and rename bucket in the database as no new directory was provided.")
+		out.ErrCont(ErrNewName)
+		fmt.Println("Cannot move bucket within the database as no new directory was provided.")
 		out.Example(fmt.Sprintf("\ndupers mv %s <new directory>", b))
 		out.ErrFatal(nil)
 	}
