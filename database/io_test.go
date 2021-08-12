@@ -114,6 +114,9 @@ func TestExportCSV(t *testing.T) {
 }
 
 func TestImportCSV(t *testing.T) {
+	if err := mock.TestRemove(); err != nil {
+		t.Error(err)
+	}
 	db, err := mock.Open()
 	if err != nil {
 		t.Error(err)
@@ -206,11 +209,12 @@ func Test_csvScanner(t *testing.T) {
 }
 
 func mockDir() string {
+	sep := string(os.PathSeparator)
 	dir := filepath.Join("home", "me", "Downloads")
-	if runtime.GOOS == "Windows" {
-		filepath.Join("C:", dir)
+	if runtime.GOOS == winOS {
+		return filepath.Join("C:", sep, dir)
 	}
-	return filepath.Join(string(os.PathSeparator), dir)
+	return filepath.Join(sep, dir)
 }
 
 func Test_bucketName(t *testing.T) {
@@ -233,7 +237,33 @@ func Test_bucketName(t *testing.T) {
 	}
 }
 
-func Test_winPosix(t *testing.T) {
+func Test_pathWindows(t *testing.T) {
+	unc := fmt.Sprintf("%sserver%sshare%s", uncPath, backslash, backslash)
+	tests := []struct {
+		name string
+		path string
+		want string
+	}{
+		{"empty", "", ""},
+		{"win drive", "C:", "C:"},
+		{"win drive tail", "C:\\", "C:"},
+		{"windows", "C:\\Users\\Ben\\Downloads\\", "C:\\Users\\Ben\\Downloads\\"},
+		{"linux", "/home/ben/Downloads", "C:\\home\\ben\\Downloads"},
+		{"linux tail", "/home/ben/Downloads/", "C:\\home\\ben\\Downloads\\"},
+		{"root", "/", "C:"},
+		{"unc", unc, unc},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := pathWindows(tt.path); got != tt.want {
+				t.Errorf("pathWindows() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_pathPosix(t *testing.T) {
+	unc := fmt.Sprintf("%sserver%sshare%s", uncPath, backslash, backslash)
 	tests := []struct {
 		name string
 		path string
@@ -244,12 +274,12 @@ func Test_winPosix(t *testing.T) {
 		{"linux tail", "/home/ben/Downloads/", "/home/ben/Downloads/"},
 		{"drive", "C:", "/"},
 		{"windows", "C:\\Users\\Ben\\Downloads\\", "/Users/Ben/Downloads/"},
-		{"network", fmt.Sprintf("%sserver%sshare%s", uncPath, backslash, backslash), "/server/share/"},
+		{"network", unc, "/server/share/"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := winPosix(tt.path); got != tt.want {
-				t.Errorf("winPosix() = %q, want %q", got, tt.want)
+			if got := pathPosix(tt.path); got != tt.want {
+				t.Errorf("pathPosix() = %q, want %q", got, tt.want)
 			}
 		})
 	}
@@ -259,10 +289,13 @@ func Test_importCSV(t *testing.T) {
 	const (
 		helloWorld = "68656c6c6f20776f726c64"
 		sum        = "44dcc97a2b115c9fd51c95d6a3f2075f2f7c09067e34a33d9259cd22208bffba"
-		path       = "/home/me/downloads"
 		file       = "someimage.png"
 	)
-	abs := strings.Join([]string{path, file}, fwdslash)
+	path := "/home/me/downloads"
+	if runtime.GOOS == winOS {
+		path = "C:\\home\\me\\downloads"
+	}
+	abs := strings.Join([]string{path, file}, string(os.PathSeparator))
 	line := strings.Join([]string{sum, file}, ",")
 	bsum, err := checksum(sum)
 	if err != nil {

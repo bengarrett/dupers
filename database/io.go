@@ -363,8 +363,10 @@ func bucketName(s string) string {
 		return ""
 	}
 	path := ss[1]
-	if runtime.GOOS != winOS {
-		path = winPosix(path)
+	if runtime.GOOS == winOS {
+		path = pathWindows(path)
+	} else {
+		path = pathPosix(path)
 	}
 	if filepath.IsAbs(path) {
 		return path
@@ -372,26 +374,65 @@ func bucketName(s string) string {
 	return ""
 }
 
-// winPosix transforms a Windows or UNC path into a POSIX path.
-func winPosix(path string) string {
+func isDrive(path string) bool {
+	valid := regexp.MustCompile(`^[a-z|A-Z]:\\?$`)
+	return valid.MatchString(path)
+}
+
+func isUNC(path string) bool {
+	const uncLen = 2
+	if len(path) < uncLen {
+		return false
+	}
+	return (path[0:uncLen] == "\\\\")
+}
+
+// pathWindows returns a Windows or UNC usable path from the source path.
+func pathWindows(src string) string {
+	const drive = "C:"
+	switch src {
+	case "":
+		return ""
+	case "/":
+		return drive
+	}
+	// source path is windows or unc
+	if isDrive(src) {
+		return src[0:2]
+	}
+	if isDrive(src[0:2]) {
+		return src
+	}
+	if isUNC(src) {
+		return src
+	}
+	// source path is posix
+	src = strings.ReplaceAll(src, fwdslash, backslash)
+	if !isDrive(src[0:2]) {
+		return drive + src
+	}
+	return src
+}
+
+// pathPosix returns POSIX path from the source path.
+func pathPosix(src string) string {
 	const driveLen, subStr = 2, 2
-	if len(path) < driveLen {
-		return path
+	if len(src) < driveLen {
+		return src
 	}
-	if path[0:driveLen] == uncPath {
+	if src[0:driveLen] == uncPath {
 		return fmt.Sprintf("%s%s", fwdslash,
-			strings.ReplaceAll(path[driveLen:], backslash, fwdslash))
+			strings.ReplaceAll(src[driveLen:], backslash, fwdslash))
 	}
-	ps := strings.SplitN(path, ":", subStr)
+	ps := strings.SplitN(src, ":", subStr)
 	drive, valid := ps[0], regexp.MustCompile(`^[a-z|A-Z]$`)
 	if valid.MatchString(drive) {
-		path = strings.ReplaceAll(ps[1], backslash, fwdslash)
-		fmt.Println("path", path)
-		if path == "" {
-			path = fwdslash
+		src = strings.ReplaceAll(ps[1], backslash, fwdslash)
+		if src == "" {
+			src = fwdslash
 		}
 	}
-	return path
+	return src
 }
 
 // importCSV reads, validates and returns a line of data from an export csv file.
