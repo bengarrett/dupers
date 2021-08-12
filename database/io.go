@@ -23,7 +23,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-const loops = 150
+const loops = 0
 
 const (
 	backslash = "\u005C"
