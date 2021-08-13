@@ -191,25 +191,26 @@ func dupeCmd(c *dupers.Config, f *cmdFlags, args ...string) {
 
 // dupeCleanup runs the cleanup commands when the appropriate flags are set.
 func dupeCleanup(c *dupers.Config, f *cmdFlags) {
+	if *f.sensen {
+		if c.Debug {
+			out.Bug("remove all non unique Windows and MS-DOS files.")
+		}
+		fmt.Print(c.Remove())
+		fmt.Print(c.RemoveAll())
+		fmt.Print(c.Clean())
+		return
+	}
 	if *f.rm || *f.rmPlus {
 		if c.Debug {
 			out.Bug("remove duplicate files.")
 		}
 		fmt.Print(c.Remove())
-	}
-	if *f.sensen {
-		if c.Debug {
-			out.Bug("remove all non unique Windows and MS-DOS files.")
+		if *f.rmPlus {
+			if c.Debug {
+				out.Bug("remove empty directories.")
+			}
+			fmt.Print(c.Clean())
 		}
-		fmt.Print(c.RemoveAll())
-		fmt.Print(c.Remove())
-		fmt.Print(c.Clean())
-	}
-	if *f.rmPlus {
-		if c.Debug {
-			out.Bug("remove empty directories.")
-		}
-		fmt.Print(c.Clean())
 	}
 }
 

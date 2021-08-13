@@ -211,7 +211,7 @@ func (c *Config) Print() string {
 		fmt.Fprintln(w, match(path, l))
 	}
 	if finds == 0 {
-		fmt.Fprintln(w, color.Info.Sprint("No duplicate files found."))
+		fmt.Fprintln(w, color.Info.Sprint("\rNo duplicate files found.          "))
 	}
 	return w.String()
 }
@@ -220,7 +220,7 @@ func (c *Config) Print() string {
 func (c *Config) Remove() string {
 	w := new(bytes.Buffer)
 	if len(c.sources) == 0 || len(c.compare) == 0 {
-		fmt.Fprintln(w, "No duplicate files to remove.")
+		fmt.Fprintln(w, "No duplicate files to remove.          ")
 		return w.String()
 	}
 	fmt.Fprintln(w)
@@ -268,8 +268,8 @@ func (c *Config) RemoveAll() string {
 		out.ErrCont(err)
 	}
 	if !c.Test {
-		color.Info.Println("\nRemove ALL files, except for unique Windows/MS-DOS programs ?")
-		fmt.Printf("%s %s", color.Secondary.Sprint("target directory:"), root)
+		fmt.Printf("%s %s\n", color.Secondary.Sprint("Target directory:"), color.Debug.Sprint(root))
+		fmt.Println("Delete everything in the target directory, except for directories\ncontaining unique Windows or MS-DOS programs and assets?")
 		if input := out.YN("Please confirm", out.Nil); !input {
 			os.Exit(0)
 		}
