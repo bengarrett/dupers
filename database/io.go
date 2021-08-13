@@ -46,13 +46,23 @@ var (
 	ErrImportPath   = errors.New("import item has an invalid file path")
 )
 
+// read bolt option to open in read only mode with a file lock timeout.
+func read() *bolt.Options {
+	return &bolt.Options{ReadOnly: true, Timeout: Timeout}
+}
+
+// write bolt option to open in write mode with a file lock timeout.
+func write() *bolt.Options {
+	return &bolt.Options{Timeout: Timeout}
+}
+
 // OpenRead opens the Bolt database for reading.
 func OpenRead() (db *bolt.DB, err error) {
 	path, err := DB()
 	if err != nil {
 		return nil, err
 	}
-	db, err = bolt.Open(path, PrivateFile, &bolt.Options{ReadOnly: true})
+	db, err = bolt.Open(path, PrivateFile, read())
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +75,7 @@ func OpenWrite() (db *bolt.DB, err error) {
 	if err != nil {
 		return nil, err
 	}
-	db, err = bolt.Open(path, PrivateFile, nil)
+	db, err = bolt.Open(path, PrivateFile, write())
 	if err != nil {
 		return nil, err
 	}

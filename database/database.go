@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 	"text/tabwriter"
+	"time"
 
 	"github.com/bengarrett/dupers/out"
 	"github.com/dustin/go-humanize"
@@ -38,7 +39,9 @@ const (
 	PrivateFile fs.FileMode = 0600
 	PrivateDir  fs.FileMode = 0700
 
-	NotFound   = "This is okay as one will be created when using the dupe or search commands."
+	NotFound = "This is okay as one will be created when using the dupe or search commands."
+	Timeout  = 3 * time.Second
+
 	backupTime = "20060102-150405"
 	boltName   = "dupers.db"
 	csvName    = "dupers-export.csv"
@@ -128,7 +131,7 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 	if debug {
 		out.Bug("database path: " + path)
 	}
-	db, err := bolt.Open(path, PrivateFile, nil)
+	db, err := bolt.Open(path, PrivateFile, write())
 	if err != nil {
 		return err
 	}
@@ -236,14 +239,14 @@ func Compact(debug bool) error {
 	// make a temporary database
 	tmp := filepath.Join(os.TempDir(), backup())
 	// open both databases
-	srcDB, err := bolt.Open(src, PrivateFile, nil)
+	srcDB, err := bolt.Open(src, PrivateFile, write())
 	if err != nil {
 		return err
 	} else if debug {
 		out.Bug("opened original database: " + src)
 	}
 	defer srcDB.Close()
-	tmpDB, err := bolt.Open(tmp, PrivateFile, nil)
+	tmpDB, err := bolt.Open(tmp, PrivateFile, write())
 	if err != nil {
 		return err
 	} else if debug {
@@ -445,7 +448,7 @@ func DB() (string, error) {
 }
 
 func createDB(path string) error {
-	db, err := bolt.Open(path, PrivateFile, nil)
+	db, err := bolt.Open(path, PrivateFile, write())
 	if err != nil {
 		return fmt.Errorf("could not create a new database: %w: %s", err, path)
 	}
@@ -503,7 +506,7 @@ func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, int, error) {
 		}
 		item map[string]vals
 	)
-	db, err := bolt.Open(name, PrivateFile, &bolt.Options{ReadOnly: true})
+	db, err := bolt.Open(name, PrivateFile, read())
 	if err != nil {
 		return w, 0, err
 	}
@@ -547,7 +550,7 @@ func IsEmpty() (bool, error) {
 	if err != nil {
 		return true, err
 	}
-	db, err := bolt.Open(path, PrivateFile, nil)
+	db, err := bolt.Open(path, PrivateFile, write())
 	if err != nil {
 		return true, err
 	}
