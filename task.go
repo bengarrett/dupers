@@ -329,7 +329,8 @@ func exportBucket(quiet bool, args [2]string) {
 	if errEx != nil {
 		out.ErrFatal(errEx)
 	}
-	s := fmt.Sprintf("The exported bucket file is at: %s", exp)
+	s := fmt.Sprintf("%s %s\n", color.Secondary.Sprint("Bucket name:"), color.Debug.Sprint(name))
+	s += fmt.Sprintf("The exported bucket file is at: %s", exp)
 	out.Response(s, quiet)
 }
 
@@ -413,9 +414,11 @@ func moveBucket(quiet bool, args [3]string) {
 		out.ErrFatal(ErrNewName)
 	}
 	if !quiet {
-		fmt.Printf("Current:\t%s\nNew path:\t%s\n", name, newName)
-		fmt.Println("This only renames the bucket, it does not move files on your system.")
-		if !out.YN("Rename bucket", out.Nil) {
+		fmt.Printf("%s\t%s\n%s\t%s\n",
+			color.Secondary.Sprint("Bucket name:"), color.Debug.Sprint(name),
+			"New name:", color.Debug.Sprint(newName))
+		fmt.Println("This renames the database bucket but it does not edit your file system.")
+		if !out.YN("Rename bucket", out.No) {
 			return
 		}
 	}

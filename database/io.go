@@ -491,19 +491,46 @@ func Import(name Bucket, ls *Lists, db *bolt.DB) (imported int, err error) {
 		}
 		defer db.Close()
 	}
+	const batchItems = 50000
 	items, total := 0, len(*ls)
+	batch := make(Lists, batchItems)
 	for path, sum := range *ls {
+		batch[path] = sum
 		items++
-		fmt.Print(out.Status(items, total, out.Read))
+		if items%batchItems == 0 {
+			if err := db.Update(func(tx *bolt.Tx) error {
+				b, err := tx.CreateBucketIfNotExists([]byte(name))
+				if err != nil {
+					return err
+				}
+				for p, s := range batch {
+					fmt.Print(out.Status(imported, total, out.Read))
+					if err := b.Put([]byte(string(p)), s[:]); err != nil {
+						return err
+					}
+					imported++
+				}
+				return nil
+			}); err != nil {
+				return 0, err
+			}
+			batch = make(Lists, batchItems)
+			continue
+		}
+	}
+	if len(batch) > 0 {
 		if err := db.Update(func(tx *bolt.Tx) error {
 			b, err := tx.CreateBucketIfNotExists([]byte(name))
 			if err != nil {
 				return err
 			}
-			if err := b.Put([]byte(string(path)), sum[:]); err != nil {
-				return err
+			for p, s := range batch {
+				fmt.Print(out.Status(imported, total, out.Read))
+				if err := b.Put([]byte(string(p)), s[:]); err != nil {
+					return err
+				}
+				imported++
 			}
-			imported++
 			return nil
 		}); err != nil {
 			return 0, err
