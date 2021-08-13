@@ -611,7 +611,7 @@ func printRM(path string, err error) string {
 		out.ErrCont(e)
 		return ""
 	}
-	return fmt.Sprintf("%s: %s\n", color.Secondary.Sprint("removed"), path)
+	return fmt.Sprintf("%s: %s", color.Secondary.Sprint("removed"), path)
 }
 
 // printWalk prints "Scanning/Looking up".
