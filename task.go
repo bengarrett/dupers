@@ -182,9 +182,6 @@ func dupeCmd(c *dupers.Config, f *cmdFlags, args ...string) {
 	dupeCleanup(c, f)
 	// summaries
 	if !c.Quiet {
-		if c.Timer() > winRemind {
-			fmt.Printf("\n%s: %s\n", performance, color.Debug.Sprintf("duper -quiet %s ...", "dupe"))
-		}
 		fmt.Println(c.Status())
 	}
 }
@@ -494,9 +491,6 @@ func rescanBucket(c *dupers.Config, plus bool, args [2]string) {
 		out.ErrFatal(err)
 	}
 	if !c.Quiet {
-		if c.Timer() > winRemind {
-			fmt.Printf("\n%s: %s\n", performance, color.Debug.Sprintf("duper -quiet %s ...", cmd))
-		}
 		fmt.Println(c.Status())
 	}
 }
