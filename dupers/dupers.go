@@ -100,7 +100,6 @@ func (c *Config) CheckPaths() (ok bool, checkCnt, bucketCnt int) { //nolint: goc
 		if c.Debug {
 			out.Bug(err.Error())
 		}
-		return
 	}
 	if c.Debug {
 		s := fmt.Sprintf("all buckets: %s", c.Buckets())
@@ -136,7 +135,6 @@ func (c *Config) CheckPaths() (ok bool, checkCnt, bucketCnt int) { //nolint: goc
 			if c.Debug {
 				out.Bug(err.Error())
 			}
-			return
 		}
 	}
 	return check(), checkCnt, bucketCnt
@@ -192,6 +190,9 @@ func (c *Config) Clean() string {
 func (c *Config) Print() string {
 	if c.Debug {
 		out.Bug("print duplicate results")
+		s := fmt.Sprintf("comparing %d sources against %d unquie items to compare",
+			len(c.sources), len(c.compare))
+		out.Bug(s)
 	}
 	w := new(bytes.Buffer)
 	finds := 0
@@ -280,9 +281,15 @@ func (c *Config) RemoveAll() string {
 
 // Status summarizes the file total and time taken.
 func (c *Config) Status() string {
-	p, s := message.NewPrinter(language.English), "\r"
-	s += color.Secondary.Sprint("Scanned ") +
-		color.Primary.Sprintf("%s files", p.Sprint(number.Decimal(c.files)))
+	p, s, l := message.NewPrinter(language.English), "\r", len(c.compare)
+	if c.files == 0 && l > 0 {
+		// -fast flag
+		s += color.Secondary.Sprint("Scanned ") +
+			color.Primary.Sprintf("%s unique items", p.Sprint(number.Decimal(l)))
+	} else {
+		s += color.Secondary.Sprint("Scanned ") +
+			color.Primary.Sprintf("%s files", p.Sprint(number.Decimal(c.files)))
+	}
 	if !c.Test {
 		s += color.Secondary.Sprint(", taking ") +
 			color.Primary.Sprintf("%s", c.Timer())
@@ -409,7 +416,7 @@ func (c *Config) WalkSource() error {
 	if errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("%w: %s", ErrPathNoFound, root)
 	} else if err != nil {
-		return err
+		return fmt.Errorf("%w: %s", err, root)
 	}
 	if !stat.IsDir() {
 		c.sources = append(c.sources, root)
@@ -440,7 +447,8 @@ func (c *Config) WalkSource() error {
 		c.sources = append(c.sources, path)
 		return nil
 	}); err != nil {
-		return err
+		out.ErrCont(fmt.Errorf("item has a problem: %w", err))
+		return nil
 	}
 	if c.Debug {
 		out.Bug("directories dupe check: " + strings.Join(c.sources, " "))
