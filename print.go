@@ -18,6 +18,8 @@ import (
 	"github.com/bengarrett/dupers/dupers"
 	"github.com/bengarrett/dupers/out"
 	"github.com/gookit/color"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 )
 
 const (
@@ -147,11 +149,16 @@ func exampleSearch(w *tabwriter.Writer) *tabwriter.Writer {
 // checkDupePaths checks the path arguments supplied to the dupe command.
 func checkDupePaths(c *dupers.Config) {
 	if ok, cc, bc := c.CheckPaths(); !ok {
-		fmt.Printf("Directory to check:                  %s (%s)\n", c.ToCheck(), color.Red.Sprintf("%d files", cc))
-		fmt.Printf("Buckets to lookup in for duplicates: %s (%d files)\n\n", c.PrintBuckets(), bc)
-		color.Notice.Println("Please confirm the directories are correct.")
-		color.Info.Println("The dictory to check is not stored to the database.")
-		if !out.YN("Is this what you want", out.Nil) {
+		p := message.NewPrinter(language.English)
+		verb := "Buckets"
+		if len(c.Buckets()) == 1 {
+			verb = "Bucket"
+		}
+		fmt.Printf("Directory to check:\n %s (%s)\n", c.ToCheck(), color.Info.Sprintf("%s files", p.Sprint(cc)))
+		fmt.Printf("%s to lookup, for finding duplicates:\n %s (%s)\n\n",
+			verb, c.PrintBuckets(), color.Info.Sprintf("%s files", p.Sprint(bc)))
+		color.Warn.Println("\"Directory to check\" is NOT saved to the database.")
+		if !out.YN("Is this what you want", out.No) {
 			os.Exit(0)
 		}
 	}
