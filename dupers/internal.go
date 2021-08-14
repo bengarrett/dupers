@@ -75,6 +75,9 @@ func (i *internal) SetCompares(name Bucket) {
 	if err != nil {
 		out.ErrCont(err)
 	}
+	if i.compare == nil {
+		i.compare = make(checksums)
+	}
 	for fp, sum := range ls {
 		i.compare[sum] = string(fp)
 	}
