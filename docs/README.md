@@ -50,7 +50,7 @@ scoop install dupers
 
 ## Usage
 
-TODO screenshots
+TODO screenshots.
 
 ## Example usage
 #### Dupe check
@@ -88,36 +88,26 @@ duper search "2010" D:\photos
 
 ## Performance
 
-Due to the nature of duplicate file checking, several unrelated issues can significantly affect duper's performance.
+Due to the nature of duplicate file checking, several issues can affect duper's performance.
 
-#### Hardware and the Operating System
+#### Hardware
+With its constant opening and reading of files, hardware directly affects dupers' performance, CPU used and the read/write speed of the hard drive. Fast multithreaded CPUs and SSD drives help here.
 
-With its constant opening and reading of files, hardware directly affects dupers' performance, both CPU used and the read/write speed of the hard drive. Fast multithreaded CPUs and SSD drives help here.
+#### Operating Systems
 
-Recent changes to modern operating systems harm dupers. Nowadays, terminal and command prompt applications receive 25-35% of the available CPU resources.
+To restrict aggressive programs, terminal and command prompt applications only receive **25-35%** of the available CPU resources. You can improve this by adjusting the process priority of dupers in your operating system's activity or processes tool, but it may not give the desired effect.
 
-You can improve this by adjusting the process priority of dupers in your operating system's activity or processes tool, but it may not give the desired effect.
+#### Command flags
 
-#### Live status and command flags
+When running dupe checking, a `-fast` flag can significantly improve performance when dealing with extensive file collections. It does this by only running dupe checks against the database and completely ignoring the files residing on the host system.
 
-The terminal and command prompt apps are not designed for the rapid display of live text and can introduce a significant performance hit to dupers when processing large tasks. An easy fix is to use the `-quiet` flag with the duper commands.
-
-###### Dupe command using *quiet* fast mode takes less than a second 😃
-```ps
-duper -quiet -fast dupe C:\Users\Me\Downloads D:\textfiles
-# Scanned 191842 files, taking 901ms
-```
-###### Dupe command using the fast mode, taking 9 seconds
+###### Dupe command on a large collection using fast mode takes less than a second 😃
 ```ps
 duper -fast dupe C:\Users\Me\Downloads D:\textfiles
-# Scanned 191842 files, taking 9.0s
+# Scanned 191842 files, taking 901ms
 ```
-###### Dupe command using the *quiet* mode, taking 15 seconds
-```ps
-duper -quiet dupe C:\Users\Me\Downloads D:\textfiles
-# Scanned 191842 files, taking 15.0s
-```
-###### Dupe command taking 46 seconds ☹️
+
+###### Dupe command on a large collection normally taking 46 seconds ☹️
 ```ps
 duper dupe C:\Users\Me\Downloads D:\textfiles
 # Checking 51179 of 387859 items...
@@ -126,10 +116,9 @@ duper dupe C:\Users\Me\Downloads D:\textfiles
 
 ## Limitations
 
-#### Identical files within a bucket are not saved to the database
+#### Multiple identical files
 
-Dupers uses the SHA-256 file checksums as unique keys and each key's value only holds a single path location. This means both the `dupe` and `search` commands will not return all the possible locations of identical files in a bucket, as only one unique file is ever stored.
-
+Both the `dupe` and `search` commands only show the first unique file match. Dupers uses the SHA-256 file checksums as unique keys, and each key's value only holds a single path location.
 
 #### Windows Command Prompt directory paths
 
