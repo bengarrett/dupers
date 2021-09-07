@@ -143,6 +143,7 @@ func dupeCmd(c *dupers.Config, f *cmdFlags, args ...string) {
 		out.Bug(s)
 	}
 	l := len(args)
+	// fetch bucket info
 	b, err := database.AllBuckets(nil)
 	if err != nil {
 		out.ErrFatal(err)
@@ -163,6 +164,7 @@ func dupeCmd(c *dupers.Config, f *cmdFlags, args ...string) {
 		s := fmt.Sprintf("buckets: %s", c.PrintBuckets())
 		out.Bug(s)
 	}
+	// check the user supplied directories
 	checkDupePaths(c)
 	// files or directories to compare (these are not saved to database)
 	if err := c.WalkSource(); err != nil {
@@ -214,16 +216,28 @@ func dupeCleanup(c *dupers.Config, f *cmdFlags) {
 // dupeLookup cleans and updates buckets for changes on the file system.
 func dupeLookup(c *dupers.Config, f *cmdFlags) {
 	if c.Debug {
-		out.Bug("database cleanup.")
+		out.Bug("dupe lookup.")
 	}
 	var bkts []string
 	for _, b := range c.Buckets() {
 		bkts = append(bkts, string(b))
 	}
 	if !*f.lookup && len(bkts) > 0 {
+		if c.Debug {
+			out.Bug("non-fast mode, database cleanup.")
+		}
 		if err := database.Clean(c.Quiet, c.Debug, bkts...); err != nil {
 			out.ErrCont(err)
 		}
+	}
+	if *f.lookup {
+		if c.Debug {
+			out.Bug("read the hash values in the buckets.")
+		}
+		for _, b := range c.Buckets() {
+			c.SetCompares(b)
+		}
+		return
 	}
 	if c.Debug {
 		out.Bug("walk the buckets.")
