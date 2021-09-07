@@ -20,11 +20,19 @@ import (
 	"github.com/gookit/color"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
+
+	_ "embed"
 )
 
 const (
 	tabPadding  = 4
 	description = "Dupers is the blazing-fast file duplicate checker and filename search."
+)
+
+var (
+	// logo.txt by sensenstahl
+	//go:embed logo.txt
+	brand string // nolint: gochecknoglobals
 )
 
 // Help, usage and examples.
@@ -166,17 +174,20 @@ func checkDupePaths(c *dupers.Config) {
 
 // vers prints out the program information and version.
 func vers() string {
-	const copyright = "\u00A9"
+	const copyright, year = "\u00A9", 2021
 	exe, err := self()
 	if err != nil {
 		out.ErrCont(err)
 	}
 	w := new(bytes.Buffer)
-	fmt.Fprintf(w, "dupers v%s\n%s 2021 Ben Garrett\n", version, copyright)
-	fmt.Fprintf(w, "%s\n\n", color.Primary.Sprint("https://github.com/bengarrett/dupers"))
-	fmt.Fprintf(w, "%s %s (%s)\n", color.Secondary.Sprint("build:"), commit, date)
-	fmt.Fprintf(w, "%s    %s\n", color.Secondary.Sprint("go:"), strings.Replace(runtime.Version(), "go", "v", 1))
-	fmt.Fprintf(w, "%s  %s\n", color.Secondary.Sprint("path:"), exe)
+	fmt.Fprintln(w, brand)
+	fmt.Fprintf(w, "  dupers v%s\n", version)
+	fmt.Fprintf(w, "  %s %d Ben Garrett\n", copyright, year)
+	fmt.Fprintf(w, "  %s\n\n", color.Primary.Sprint("https://github.com/bengarrett/dupers"))
+	fmt.Fprintf(w, "  %s    %s (%s)\n", color.Secondary.Sprint("build:"), commit, date)
+	fmt.Fprintf(w, "  %s %s/%s\n", color.Secondary.Sprint("platform:"), runtime.GOOS, runtime.GOARCH)
+	fmt.Fprintf(w, "  %s       %s\n", color.Secondary.Sprint("go:"), strings.Replace(runtime.Version(), "go", "v", 1))
+	fmt.Fprintf(w, "  %s     %s\n", color.Secondary.Sprint("path:"), exe)
 	return w.String()
 }
 
