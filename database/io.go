@@ -283,7 +283,7 @@ func bucketStat(name string) string {
 	}
 	for {
 		name = strings.TrimSpace(name)
-		abs, err := filepath.Abs(name)
+		abs, err := Abs(name)
 		if err != nil {
 			out.ErrCont(fmt.Errorf("%w: %s", err, name))
 			continue

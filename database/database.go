@@ -67,12 +67,20 @@ var (
 )
 
 // Abs returns an absolute representation of the named bucket.
-func Abs(bucket string) ([]byte, error) {
+func Abs(bucket string) (string, error) {
 	s, err := filepath.Abs(bucket)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return []byte(s), nil
+	if runtime.GOOS == "windows" {
+		return strings.ToLower(s), nil
+	}
+	return s, nil
+}
+
+func AbsB(bucket string) ([]byte, error) {
+	s, err := Abs(bucket)
+	return []byte(s), err
 }
 
 // AllBuckets lists all the stored bucket names in the database.
@@ -155,11 +163,11 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 			out.ErrCont(err)
 			continue
 		} else if debug {
-			out.Bug("bucket: " + string(abs))
+			out.Bug("bucket: " + abs)
 		}
 		// check the bucket directory exists on the file system
-		if i, errS := os.Stat(string(abs)); os.IsNotExist(errS) {
-			out.ErrCont(fmt.Errorf("%w: %s", ErrBucketSkip, string(abs)))
+		if i, errS := os.Stat(abs); os.IsNotExist(errS) {
+			out.ErrCont(fmt.Errorf("%w: %s", ErrBucketSkip, abs))
 			errs++
 			if i, errc := Count(bucket, db); errc == nil {
 				cnt += i
@@ -178,7 +186,7 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 			continue
 		}
 		if err = db.View(func(tx *bolt.Tx) error {
-			b := tx.Bucket(abs)
+			b := tx.Bucket([]byte(abs))
 			if b == nil {
 				return fmt.Errorf("%w: %s", ErrBucketNotFound, abs)
 			}
@@ -202,7 +210,7 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 						out.Bug(s)
 					}
 					if errUp := db.Update(func(tx *bolt.Tx) error {
-						return tx.Bucket(abs).Delete(k)
+						return tx.Bucket([]byte(abs)).Delete(k)
 					}); errUp != nil {
 						return errUp
 					}
@@ -245,8 +253,7 @@ func totals(buckets []string, db *bolt.DB) (int, error) {
 			out.ErrCont(err)
 			continue
 		}
-		name := string(abs)
-		items, err := Count(name, db)
+		items, err := Count(abs, db)
 		if err != nil {
 			return -1, err
 		}
@@ -354,7 +361,7 @@ func compare(term []byte, noCase, base bool, buckets ...string) (*Matches, error
 	}
 	finds := make(Matches)
 	for _, bucket := range buckets {
-		abs, err := Abs(bucket)
+		abs, err := AbsB(bucket)
 		if err != nil {
 			out.ErrCont(err)
 		}

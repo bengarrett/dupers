@@ -248,7 +248,7 @@ func (c *Config) listItems(bucket string) error {
 	if c.Debug {
 		out.Bug("list bucket items: " + bucket)
 	}
-	abs, err := database.Abs(bucket)
+	abs, err := database.AbsB(bucket)
 	if err != nil {
 		out.ErrCont(err)
 	}

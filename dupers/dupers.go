@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/bengarrett/dupers/database"
 	"github.com/bengarrett/dupers/out"
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
@@ -484,7 +485,7 @@ func (c *Config) init() {
 	}
 	// normalise bucket names
 	for i, b := range c.Buckets() {
-		abs, err := filepath.Abs(string(b))
+		abs, err := database.Abs(string(b))
 		if err != nil {
 			out.ErrCont(err)
 			c.Buckets()[i] = ""

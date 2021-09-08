@@ -325,7 +325,7 @@ func searchCmdSummary(total int, term string, exact, filename bool) string {
 // exportBucket saves the bucket to a csv file.
 func exportBucket(quiet bool, args [2]string) {
 	checkBkt(dex, dex, args[1])
-	name, err := filepath.Abs(args[1])
+	name, err := database.Abs(args[1])
 	if err != nil {
 		out.ErrFatal(err)
 	}
@@ -355,7 +355,7 @@ func importBucket(quiet bool, args [2]string) {
 		out.Example(fmt.Sprintf("\ndupers %s <filepath>", dim))
 		out.ErrFatal(nil)
 	}
-	name, err := filepath.Abs(args[1])
+	name, err := database.Abs(args[1])
 	if err != nil {
 		out.ErrFatal(err)
 	}
@@ -371,7 +371,7 @@ func importBucket(quiet bool, args [2]string) {
 // listBucket lists the content of a bucket to the stdout.
 func listBucket(quiet bool, args [2]string) {
 	checkBkt("list", dls, args[1])
-	name, err := filepath.Abs(args[1])
+	name, err := database.Abs(args[1])
 	if err != nil {
 		out.ErrFatal(err)
 	}
@@ -400,7 +400,7 @@ func listBucket(quiet bool, args [2]string) {
 func moveBucket(quiet bool, args [3]string) {
 	b, dir := args[1], args[2]
 	checkBkt("move and rename", dmv, b)
-	name, err := filepath.Abs(b)
+	name, err := database.Abs(b)
 	if err != nil {
 		out.ErrFatal(err)
 	}
@@ -418,7 +418,7 @@ func moveBucket(quiet bool, args [3]string) {
 		out.Example(fmt.Sprintf("\ndupers mv %s <new directory>", b))
 		out.ErrFatal(nil)
 	}
-	newName, err := filepath.Abs(dir)
+	newName, err := database.Abs(dir)
 	if err != nil {
 		out.ErrFatal(err)
 	}
@@ -442,15 +442,25 @@ func moveBucket(quiet bool, args [3]string) {
 // removeBucket removes the bucket from the database.
 func removeBucket(quiet bool, args [2]string) {
 	checkBkt("remove", drm, args[1])
-	name, err := filepath.Abs(args[1])
+	name, err := database.Abs(args[1])
 	if err != nil {
 		out.ErrFatal(err)
 	}
+
 	items, err := database.Count(name, nil)
 	if errors.Is(err, database.ErrBucketNotFound) {
-		bucketNoFound(name, err)
-		return
+		// fallback Abs check
+		name, err = filepath.Abs(args[1])
+		if err != nil {
+			out.ErrFatal(err)
+		}
+		items, err = database.Count(name, nil)
+		if errors.Is(err, database.ErrBucketNotFound) {
+			bucketNoFound(name, err)
+			return
+		}
 	}
+
 	if !quiet {
 		fmt.Printf("%s\t%s\n", color.Secondary.Sprint("Bucket:"), color.Debug.Sprint(name))
 		p := message.NewPrinter(language.English)
@@ -492,7 +502,7 @@ func rescanBucket(c *dupers.Config, plus bool, args [2]string) {
 		cmd = dupp
 	}
 	checkBkt("add or update", cmd, args[1])
-	path, err := filepath.Abs(args[1])
+	path, err := database.Abs(args[1])
 	if err != nil {
 		out.ErrFatal(err)
 	}
