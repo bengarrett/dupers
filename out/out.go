@@ -48,7 +48,7 @@ const (
 
 // Bug prints the string to a newline.
 func Bug(debug string) {
-	fmt.Printf("∙%s\n", debug)
+	fmt.Fprintf(os.Stderr, "∙%s\n", debug)
 }
 
 // EnterKey returns the Enter keyboard code.
@@ -66,7 +66,7 @@ func ErrAppend(err error) {
 		return
 	}
 	s := strings.ToLower(err.Error())
-	color.Warn.Printf("%s.\n", strings.TrimSpace(s))
+	fmt.Fprint(os.Stderr, color.Warn.Sprintf("%s.\n", strings.TrimSpace(s)))
 }
 
 // ErrCont prints the error.
@@ -84,7 +84,7 @@ func ErrCont(err error) {
 	case strings.HasPrefix(s, "bucket not found"):
 		s = "bucket does not exist"
 	}
-	color.Warn.Printf("The %s.\n", s)
+	fmt.Fprintln(os.Stderr, color.Warn.Sprintf("\rThe %s", s))
 }
 
 // ErrFatal prints the error and exits the program.
@@ -123,7 +123,7 @@ func Status(count, total int, m Mode) string {
 	// to significantly improved terminal performance
 	// only update the status every 1000th count
 	const mod = 1000
-	if count > mod && count%mod != 0 {
+	if count != total && count > mod && count%mod != 0 {
 		return ""
 	}
 	const (
