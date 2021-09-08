@@ -55,6 +55,7 @@ const (
 var (
 	ErrBucketNotFound = bolt.ErrBucketNotFound
 	ErrBucketAsFile   = errors.New("bucket points to a file, not a directory")
+	ErrBucketSkip     = errors.New("bucket directory does not exist")
 	ErrDBClean        = errors.New("database has nothing to clean")
 	ErrDBCompact      = errors.New("database compression has not reduced the size")
 	ErrDBEmpty        = errors.New("database is empty and contains no items")
@@ -137,13 +138,17 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 	}
 	defer db.Close()
 	if len(buckets) == 0 {
-		var err error
-		buckets, err = AllBuckets(db)
-		if err != nil {
-			return err
+		var err1 error
+		buckets, err1 = AllBuckets(db)
+		if err1 != nil {
+			return err1
 		}
 	}
 	cnt, errs, finds, total := 0, 0, 0, 0
+	total, err = totals(buckets, db)
+	if err != nil {
+		return err
+	}
 	for _, bucket := range buckets {
 		abs, err := Abs(bucket)
 		if err != nil {
@@ -154,22 +159,28 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 		}
 		// check the bucket directory exists on the file system
 		if i, errS := os.Stat(string(abs)); os.IsNotExist(errS) {
+			out.ErrCont(fmt.Errorf("%w: %s", ErrBucketSkip, string(abs)))
+			errs++
+			if i, errc := Count(bucket, db); errc == nil {
+				cnt += i
+			}
+			continue
+		} else if err != nil {
 			out.ErrCont(err)
 			errs++
 			continue
 		} else if !i.IsDir() {
 			out.ErrCont(fmt.Errorf("%w: %s", ErrBucketAsFile, abs))
 			errs++
+			if i, errc := Count(bucket, db); errc == nil {
+				cnt += i
+			}
 			continue
 		}
 		if err = db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket(abs)
 			if b == nil {
 				return fmt.Errorf("%w: %s", ErrBucketNotFound, abs)
-			}
-			total, err = count(b, db)
-			if err != nil {
-				return err
 			}
 			err = b.ForEach(func(k, v []byte) error {
 				cnt++
@@ -224,6 +235,24 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 		fmt.Printf("\rThe database removed %d stale items\n", finds)
 	}
 	return nil
+}
+
+func totals(buckets []string, db *bolt.DB) (int, error) {
+	count := 0
+	for _, bucket := range buckets {
+		abs, err := Abs(bucket)
+		if err != nil {
+			out.ErrCont(err)
+			continue
+		}
+		name := string(abs)
+		items, err := Count(name, db)
+		if err != nil {
+			return -1, err
+		}
+		count += items
+	}
+	return count, nil
 }
 
 // Compact the database by reclaiming space.
