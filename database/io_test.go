@@ -113,31 +113,6 @@ func TestExportCSV(t *testing.T) {
 	})
 }
 
-func TestImportCSV(t *testing.T) {
-	if err := mock.TestRemove(); err != nil {
-		t.Error(err)
-	}
-	db, err := mock.Open()
-	if err != nil {
-		t.Error(err)
-	}
-	defer db.Close()
-	r, err := ImportCSV("", db)
-	if r != 0 {
-		t.Errorf("ImportCSV(empty) records != 0")
-	}
-	if err == nil {
-		t.Errorf("ImportCSV(empty) expect error, not nil")
-	}
-	r, err = ImportCSV(mock.Export1(), db)
-	if r != 26 {
-		t.Errorf("ImportCSV(export1) expect 26 records to be imported")
-	}
-	if err != nil {
-		t.Errorf("ImportCSV(export1) expect no error, not %v", err)
-	}
-}
-
 func Test_csvChecker(t *testing.T) {
 	openBin, err := os.Open(mock.Item1())
 	if err != nil {
