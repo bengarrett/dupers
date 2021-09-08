@@ -151,6 +151,9 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 		if err1 != nil {
 			return err1
 		}
+		if len(buckets) == 0 {
+			return ErrDBEmpty
+		}
 	}
 	cnt, errs, finds, total := 0, 0, 0, 0
 	total, err = totals(buckets, db)

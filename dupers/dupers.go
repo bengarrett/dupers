@@ -311,10 +311,16 @@ func (c *Config) WalkDirs() {
 	// walk through the directories provided
 	redo := []Bucket{}
 	for _, bucket := range c.Buckets() {
+		s := string(bucket)
 		if c.Debug {
-			out.Bug("walkdir bucket: " + string(bucket))
+			out.Bug("walkdir bucket: " + s)
 		}
 		if err := c.WalkDir(bucket); err != nil {
+			if errors.Is(errors.Unwrap(err), ErrPathNoFound) &&
+				errors.Is(database.Exist(s, c.db), database.ErrBucketNotFound) {
+				out.ErrCont(err)
+				continue
+			}
 			redo = append(redo, bucket)
 			out.ErrCont(err)
 		}

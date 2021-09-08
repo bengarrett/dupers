@@ -486,10 +486,15 @@ func removeBucket(quiet bool, args [2]string) {
 
 func bucketNoFound(name string, err error) {
 	out.ErrCont(err)
+
 	fmt.Printf("Bucket to remove: %s\n", color.Danger.Sprint(name))
 	buckets, err2 := database.AllBuckets(nil)
 	if err2 != nil {
 		out.ErrFatal(err2)
+	}
+	if len(buckets) == 0 {
+		fmt.Println("There are no buckets in the database")
+		out.ErrFatal(nil)
 	}
 	fmt.Printf("Buckets in use:   %s\n", strings.Join(buckets, "\n\t\t  "))
 	out.ErrFatal(nil)
