@@ -123,8 +123,16 @@ func Status(count, total int, m Mode) string {
 	// to significantly improved terminal performance
 	// only update the status every 1000th count
 	const mod = 1000
-	if count != total && count > mod && count%mod != 0 {
-		return ""
+	if count != total && count > mod {
+		if count < mod*2 {
+			// between 1000-2000, update every 100th count
+			if count%(mod/10) != 0 {
+				return ""
+			}
+		} else if count%mod != 0 {
+			// 2000+, update every 1000th count
+			return ""
+		}
 	}
 	const (
 		check = "%sChecking %d of %d items "
