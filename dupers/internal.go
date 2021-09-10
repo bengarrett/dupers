@@ -83,6 +83,11 @@ func (i *internal) SetCompares(name Bucket) {
 	}
 }
 
+// Compares returns the number of items contained in c.compare.
+func (i *internal) Compares() int {
+	return len(i.compare)
+}
+
 // SetTimer starts a process timer.
 func (i *internal) SetTimer() {
 	i.timer = time.Now()

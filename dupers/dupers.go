@@ -191,7 +191,7 @@ func (c *Config) Clean() string {
 func (c *Config) Print() string {
 	if c.Debug {
 		out.Bug("print duplicate results")
-		s := fmt.Sprintf("comparing %d sources against %d unquie items to compare",
+		s := fmt.Sprintf("comparing %d sources against %d unique items to compare",
 			len(c.sources), len(c.compare))
 		out.Bug(s)
 	}

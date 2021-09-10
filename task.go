@@ -218,6 +218,16 @@ func dupeLookup(c *dupers.Config, f *cmdFlags) {
 	if c.Debug {
 		out.Bug("dupe lookup.")
 	}
+	// normalise bucket names
+	for i, b := range c.Buckets() {
+		abs, err := database.Abs(string(b))
+		if err != nil {
+			out.ErrCont(err)
+			c.Buckets()[i] = ""
+			continue
+		}
+		c.Buckets()[i] = dupers.Bucket(abs)
+	}
 	var bkts []string
 	for _, b := range c.Buckets() {
 		bkts = append(bkts, string(b))
@@ -237,7 +247,10 @@ func dupeLookup(c *dupers.Config, f *cmdFlags) {
 		for _, b := range c.Buckets() {
 			c.SetCompares(b)
 		}
-		return
+		if c.Compares() > 0 {
+			return
+		}
+		fmt.Println("The -fast flag cannot be used for this dupe query")
 	}
 	if c.Debug {
 		out.Bug("walk the buckets.")
