@@ -244,13 +244,17 @@ func dupeLookup(c *dupers.Config, f *cmdFlags) {
 		if c.Debug {
 			out.Bug("read the hash values in the buckets.")
 		}
+		fastErr := false
 		for _, b := range c.Buckets() {
-			c.SetCompares(b)
+			if i := c.SetCompares(b); i > 0 {
+				continue
+			}
+			fastErr = true
+			fmt.Println("The -fast flag cannot be used for this dupe query")
 		}
-		if c.Compares() > 0 {
+		if !fastErr {
 			return
 		}
-		fmt.Println("The -fast flag cannot be used for this dupe query")
 	}
 	if c.Debug {
 		out.Bug("walk the buckets.")

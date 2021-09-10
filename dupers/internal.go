@@ -70,7 +70,7 @@ func (i *internal) SetBuckets(names ...string) {
 }
 
 // SetCompares fetches items from the named bucket and sets them to c.compare.
-func (i *internal) SetCompares(name Bucket) {
+func (i *internal) SetCompares(name Bucket) int {
 	ls, err := database.List(string(name), i.db)
 	if err != nil {
 		out.ErrCont(err)
@@ -81,6 +81,7 @@ func (i *internal) SetCompares(name Bucket) {
 	for fp, sum := range ls {
 		i.compare[sum] = string(fp)
 	}
+	return len(ls)
 }
 
 // Compares returns the number of items contained in c.compare.
