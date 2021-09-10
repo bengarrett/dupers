@@ -15,6 +15,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/bengarrett/dupers/database"
 	"github.com/bengarrett/dupers/out"
@@ -292,8 +293,9 @@ func (c *Config) Status() string {
 			color.Primary.Sprintf("%s files", p.Sprint(number.Decimal(c.files)))
 	}
 	if !c.Test {
+		t := c.Timer().Truncate(time.Millisecond)
 		s += color.Secondary.Sprint(", taking ") +
-			color.Primary.Sprintf("%s", c.Timer())
+			color.Primary.Sprintf("%v", t)
 	}
 	if runtime.GOOS != winOS {
 		s += "\n"
