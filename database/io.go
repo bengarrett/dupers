@@ -529,21 +529,21 @@ func Import(name Bucket, ls *Lists, db *bolt.DB) (imported int, err error) {
 		}
 	}
 	if len(batch) > 0 {
-		if err := db.Update(func(tx *bolt.Tx) error {
-			b, err := tx.CreateBucketIfNotExists([]byte(name))
-			if err != nil {
-				return err
-			}
-			for p, s := range batch {
+		for path, sum := range batch {
+			if err := db.Update(func(tx *bolt.Tx) error {
+				b, err := tx.CreateBucketIfNotExists([]byte(name))
+				if err != nil {
+					return err
+				}
 				fmt.Print(out.Status(imported, total, out.Read))
-				if err := b.Put([]byte(string(p)), s[:]); err != nil {
+				if err := b.Put([]byte(string(path)), sum[:]); err != nil {
 					return err
 				}
 				imported++
+				return nil
+			}); err != nil {
+				return 0, err
 			}
-			return nil
-		}); err != nil {
-			return 0, err
 		}
 	}
 	return imported, nil
