@@ -50,7 +50,7 @@ scoop install dupers
 
 ## Usage
 
-TODO screenshots.
+https://user-images.githubusercontent.com/513842/132966227-cf3257e6-e004-4d58-a5b8-1b05f0ec89f3.mp4
 
 ## Example usage
 #### Dupe check
