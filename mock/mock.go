@@ -9,6 +9,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 
 	bolt "go.etcd.io/bbolt"
 )
@@ -24,6 +26,7 @@ const (
 	Source1  = Test1 + "/0vlLaUEvzAWP"
 	dbName   = "dupers.db"
 	dbPath   = "dupers"
+	win      = "windows"
 	oneKb    = 1024
 	oneMb    = oneKb * oneKb
 )
@@ -39,6 +42,9 @@ func Bucket1() string {
 	if err != nil {
 		log.Fatal(err)
 	}
+	if runtime.GOOS == win {
+		b = strings.ToLower(b)
+	}
 	return b
 }
 
@@ -47,6 +53,9 @@ func Bucket2() string {
 	b, err := filepath.Abs(Test2)
 	if err != nil {
 		log.Fatal(err)
+	}
+	if runtime.GOOS == win {
+		b = strings.ToLower(b)
 	}
 	return b
 }
@@ -150,7 +159,7 @@ func TestOpen() error {
 	}
 	defer db.Close()
 	return db.Update(func(tx *bolt.Tx) error {
-		fmt.Println(db.Path())
+		fmt.Println("db path:", db.Path(), "bucket:", Bucket1())
 		b, err := tx.CreateBucketIfNotExists([]byte(Bucket1()))
 		if err != nil {
 			return err
