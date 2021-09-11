@@ -1,6 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
 
-package dupers
+package dupe
 
 import (
 	"fmt"

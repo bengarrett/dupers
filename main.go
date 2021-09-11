@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/bengarrett/dupers/dupers"
+	"github.com/bengarrett/dupers/dupe"
 	"github.com/bengarrett/dupers/out"
 	"github.com/gookit/color"
 )
@@ -102,7 +102,7 @@ func shortFlags(a *aliases) {
 }
 
 // parse the command aliases and flags and returns true if the program should exit.
-func parse(a *aliases, c *dupers.Config, f *cmdFlags) (exit bool) {
+func parse(a *aliases, c *dupe.Config, f *cmdFlags) (exit bool) {
 	if *a.mono || *f.mono {
 		color.Enable = false
 	}
@@ -130,7 +130,7 @@ func parse(a *aliases, c *dupers.Config, f *cmdFlags) (exit bool) {
 }
 
 func main() {
-	a, c, f := aliases{}, dupers.Config{}, cmdFlags{}
+	a, c, f := aliases{}, dupe.Config{}, cmdFlags{}
 	c.SetTimer()
 	flags(&f)
 	shortFlags(&a)

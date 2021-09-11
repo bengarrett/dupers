@@ -15,7 +15,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/bengarrett/dupers/database"
-	"github.com/bengarrett/dupers/dupers"
+	"github.com/bengarrett/dupers/dupe"
 	"github.com/bengarrett/dupers/out"
 	"github.com/gookit/color"
 	"golang.org/x/text/language"
@@ -155,7 +155,7 @@ func exampleSearch(w *tabwriter.Writer) *tabwriter.Writer {
 }
 
 // checkDupePaths checks the path arguments supplied to the dupe command.
-func checkDupePaths(c *dupers.Config) {
+func checkDupePaths(c *dupe.Config) {
 	if ok, cc, bc := c.CheckPaths(); !ok {
 		p := message.NewPrinter(language.English)
 		verb := "Buckets"

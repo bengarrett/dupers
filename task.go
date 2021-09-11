@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	"github.com/bengarrett/dupers/database"
-	"github.com/bengarrett/dupers/dupers"
+	"github.com/bengarrett/dupers/dupe"
 	"github.com/bengarrett/dupers/out"
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
@@ -100,7 +100,7 @@ func chkWinDir(s string) error {
 }
 
 // databaseCmd parses the database commands.
-func databaseCmd(c *dupers.Config, quiet bool, args ...string) {
+func databaseCmd(c *dupe.Config, quiet bool, args ...string) {
 	checkDB()
 	arr := [2]string{}
 	copy(arr[:], args)
@@ -137,7 +137,7 @@ func databaseCmd(c *dupers.Config, quiet bool, args ...string) {
 }
 
 // dupeCmd parses the dupe command.
-func dupeCmd(c *dupers.Config, f *cmdFlags, args ...string) {
+func dupeCmd(c *dupe.Config, f *cmdFlags, args ...string) {
 	if c.Debug {
 		s := fmt.Sprintf("dupeCmd: %s", strings.Join(args, " "))
 		out.Bug(s)
@@ -189,7 +189,7 @@ func dupeCmd(c *dupers.Config, f *cmdFlags, args ...string) {
 }
 
 // dupeCleanup runs the cleanup commands when the appropriate flags are set.
-func dupeCleanup(c *dupers.Config, f *cmdFlags) {
+func dupeCleanup(c *dupe.Config, f *cmdFlags) {
 	if *f.sensen {
 		if c.Debug {
 			out.Bug("remove all non unique Windows and MS-DOS files.")
@@ -214,7 +214,7 @@ func dupeCleanup(c *dupers.Config, f *cmdFlags) {
 }
 
 // dupeLookup cleans and updates buckets for changes on the file system.
-func dupeLookup(c *dupers.Config, f *cmdFlags) {
+func dupeLookup(c *dupe.Config, f *cmdFlags) {
 	if c.Debug {
 		out.Bug("dupe lookup.")
 	}
@@ -226,7 +226,7 @@ func dupeLookup(c *dupers.Config, f *cmdFlags) {
 			c.Buckets()[i] = ""
 			continue
 		}
-		c.Buckets()[i] = dupers.Bucket(abs)
+		c.Buckets()[i] = dupe.Bucket(abs)
 	}
 	var bkts []string
 	for _, b := range c.Buckets() {
@@ -300,7 +300,7 @@ func searchCmd(f *cmdFlags, args ...string) {
 			}
 		}
 	}
-	fmt.Print(dupers.Print(*f.quiet, m))
+	fmt.Print(dupe.Print(*f.quiet, m))
 	if !*f.quiet {
 		l := 0
 		if m != nil {
@@ -518,7 +518,7 @@ func bucketNoFound(name string, err error) {
 }
 
 // rescanBucket rescans the bucket for any changes on the file system.
-func rescanBucket(c *dupers.Config, plus bool, args [2]string) {
+func rescanBucket(c *dupe.Config, plus bool, args [2]string) {
 	cmd := dup
 	if plus {
 		cmd = dupp
@@ -528,7 +528,7 @@ func rescanBucket(c *dupers.Config, plus bool, args [2]string) {
 	if err != nil {
 		out.ErrFatal(err)
 	}
-	name := dupers.Bucket(path)
+	name := dupe.Bucket(path)
 	if plus {
 		if err := c.WalkArchiver(name); err != nil {
 			out.ErrFatal(err)
