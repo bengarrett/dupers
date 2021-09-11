@@ -147,19 +147,19 @@ func Read(name string) (sum [32]byte, err error) {
 
 // TestOpen creates and opens the mock database, the test 1 bucket and adds the source 1 file.
 // The mock database is closed after the update.
+// Note: If this test fails under Windows, try running `go test ./...` after closing VS Code.
+// https://github.com/electron-userland/electron-builder/issues/3666
 func TestOpen() error {
 	path, err := Name()
 	if err != nil {
 		return err
 	}
-	fmt.Println(path)
 	db, err := bolt.Open(path, PrivateFile, nil)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 	return db.Update(func(tx *bolt.Tx) error {
-		fmt.Println("db path:", db.Path(), "bucket:", Bucket1())
 		b, err := tx.CreateBucketIfNotExists([]byte(Bucket1()))
 		if err != nil {
 			return err
