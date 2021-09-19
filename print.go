@@ -26,7 +26,7 @@ import (
 
 const (
 	tabPadding  = 4
-	description = "Dupers is the blazing-fast file duplicate checker and filename search."
+	description = "Dupers is the blazing-fast file duplicate checker and filename search tool."
 )
 
 var (
@@ -121,7 +121,7 @@ func exampleDupe(w *tabwriter.Writer) *tabwriter.Writer {
 	if runtime.GOOS == winOS {
 		fmt.Fprint(w, color.Info.Sprintf("    dupers dupe \"%s\" \"%s\"",
 			filepath.Join(home(), "file.txt"), filepath.Join(home(), "Downloads")))
-		fmt.Fprint(w, color.Secondary.Sprint("\n    # search for files in Documents that also exist on drives D: and E:\n"))
+		fmt.Fprint(w, color.Secondary.Sprint("\n    # search the database for files in Documents that also exist on drives D: and E:\n"))
 		fmt.Fprint(w, color.Info.Sprintf("    dupers dupe \"%s\" %s %s",
 			filepath.Join(home(), "Documents"), "D:", "E:"))
 		fmt.Fprintln(w)

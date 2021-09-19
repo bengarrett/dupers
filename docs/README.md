@@ -1,6 +1,6 @@
 # dupers
 
-Dupers is the blazing-fast file duplicate checker and filename search.
+Dupers is the blazing-fast file duplicate checker and filename search tool.
 
 - Dupers uses SHA-256 checksums in the fast and straightforward key/value database store.
 - Automate the deletion of duplicates.
