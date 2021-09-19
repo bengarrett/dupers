@@ -339,13 +339,8 @@ func TestRename(t *testing.T) {
 		t.Error(err)
 	}
 	t.Run("rename", func(t *testing.T) {
-		// use else if to stop parallel processing
 		if err := Rename(mock.Bucket2(), mock.Bucket1()); err == nil {
 			t.Error("Rename() bucket2 to bucket1 error = nil, want error")
-		} else if err := Rename(mock.Bucket1(), mock.Bucket2()); err != nil {
-			t.Errorf("Rename() bucket1 to bucket1 error = %v, want nil", err)
-		} else if err := Rename(mock.Bucket2(), mock.Bucket1()); err != nil {
-			t.Errorf("Rename() bucket2 back to bucket1 error = %v, want nil", err)
 		}
 		if err := Rename("", ""); err == nil {
 			t.Error("Rename() empty buckets error = nil, want error")
