@@ -159,8 +159,15 @@ func TestOpen() error {
 		return err
 	}
 	defer db.Close()
-	return db.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists([]byte(Bucket1()))
+	if err := db.Update(func(tx *bolt.Tx) error {
+		// delete any existing buckets from the mock database
+		if err := tx.ForEach(func(name []byte, b *bolt.Bucket) error {
+			return tx.DeleteBucket(name)
+		}); err != nil {
+			return err
+		}
+		// create the new mock bucket
+		b, err := tx.CreateBucket([]byte(Bucket1()))
 		if err != nil {
 			return err
 		}
@@ -169,7 +176,10 @@ func TestOpen() error {
 			return err
 		}
 		return b.Put([]byte(Item1()), sum256[:])
-	})
+	}); err != nil {
+		return err
+	}
+	return db.Close()
 }
 
 // TestRemove deletes the mock database.
@@ -181,6 +191,13 @@ func TestRemove() error {
 	err = os.Remove(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
+	}
+	if runtime.GOOS == "windows" {
+		var e *os.PathError
+		if errors.As(err, &e) {
+			log.Printf("could not remove the mock database as the Windows filesystem has locked it: %s\n", path)
+			return nil
+		}
 	}
 	if err != nil {
 		return err

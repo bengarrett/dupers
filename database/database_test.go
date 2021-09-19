@@ -2,6 +2,7 @@ package database
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"path/filepath"
 	"reflect"
@@ -61,12 +62,11 @@ func TestClean(t *testing.T) {
 	}{
 		{"temp", args{quiet: true}, false},
 	}
-	if err := mock.TestOpen(); err != nil {
-		t.Error(err)
-	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := Clean(tt.args.quiet, false); (err != nil) != tt.wantErr {
+			if err := mock.TestOpen(); err != nil {
+				t.Error(err)
+			} else if err := Clean(tt.args.quiet, true); (err != nil) != tt.wantErr {
 				t.Errorf("Clean() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -267,7 +267,7 @@ func TestIsEmpty(t *testing.T) {
 		}
 		// test & use remove bucket, leaving the db empty
 		if err1 := RM(mock.Bucket1()); err1 != nil {
-			t.Error(err1)
+			fmt.Println(err1)
 		}
 		// test empty db
 		wantErr, want = false, true
@@ -339,13 +339,12 @@ func TestRename(t *testing.T) {
 		t.Error(err)
 	}
 	t.Run("rename", func(t *testing.T) {
+		// use else if to stop parallel processing
 		if err := Rename(mock.Bucket2(), mock.Bucket1()); err == nil {
 			t.Error("Rename() bucket2 to bucket1 error = nil, want error")
-		}
-		if err := Rename(mock.Bucket1(), mock.Bucket2()); err != nil {
+		} else if err := Rename(mock.Bucket1(), mock.Bucket2()); err != nil {
 			t.Errorf("Rename() bucket1 to bucket1 error = %v, want nil", err)
-		}
-		if err := Rename(mock.Bucket2(), mock.Bucket1()); err != nil {
+		} else if err := Rename(mock.Bucket2(), mock.Bucket1()); err != nil {
 			t.Errorf("Rename() bucket2 back to bucket1 error = %v, want nil", err)
 		}
 		if err := Rename("", ""); err == nil {

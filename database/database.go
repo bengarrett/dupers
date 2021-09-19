@@ -145,15 +145,9 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 		return err
 	}
 	defer db.Close()
-	if len(buckets) == 0 {
-		var err1 error
-		buckets, err1 = AllBuckets(db)
-		if err1 != nil {
-			return err1
-		}
-		if len(buckets) == 0 {
-			return ErrDBEmpty
-		}
+	buckets, err = cleanAll(buckets, debug, db)
+	if err != nil {
+		return err
 	}
 	cnt, errs, finds, total := 0, 0, 0, 0
 	total, err = totals(buckets, db)
@@ -169,7 +163,7 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 			out.Bug("bucket: " + abs)
 		}
 		// check the bucket directory exists on the file system
-		if i, errS := os.Stat(abs); os.IsNotExist(errS) {
+		if fi, errS := os.Stat(abs); os.IsNotExist(errS) {
 			out.ErrCont(fmt.Errorf("%w: %s", ErrBucketSkip, abs))
 			errs++
 			if i, errc := Count(bucket, db); errc == nil {
@@ -180,7 +174,7 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 			out.ErrCont(err)
 			errs++
 			continue
-		} else if !i.IsDir() {
+		} else if !fi.IsDir() {
 			out.ErrCont(fmt.Errorf("%w: %s", ErrBucketAsFile, abs))
 			errs++
 			if i, errc := Count(bucket, db); errc == nil {
@@ -209,8 +203,7 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 						}
 					}
 					if debug {
-						s := fmt.Sprintf("%s: %s", k, errS)
-						out.Bug(s)
+						out.Bug(fmt.Sprintf("%s: %s", k, errS))
 					}
 					if errUp := db.Update(func(tx *bolt.Tx) error {
 						return tx.Bucket([]byte(abs)).Delete(k)
@@ -246,6 +239,24 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 		fmt.Printf("\rThe database removed %d stale items\n", finds)
 	}
 	return nil
+}
+
+func cleanAll(buckets []string, debug bool, db *bolt.DB) ([]string, error) {
+	if len(buckets) > 0 {
+		return buckets, nil
+	}
+	if debug {
+		out.Bug("fetching all buckets")
+	}
+	var err1 error
+	buckets, err1 = AllBuckets(db)
+	if err1 != nil {
+		return nil, err1
+	}
+	if len(buckets) == 0 {
+		return nil, ErrDBEmpty
+	}
+	return buckets, nil
 }
 
 func totals(buckets []string, db *bolt.DB) (int, error) {
