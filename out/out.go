@@ -162,7 +162,7 @@ func Status(count, total int, m Mode) string {
 // YN prints the question to stdout and prompts for a yes or no reply.
 // The prompt will loop unless a y or n value is given or Ctrl-C is pressed.
 func YN(question string, recommend YND) bool {
-	const no, yes = "n", "y"
+	const no, yes, cursorUp = "n", "y", "\x1b[1A"
 	p, def := "", " "
 	switch recommend {
 	case Nil:
@@ -174,7 +174,8 @@ func YN(question string, recommend YND) bool {
 		p = "N/y"
 		def = " (default: no) "
 	}
-	fmt.Printf("\r%s?%s[%s]: ", question, def, p)
+	prompt := fmt.Sprintf("\r%s?%s[%s]: ", question, def, p)
+	fmt.Print(prompt)
 	for {
 		r := bufio.NewReader(os.Stdin)
 		b, err := r.ReadByte()
@@ -190,8 +191,10 @@ func YN(question string, recommend YND) bool {
 		if b == EnterKey() {
 			switch recommend {
 			case Yes:
+				fmt.Printf("%s%s%s\n", cursorUp, prompt, "y")
 				return true
 			case No:
+				fmt.Printf("%s%s%s\n", cursorUp, prompt, "n")
 				return false
 			case Nil:
 				continue
