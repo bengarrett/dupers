@@ -450,7 +450,7 @@ func moveBucket(quiet bool, args [3]string) {
 		fmt.Printf("%s\t%s\n%s\t%s\n",
 			color.Secondary.Sprint("Bucket name:"), color.Debug.Sprint(name),
 			"New name:", color.Debug.Sprint(newName))
-		fmt.Println("This renames the database bucket but it does not edit your file system.")
+		fmt.Println("Renames the database bucket, but this does not make changes to the file system.")
 		if !out.YN("Rename bucket", out.No) {
 			return
 		}
