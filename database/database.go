@@ -61,7 +61,7 @@ var (
 	ErrDBEmpty        = errors.New("database is empty and contains no items")
 	ErrDBNotFound     = errors.New("database file does not exist")
 	ErrDBZeroByte     = errors.New("database is a zero byte file")
-	ErrImportFile     = errors.New("not a valid duper export file")
+	ErrImportFile     = errors.New("not a valid dupers export file")
 
 	testMode = false // nolint: gochecknoglobals
 )
@@ -542,7 +542,7 @@ func Info() (string, error) {
 	tooBig := int64(float64(bucketsB) * oneAndAHalf)
 	if s.Size() > oneMB && s.Size() > tooBig {
 		fmt.Fprintln(w, color.Notice.Sprint("\nTo reduce the size of the database:"))
-		fmt.Fprintln(w, color.Debug.Sprint("duper backup && duper clean"))
+		fmt.Fprintln(w, color.Debug.Sprint("dupers backup && dupers clean"))
 	}
 	w.Flush()
 	return b.String(), nil

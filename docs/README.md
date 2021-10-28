@@ -57,10 +57,10 @@ Run a check of the files in Downloads on the collection of text files.
 
 ```sh
 # Windows
-duper dupe C:\Users\Me\Downloads D:\textfiles
+dupers dupe C:\Users\Me\Downloads D:\textfiles
 
 # Linux, macOS
-duper dupe ~/Downloads ~/textfiles
+dupers dupe ~/Downloads ~/textfiles
 ```
 
 #### Dupe check multiple locations
@@ -69,19 +69,19 @@ Run a check of the files in Downloads on collections of text files and images.
 
 ```sh
 # Windows
-duper dupe C:\Users\Me\Downloads D:\textfiles D:\photos
+dupers dupe C:\Users\Me\Downloads D:\textfiles D:\photos
 
 # Linux, macOS
-duper dupe ~/Downloads ~/Textfiles ~/Pictures
+dupers dupe ~/Downloads ~/Textfiles ~/Pictures
 ```
 
 #### Search for a filename
 ```sh
 # Search the database for ZIP files
-duper -name search .zip
+dupers -name search .zip
 
 # Search the database for photos containing 2010 in their file or directory names
-duper search "2010" D:\photos
+dupers search "2010" D:\photos
 ```
 
 ## Performance
@@ -101,13 +101,13 @@ When running dupe checking, a `-fast` flag can significantly improve performance
 
 ###### Dupe command on a large collection using fast mode takes less than a second 😃
 ```ps
-duper -fast dupe C:\Users\Me\Downloads D:\textfiles
+dupers -fast dupe C:\Users\Me\Downloads D:\textfiles
 # Scanned 191842 files, taking 901ms
 ```
 
 ###### Dupe command on a large collection normally taking 46 seconds ☹️
 ```ps
-duper dupe C:\Users\Me\Downloads D:\textfiles
+dupers dupe C:\Users\Me\Downloads D:\textfiles
 # Checking 51179 of 387859 items...
 # Scanned 191842 files, taking 46.3s
 ```
