@@ -13,9 +13,8 @@ Dupers is the blazing-fast file duplicate checker and filename search tool.
 
 <small>Dupers is a standalone (portable) terminal program and doesn't require installation.</small>
 
-- [Windows](https://github.com/bengarrett/dupers/releases/latest/download/dupers_Windows_Intel.zip) or [legacy XP 32-bit](https://github.com/bengarrett/dupers/releases/latest/download/dupers_Windows_32bit.zip)
-- [macOS Intel](https://github.com/bengarrett/dupers/releases/latest/download/dupers_macOS_Intel.tar.gz
-) or [Apple M chip](https://github.com/bengarrett/dupers/releases/latest/download/dupers_macOS_M-series.tar.gz
+- [Windows](https://github.com/bengarrett/dupers/releases/latest/download/dupers_Windows_Intel.zip) or [XP compatible 32-bit](https://github.com/bengarrett/dupers/releases/latest/download/dupers_Windows_32bit.zip)
+- [macOS](https://github.com/bengarrett/dupers/releases/latest/download/dupers_macOS_all.tar.gz
 )
 - [Linux](https://github.com/bengarrett/dupers/releases/latest/download/dupers_Linux_Intel.tar.gz
 ) and [FreeBSD](https://github.com/bengarrett/dupers/releases/latest/download/dupers_FreeBSD_Intel.tar.gz

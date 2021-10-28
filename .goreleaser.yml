@@ -20,6 +20,10 @@ builds:
   - id: Windows
     goos: ['windows']
     goarch: ['386', 'amd64']
+universal_binaries:
+  - id: macOS
+    name_template: "{{ .ProjectName }}"
+    replace: true
 
 archives:
   - id: FreeBSD
@@ -101,3 +105,7 @@ scoop:
   # in case there is an indicator for prerelease in the tag e.g. v1.0.0-rc1
   # Default is false.
   skip_upload: auto
+
+changelog:
+  skip: false
+  use: git
