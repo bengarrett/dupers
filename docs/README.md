@@ -57,10 +57,15 @@ Run a check of the files in Downloads on the collection of text files.
 
 ```sh
 # Windows
-dupers dupe C:\Users\Me\Downloads D:\textfiles
+dupers dupe C:\Downloads D:\textfiles
 
 # Linux, macOS
 dupers dupe ~/Downloads ~/textfiles
+
+# dupers        the program name
+# dupe          the command to run
+# C:\Downloads  the path containing new files to check
+# D:\textfiles  the path containing a collection of files (a bucket)
 ```
 
 #### Dupe check multiple locations
@@ -69,19 +74,38 @@ Run a check of the files in Downloads on collections of text files and images.
 
 ```sh
 # Windows
-dupers dupe C:\Users\Me\Downloads D:\textfiles D:\photos
+dupers dupe C:\Downloads D:\textfiles D:\photos
 
 # Linux, macOS
 dupers dupe ~/Downloads ~/Textfiles ~/Pictures
+
+# dupers        the program name
+# dupe          the command to run
+# C:\Downloads  the path containing new files to check
+# D:\textfiles  a path containing a collection of files (a bucket)
+# D:\photos     another path containing a collection of files (a bucket)
 ```
 
 #### Search for a filename
 ```sh
 # Search the database for ZIP files
+# Note: options such as -name always go before the command
 dupers -name search .zip
 
+# dupers     the program name
+# -name      an option, to search only for filenames
+# search     the command to run
+# .zip       the search expression
+```
+
+```sh
 # Search the database for photos containing 2010 in their file or directory names
 dupers search "2010" D:\photos
+
+# dupers     the program name
+# search     the command to run
+# "2010"     the search expression
+# D:\photos  the path containing a collection of files (a bucket)
 ```
 
 ## Performance
