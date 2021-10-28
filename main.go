@@ -83,7 +83,7 @@ func flags(f *cmdFlags) {
 		"\n\t\tthe results maybe stale as it does not look for any file changes on your system")
 	f.mono = flag.Bool("mono", false, "monochrome mode to remove all color output")
 	f.quiet = flag.Bool("quiet", false, "quiet mode hides all but essential feedback")
-	f.sensen = flag.Bool("sensen", false, "delete everything in the <directory to check>;"+
+	f.sensen = flag.Bool("sensen", false, "delete everything in the <directory to check>"+
 		"\n\t\texcept for directories containing unique Windows programs and assets")
 	f.rm = flag.Bool("delete", false, "delete the duplicate files found in the <directory to check>")
 	f.rmPlus = flag.Bool("delete+", false, "delete the duplicate files and remove empty directories from the <directory to check>")

@@ -237,6 +237,8 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 	}
 	if finds > 0 {
 		fmt.Printf("\rThe database removed %d stale items\n", finds)
+	} else {
+		fmt.Println()
 	}
 	return nil
 }
