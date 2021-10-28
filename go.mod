@@ -6,9 +6,9 @@ require (
 	github.com/bodgit/sevenzip v1.1.0
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/dustin/go-humanize v1.0.0
-	github.com/frankban/quicktest v1.13.1 // indirect
+	github.com/frankban/quicktest v1.14.0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/gookit/color v1.4.2
+	github.com/gookit/color v1.5.0
 	github.com/h2non/filetype v1.1.1
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -20,7 +20,7 @@ require (
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	go.etcd.io/bbolt v1.3.6
 	go4.org v0.0.0-20201209231011-d4a079459e60 // indirect
-	golang.org/x/sys v0.0.0-20210906170528-6f6e22806c34 // indirect
+	golang.org/x/sys v0.0.0-20211025201205-69cdffdb9359 // indirect
 	golang.org/x/text v0.3.7
 )
 
