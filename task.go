@@ -31,6 +31,10 @@ func checkBkt(term, cmd, name string) {
 	}
 	out.ErrCont(ErrDatabaseName)
 	fmt.Printf("Cannot %s the bucket as no bucket name was provided.\n", term)
+	if cmd == dmv {
+		out.Example(fmt.Sprintf("\ndupers %s <bucket name> <new directory>", cmd))
+		out.ErrFatal(nil)
+	}
 	out.Example(fmt.Sprintf("\ndupers %s <bucket name>", cmd))
 	out.ErrFatal(nil)
 }
