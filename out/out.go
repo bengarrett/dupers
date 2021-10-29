@@ -134,12 +134,19 @@ func Status(count, total int, m Mode) string {
 			return ""
 		}
 	}
-	const (
-		check = "%sChecking %d+ of %d items "
-		look  = "%sLooking up %d+ items     "
-		scan  = "%sScanning %d+ files       "
-		read  = "%sReading %d+ of %d items  "
+	var (
+		check = "%sChecking %d of %d items "
+		look  = "%sLooking up %d items     "
+		scan  = "%sScanning %d files       "
+		read  = "%sReading %d of %d items  "
 	)
+	skipping, updating := (count >= mod), (count != total)
+	if skipping && updating {
+		check = "%sChecking %d+ of %d items "
+		look = "%sLooking up %d+ items     "
+		scan = "%sScanning %d+ files       "
+		read = "%sReading %d+ of %d items  "
+	}
 	pre, p := cr, message.NewPrinter(language.English)
 	if runtime.GOOS != winOS {
 		// erasing the line makes for a less flickering counter.
