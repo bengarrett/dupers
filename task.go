@@ -154,22 +154,21 @@ func dupeCmd(c *dupe.Config, f *cmdFlags, args ...string) {
 	}
 	const minArgs = 3
 	if l < minArgs && len(b) == 0 {
-		dupeCmdErr(l, len(b))
+		dupeCmdErr(l, len(b), minArgs)
 	}
 	// directory or a file to match
 	c.SetToCheck(args[1])
 	// directories and files to scan, a bucket is the name given to database tables
-	arr := args[2:]
-	c.SetBuckets(arr...)
-	if arr == nil {
+	if buckets := args[2:]; len(buckets) == 0 {
 		c.SetAllBuckets()
+	} else {
+		c.SetBuckets(buckets...)
+		checkDupePaths(c)
 	}
 	if c.Debug {
 		s := fmt.Sprintf("buckets: %s", c.PrintBuckets())
 		out.Bug(s)
 	}
-	// check the user supplied directories
-	checkDupePaths(c)
 	// files or directories to compare (these are not saved to database)
 	if err := c.WalkSource(); err != nil {
 		out.ErrFatal(err)
