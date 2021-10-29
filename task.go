@@ -148,7 +148,9 @@ func dupeCmd(c *dupe.Config, f *cmdFlags, args ...string) {
 	}
 	l := len(args)
 	if l == 1 {
-		dupeCmdErr(l, 0, 2)
+		const minArgs = 2
+
+		dupeCmdErr(l, 0, minArgs)
 	}
 	// fetch bucket info
 	b, err := database.AllBuckets(nil)
@@ -234,7 +236,7 @@ func dupeLookup(c *dupe.Config, f *cmdFlags) {
 		}
 		c.Buckets()[i] = dupe.Bucket(abs)
 	}
-	var buckets []string
+	var buckets = make([]string, len(c.Buckets()))
 	for _, b := range c.Buckets() {
 		buckets = append(buckets, string(b))
 	}
@@ -272,40 +274,12 @@ func dupeLookup(c *dupe.Config, f *cmdFlags) {
 func searchCmd(f *cmdFlags, args ...string) {
 	l := len(args)
 	searchCmdErr(l)
-	term := args[1]
-	var (
-		buckets = []string{}
-		m       *database.Matches
-		err     error
-	)
+	term, buckets := args[1], []string{}
 	const minArgs = 2
 	if l > minArgs {
 		buckets = args[minArgs:]
 	}
-	if *f.filename {
-		if !*f.exact {
-			if m, err = database.CompareBaseNoCase(term, buckets...); err != nil {
-				searchErr(err)
-			}
-		}
-		if *f.exact {
-			if m, err = database.CompareBase(term, buckets...); err != nil {
-				searchErr(err)
-			}
-		}
-	}
-	if !*f.filename {
-		if !*f.exact {
-			if m, err = database.CompareNoCase(term, buckets...); err != nil {
-				searchErr(err)
-			}
-		}
-		if *f.exact {
-			if m, err = database.Compare(term, buckets...); err != nil {
-				searchErr(err)
-			}
-		}
-	}
+	m := searchCompare(f, term, buckets)
 	fmt.Print(dupe.Print(*f.quiet, m))
 	if !*f.quiet {
 		l := 0
@@ -314,6 +288,30 @@ func searchCmd(f *cmdFlags, args ...string) {
 		}
 		fmt.Println(searchCmdSummary(l, term, *f.exact, *f.filename))
 	}
+}
+
+func searchCompare(f *cmdFlags, term string, buckets []string) *database.Matches {
+	var err error
+	var m *database.Matches
+	switch {
+	case *f.filename && !*f.exact:
+		if m, err = database.CompareBaseNoCase(term, buckets...); err != nil {
+			searchErr(err)
+		}
+	case *f.filename && *f.exact:
+		if m, err = database.CompareBase(term, buckets...); err != nil {
+			searchErr(err)
+		}
+	case !*f.filename && !*f.exact:
+		if m, err = database.CompareNoCase(term, buckets...); err != nil {
+			searchErr(err)
+		}
+	case !*f.filename && *f.exact:
+		if m, err = database.Compare(term, buckets...); err != nil {
+			searchErr(err)
+		}
+	}
+	return m
 }
 
 // searchCmdSummary formats the results of the search command.
@@ -371,8 +369,7 @@ func exportBucket(quiet bool, args [2]string) {
 
 // importBucket saves a csv file to the database.
 func importBucket(quiet bool, args [2]string) {
-	f := args[1]
-	if f == "" {
+	if args[1] == "" {
 		out.ErrCont(ErrImport)
 		fmt.Println("Cannot import file as no filepath was provided.")
 		out.Example(fmt.Sprintf("\ndupers %s <filepath>", dim))
@@ -403,7 +400,7 @@ func listBucket(quiet bool, args [2]string) {
 		out.ErrCont(err)
 	}
 	// sort the filenames
-	var names []string
+	var names = make([]string, len(ls))
 	for name := range ls {
 		names = append(names, string(name))
 	}
@@ -491,19 +488,25 @@ func removeBucket(quiet bool, args [2]string) {
 			return
 		}
 	}
-	if err := database.RM(name); err != nil {
-		if errors.Is(err, database.ErrBucketNotFound) {
-			// retry with the original argument
-			if err1 := database.RM(args[1]); err1 != nil {
-				if errors.Is(err1, database.ErrBucketNotFound) {
-					bucketNoFound(name, err1)
-				}
-				out.ErrFatal(err1)
-			}
-		}
-	}
+	rmBucket(name, args[1])
 	s := fmt.Sprintf("Removed bucket from the database: '%s'\n", name)
 	out.Response(s, quiet)
+}
+
+func rmBucket(name, retry string) {
+	err := database.RM(name)
+	if err == nil {
+		return
+	}
+	if errors.Is(err, database.ErrBucketNotFound) {
+		// retry with the original argument
+		if err1 := database.RM(retry); err1 != nil {
+			if errors.Is(err1, database.ErrBucketNotFound) {
+				bucketNoFound(name, err1)
+			}
+			out.ErrFatal(err1)
+		}
+	}
 }
 
 func bucketNoFound(name string, err error) {
