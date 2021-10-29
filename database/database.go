@@ -596,7 +596,7 @@ func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, int, error) {
 	return w, sizes, nil
 }
 
-// XXX IsEmpty returns true if the database has no buckets.
+// IsEmpty returns true when the database has no buckets.
 func IsEmpty() (bool, error) {
 	path, err := DB()
 	if err != nil {

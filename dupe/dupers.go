@@ -311,7 +311,6 @@ func (c *Config) WalkDirs() {
 		defer c.db.Close()
 	}
 	// walk through the directories provided
-	redo := []Bucket{}
 	for _, bucket := range c.Buckets() {
 		s := string(bucket)
 		if c.Debug {
@@ -323,16 +322,15 @@ func (c *Config) WalkDirs() {
 				out.ErrCont(err)
 				continue
 			}
-			redo = append(redo, bucket)
 			out.ErrCont(err)
 		}
 	}
-	// handle buckets that don't exist on the file system
-	for _, bucket := range redo {
-		if c.Debug {
-			out.Bug("redoing bucket: " + string(bucket))
+	// handle any items that exist in the database but not in the file system
+	// this would include items added using the `up+` archive scan command
+	for _, b := range c.Buckets() {
+		if i := c.SetCompares(b); i > 0 {
+			continue
 		}
-		c.SetCompares(bucket)
 	}
 }
 
