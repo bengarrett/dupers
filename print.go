@@ -39,6 +39,7 @@ var (
 func help() string {
 	b, f := bytes.Buffer{}, flag.Flag{}
 	w := tabwriter.NewWriter(&b, 0, 0, tabPadding, ' ', 0)
+
 	defer w.Flush()
 	fmt.Fprintf(w, "%s\n", description)
 	helpDupe(f, w)

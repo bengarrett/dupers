@@ -62,7 +62,8 @@ func Test_searchSummary(t *testing.T) {
 		{"multiple results", args{term: "xyz", total: 3}, "3 results exist for 'xyz'."},
 		{"exact results", args{term: "xyz", total: 3, exact: true}, "3 exact results exist for 'xyz'."},
 		{"filename results", args{term: "xyz", total: 3, filename: true}, "3 filename results exist for 'xyz'."},
-		{"exact filename results", args{term: "xyz", total: 3, exact: true, filename: true}, "3 exact filename results exist for 'xyz'."},
+		{"exact filename results", args{term: "xyz", total: 3, exact: true, filename: true},
+			"3 exact filename results exist for 'xyz'."},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
