@@ -122,11 +122,11 @@ func RMLine() string {
 func Status(count, total int, m Mode) string {
 	// to significantly improved terminal performance
 	// only update the status every 1000th count
-	const mod = 1000
+	const mod, ten = 1000, 10
 	if count != total && count > mod {
 		if count < mod*2 {
 			// between 1000-2000, update every 100th count
-			if count%(mod/10) != 0 {
+			if count%(mod/ten) != 0 {
 				return ""
 			}
 		} else if count%mod != 0 {
@@ -170,17 +170,7 @@ func Status(count, total int, m Mode) string {
 // The prompt will loop unless a y or n value is given or Ctrl-C is pressed.
 func YN(question string, recommend YND) bool {
 	const no, yes, cursorUp = "n", "y", "\x1b[1A"
-	p, def := "", " "
-	switch recommend {
-	case Nil:
-		p = "Y/N"
-	case Yes:
-		p = "Y/n"
-		def = " (default: yes) "
-	case No:
-		p = "N/y"
-		def = " (default: no) "
-	}
+	p, def := ynDefine(recommend)
 	prompt := fmt.Sprintf("\r%s?%s[%s]: ", question, def, p)
 	fmt.Print(prompt)
 	for {
@@ -208,6 +198,21 @@ func YN(question string, recommend YND) bool {
 			}
 		}
 	}
+}
+
+func ynDefine(recommend YND) (p string, def string) {
+	p, def = "", " "
+	switch recommend {
+	case Nil:
+		p = "Y/N"
+	case Yes:
+		p = "Y/n"
+		def = " (default: yes) "
+	case No:
+		p = "N/y"
+		def = " (default: no) "
+	}
+	return p, def
 }
 
 // Prompt prints the question to stdout and prompts for a string reply.

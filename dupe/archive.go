@@ -137,6 +137,7 @@ func (c *Config) WalkArchiver(name Bucket) error {
 		return ErrNoBucket
 	}
 	root := string(name)
+
 	c.init()
 	skip := c.skipFiles()
 	if c.db == nil {
@@ -218,6 +219,7 @@ func (c *Config) walkThread(bucket, path string, wg *sync.WaitGroup) error {
 	}
 	// multithread archive reader
 	wg.Add(1)
+
 	go func() {
 		switch ext {
 		case "":
@@ -305,6 +307,7 @@ func (c *Config) read7Zip(bucket, name string) {
 			continue
 		}
 		var sum checksum
+
 		copy(sum[:], h.Sum(nil))
 		if err := c.updateArchiver(fp, bucket, sum); err != nil {
 			out.ErrAppend(err)
@@ -365,7 +368,7 @@ func (c *Config) readArchiver(bucket, archive, ext string) { // nolint: gocyclo
 		// *archiver.TarZstd,
 		*archiver.Xz,
 		*archiver.Zip:
-		w := f.(archiver.Walker)
+		var w = f.(archiver.Walker)
 		if err := w.Walk(archive, func(f archiver.File) error {
 			if f.IsDir() {
 				return nil

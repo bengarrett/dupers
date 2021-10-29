@@ -217,6 +217,7 @@ func TestConfig_Remove(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
 	defer os.Remove(rmDst)
 	if i != written {
 		t.Errorf("CopyFile should have written %d bytes, but wrote %d", written, i)
@@ -246,6 +247,7 @@ func TestConfig_Clean(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
 	defer os.Remove(rmDst)
 	if i != written {
 		t.Errorf("CopyFile should have written %d bytes, but wrote %d", written, i)
@@ -265,7 +267,7 @@ func TestConfig_Clean(t *testing.T) {
 func TestConfig_Status(t *testing.T) {
 	c := Config{Test: true}
 	c.files = 2
-	want := "Scanned 2 files"
+	const want = "Scanned 2 files"
 	if s := strings.TrimSpace(c.Status()); !strings.Contains(s, want) {
 		t.Errorf("Config.Status() should contain %s, got %s", want, s)
 	}
@@ -373,7 +375,6 @@ func TestRemoveAll(t *testing.T) {
 	c.sources = append(c.sources, srcs)
 	s := c.RemoveAll()
 	fmt.Println(s)
-	// t.Error()
 }
 
 func cleanDir(name string) error {
@@ -386,7 +387,7 @@ func cleanDir(name string) error {
 			return nil
 		}
 		if _, err := os.Stat(path); err != nil {
-			return nil
+			return err
 		}
 		fmt.Println(path)
 		if err := os.RemoveAll(path); err != nil {
