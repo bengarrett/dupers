@@ -134,11 +134,11 @@ func Exist(bucket string, db *bolt.DB) error {
 // Stale items are file pointers that no longer exist on the host file system.
 func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funlen
 	if debug {
-		out.Bug("running database clean")
+		out.PBug("running database clean")
 
 		s := fmt.Sprintf("list of buckets:\n%s",
 			strings.Join(buckets, "\n"))
-		out.Bug(s)
+		out.PBug(s)
 	}
 
 	path, err := DB()
@@ -147,7 +147,7 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 	}
 
 	if debug {
-		out.Bug("database path: " + path)
+		out.PBug("database path: " + path)
 	}
 
 	db, err := bolt.Open(path, PrivateFile, write())
@@ -176,7 +176,7 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 			out.ErrCont(err)
 			continue
 		} else if debug {
-			out.Bug("bucket: " + abs)
+			out.PBug("bucket: " + abs)
 		}
 		// check the bucket directory exists on the file system
 		fi, errS := os.Stat(abs)
@@ -242,7 +242,7 @@ func cleanBucket(db *bolt.DB, abs string, debug, quiet bool, cnt, total, finds, 
 				fmt.Printf("%s", out.Status(cnt, total, out.Check))
 			}
 			if debug {
-				out.Bug("clean: " + string(k))
+				out.PBug("clean: " + string(k))
 			}
 			if _, errS := os.Stat(string(k)); errS != nil {
 				f := string(k)
@@ -252,7 +252,7 @@ func cleanBucket(db *bolt.DB, abs string, debug, quiet bool, cnt, total, finds, 
 					}
 				}
 				if debug {
-					out.Bug(fmt.Sprintf("%s: %s", k, errS))
+					out.PBug(fmt.Sprintf("%s: %s", k, errS))
 				}
 				if errUp := db.Update(func(tx *bolt.Tx) error {
 					return tx.Bucket([]byte(abs)).Delete(k)
@@ -284,7 +284,7 @@ func cleanAll(buckets []string, debug bool, db *bolt.DB) ([]string, error) {
 	}
 
 	if debug {
-		out.Bug("fetching all buckets")
+		out.PBug("fetching all buckets")
 	}
 
 	var err1 error
@@ -325,7 +325,7 @@ func totals(buckets []string, db *bolt.DB) (int, error) {
 // Compact the database by reclaiming space.
 func Compact(debug bool) error {
 	if debug {
-		out.Bug("running database compact")
+		out.PBug("running database compact")
 	}
 	// active database
 	src, err := DB()
@@ -339,19 +339,19 @@ func Compact(debug bool) error {
 	if err != nil {
 		return err
 	} else if debug {
-		out.Bug("opened original database: " + src)
+		out.PBug("opened original database: " + src)
 	}
 	defer srcDB.Close()
 	tmpDB, err := bolt.Open(tmp, PrivateFile, write())
 	if err != nil {
 		return err
 	} else if debug {
-		out.Bug("opened replacement database: " + tmp)
+		out.PBug("opened replacement database: " + tmp)
 	}
 	defer tmpDB.Close()
 	// compress and copy the results to the temporary database
 	if debug {
-		out.Bug("compress and copy databases")
+		out.PBug("compress and copy databases")
 	}
 	if errComp := bolt.Compact(tmpDB, srcDB, 0); errComp != nil {
 		return errComp
@@ -366,9 +366,9 @@ func Compact(debug bool) error {
 			return errT
 		}
 		s1 := fmt.Sprintf("original database: %d bytes, %s", sr.Size(), sr.Name())
-		out.Bug(s1)
+		out.PBug(s1)
 		s2 := fmt.Sprintf("new database:      %d bytes, %s", tm.Size(), tm.Name())
-		out.Bug(s2)
+		out.PBug(s2)
 	}
 	if err = srcDB.Close(); err != nil {
 		out.ErrFatal(err)
@@ -377,7 +377,7 @@ func Compact(debug bool) error {
 		return err
 	} else if debug {
 		s := fmt.Sprintf("copied %d bytes to: %s", cp, src)
-		out.Bug(s)
+		out.PBug(s)
 	}
 	return nil
 }

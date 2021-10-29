@@ -145,7 +145,7 @@ func databaseCmd(c *dupe.Config, quiet bool, args ...string) {
 func dupeCmd(c *dupe.Config, f *cmdFlags, args ...string) {
 	if c.Debug {
 		s := fmt.Sprintf("dupeCmd: %s", strings.Join(args, " "))
-		out.Bug(s)
+		out.PBug(s)
 	}
 	l := len(args)
 	if l == 1 {
@@ -173,14 +173,14 @@ func dupeCmd(c *dupe.Config, f *cmdFlags, args ...string) {
 	}
 	if c.Debug {
 		s := fmt.Sprintf("buckets: %s", c.PrintBuckets())
-		out.Bug(s)
+		out.PBug(s)
 	}
 	// files or directories to compare (these are not saved to database)
 	if err := c.WalkSource(); err != nil {
 		out.ErrFatal(err)
 	}
 	if c.Debug {
-		out.Bug("walksource complete.")
+		out.PBug("walksource complete.")
 	}
 	// walk, scan and save file paths and hashes to the database
 	dupeLookup(c, f)
@@ -201,7 +201,7 @@ func dupeCmd(c *dupe.Config, f *cmdFlags, args ...string) {
 func dupeCleanup(c *dupe.Config, f *cmdFlags) {
 	if *f.sensen {
 		if c.Debug {
-			out.Bug("remove all non unique Windows and MS-DOS files.")
+			out.PBug("remove all non unique Windows and MS-DOS files.")
 		}
 		fmt.Print(c.Remove())
 		fmt.Print(c.RemoveAll())
@@ -210,12 +210,12 @@ func dupeCleanup(c *dupe.Config, f *cmdFlags) {
 	}
 	if *f.rm || *f.rmPlus {
 		if c.Debug {
-			out.Bug("remove duplicate files.")
+			out.PBug("remove duplicate files.")
 		}
 		fmt.Print(c.Remove())
 		if *f.rmPlus {
 			if c.Debug {
-				out.Bug("remove empty directories.")
+				out.PBug("remove empty directories.")
 			}
 			fmt.Print(c.Clean())
 		}
@@ -225,7 +225,7 @@ func dupeCleanup(c *dupe.Config, f *cmdFlags) {
 // dupeLookup cleans and updates buckets for changes on the file system.
 func dupeLookup(c *dupe.Config, f *cmdFlags) {
 	if c.Debug {
-		out.Bug("dupe lookup.")
+		out.PBug("dupe lookup.")
 	}
 	// normalise bucket names
 	for i, b := range c.Buckets() {
@@ -244,7 +244,7 @@ func dupeLookup(c *dupe.Config, f *cmdFlags) {
 	}
 	if !*f.lookup && len(buckets) > 0 {
 		if c.Debug {
-			out.Bug("non-fast mode, database cleanup.")
+			out.PBug("non-fast mode, database cleanup.")
 		}
 		if err := database.Clean(c.Quiet, c.Debug, buckets...); err != nil {
 			out.ErrCont(err)
@@ -252,7 +252,7 @@ func dupeLookup(c *dupe.Config, f *cmdFlags) {
 	}
 	if *f.lookup {
 		if c.Debug {
-			out.Bug("read the hash values in the buckets.")
+			out.PBug("read the hash values in the buckets.")
 		}
 		fastErr := false
 		for _, b := range c.Buckets() {
@@ -267,7 +267,7 @@ func dupeLookup(c *dupe.Config, f *cmdFlags) {
 		}
 	}
 	if c.Debug {
-		out.Bug("walk the buckets.")
+		out.PBug("walk the buckets.")
 	}
 	c.WalkDirs()
 }

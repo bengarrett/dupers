@@ -46,8 +46,8 @@ const (
 	winOS     = "windows"
 )
 
-// Bug prints the string to a newline.
-func Bug(debug string) {
+// PBug prints the string to a newline.
+func PBug(debug string) {
 	fmt.Fprintf(os.Stderr, "∙%s\n", debug)
 }
 

@@ -145,7 +145,7 @@ func main() {
 	chkWinDirs()
 	selection := strings.ToLower(flag.Args()[0])
 	if c.Debug {
-		out.Bug("command selection: " + selection)
+		out.PBug("command selection: " + selection)
 	}
 
 	switch selection {

@@ -158,7 +158,7 @@ func (c *Config) WalkArchiver(name Bucket) error {
 	var wg sync.WaitGroup
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if c.Debug {
-			out.Bug("walk file: " + path)
+			out.PBug("walk file: " + path)
 		}
 		if err != nil {
 			if errors.Is(err, fs.ErrPermission) {
@@ -192,7 +192,7 @@ func (c *Config) walkThread(bucket, path string, wg *sync.WaitGroup) error {
 	ext := strings.ToLower(filepath.Ext(path))
 	ok, _ := IsExtension(path)
 	if c.Debug {
-		out.Bug(fmt.Sprintf("is known extension: %v, %s", ok, ext))
+		out.PBug(fmt.Sprintf("is known extension: %v, %s", ok, ext))
 	}
 	if !ok {
 		// detect archive type by mime type
@@ -203,7 +203,7 @@ func (c *Config) walkThread(bucket, path string, wg *sync.WaitGroup) error {
 		if !ok {
 			if c.Debug && mime != "" {
 				s := fmt.Sprintf("archive not supported: %s: %s", mime, path)
-				out.Bug(s)
+				out.PBug(s)
 			}
 			return nil
 		}
@@ -212,7 +212,7 @@ func (c *Config) walkThread(bucket, path string, wg *sync.WaitGroup) error {
 	c.files++
 	if c.Debug {
 		s := fmt.Sprintf("walkCompare #%d", c.files)
-		out.Bug(s)
+		out.PBug(s)
 	}
 	if errD := walkCompare(bucket, path, c); errD != nil {
 		if !errors.Is(errD, ErrPathExist) {
@@ -250,7 +250,7 @@ func (c *Config) findItem(abs string) bool {
 // listItems sets c.sources to list all the filenames used in the bucket.
 func (c *Config) listItems(bucket string) error {
 	if c.Debug {
-		out.Bug("list bucket items: " + bucket)
+		out.PBug("list bucket items: " + bucket)
 	}
 	abs, err := database.AbsB(bucket)
 	if err != nil {
@@ -279,7 +279,7 @@ func (c *Config) listItems(bucket string) error {
 // read7Zip opens the named 7-Zip archive, hashes its content and saves those to the bucket.
 func (c *Config) read7Zip(bucket, name string) {
 	if c.Debug {
-		out.Bug("read 7zip: " + name)
+		out.PBug("read 7zip: " + name)
 	}
 	r, err := sevenzip.OpenReader(name)
 	if err != nil {
@@ -318,14 +318,14 @@ func (c *Config) read7Zip(bucket, name string) {
 	}
 	if c.Debug && cnt > 0 {
 		s := fmt.Sprintf("read %d items within the 7-Zip archive", cnt)
-		out.Bug(s)
+		out.PBug(s)
 	}
 }
 
 // readArchiver opens the named file archive, hashes its content and saves those to the bucket.
 func (c *Config) readArchiver(bucket, archive, ext string) { // nolint: gocyclo
 	if c.Debug {
-		out.Bug("read archiver: " + archive)
+		out.PBug("read archiver: " + archive)
 	}
 	// catch any archiver panics such as as opening unsupported ZIP compression formats
 	defer c.readArcRecover(archive)
@@ -382,7 +382,7 @@ func (c *Config) readArchiver(bucket, archive, ext string) { // nolint: gocyclo
 	}
 	if c.Debug && cnt > 0 {
 		s := fmt.Sprintf("read %d items within the archive", cnt)
-		out.Bug(s)
+		out.PBug(s)
 	}
 }
 
@@ -395,7 +395,7 @@ func (c *Config) readArcRecover(archive string) {
 			color.Warn.Printf("Unsupported archive: '%s'\n", archive)
 		}
 		if c.Debug {
-			out.Bug(fmt.Sprint(err))
+			out.PBug(fmt.Sprint(err))
 		}
 	}
 }
@@ -429,7 +429,7 @@ func readArcType(f interface{}) bool {
 // updateArchiver saves the checksum and path values to the bucket.
 func (c *Config) updateArchiver(path, bucket string, sum checksum) error {
 	if c.Debug {
-		out.Bug("update archiver: " + path)
+		out.PBug("update archiver: " + path)
 	}
 	if c.db == nil {
 		return bolt.ErrDatabaseNotOpen

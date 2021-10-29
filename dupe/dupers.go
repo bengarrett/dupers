@@ -57,22 +57,22 @@ var (
 func (c *Config) CheckPaths() (ok bool, checkCnt, bucketCnt int) { //nolint: gocyclo
 	const notDirectory = true
 	if c.Debug {
-		out.Bug("count the files within the paths")
+		out.PBug("count the files within the paths")
 	}
 	root := c.ToCheck()
 	if c.Debug {
-		out.Bug("path to check: " + root)
+		out.PBug("path to check: " + root)
 	}
 	stat, err := os.Stat(root)
 	if err != nil {
 		if c.Debug {
-			out.Bug("path is not found")
+			out.PBug("path is not found")
 		}
 		return notDirectory, 0, 0
 	}
 	if !stat.IsDir() {
 		if c.Debug {
-			out.Bug("path is a file")
+			out.PBug("path is a file")
 		}
 		return notDirectory, 0, 0
 	}
@@ -82,7 +82,7 @@ func (c *Config) CheckPaths() (ok bool, checkCnt, bucketCnt int) { //nolint: goc
 	}
 	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if c.Debug {
-			out.Bug("counting: " + path)
+			out.PBug("counting: " + path)
 		}
 		if err != nil {
 			return err
@@ -100,12 +100,12 @@ func (c *Config) CheckPaths() (ok bool, checkCnt, bucketCnt int) { //nolint: goc
 		return nil
 	}); err != nil {
 		if c.Debug {
-			out.Bug(err.Error())
+			out.PBug(err.Error())
 		}
 	}
 	if c.Debug {
 		s := fmt.Sprintf("all buckets: %s", c.Buckets())
-		out.Bug(s)
+		out.PBug(s)
 	}
 	for _, b := range c.Buckets() {
 		if err := filepath.WalkDir(string(b), func(path string, d fs.DirEntry, err error) error {
@@ -114,7 +114,7 @@ func (c *Config) CheckPaths() (ok bool, checkCnt, bucketCnt int) { //nolint: goc
 				return nil
 			}
 			if c.Debug {
-				out.Bug("walking bucket item: " + path)
+				out.PBug("walking bucket item: " + path)
 			}
 			if err := skipDir(d); err != nil {
 				return err
@@ -135,7 +135,7 @@ func (c *Config) CheckPaths() (ok bool, checkCnt, bucketCnt int) { //nolint: goc
 				break
 			}
 			if c.Debug {
-				out.Bug(err.Error())
+				out.PBug(err.Error())
 			}
 		}
 	}
@@ -191,10 +191,10 @@ func (c *Config) Clean() string {
 // Print the results of a dupe request.
 func (c *Config) Print() string {
 	if c.Debug {
-		out.Bug("print duplicate results")
+		out.PBug("print duplicate results")
 		s := fmt.Sprintf("comparing %d sources against %d unique items to compare",
 			len(c.sources), len(c.compare))
-		out.Bug(s)
+		out.PBug(s)
 	}
 	w := new(bytes.Buffer)
 	finds := 0
@@ -230,11 +230,11 @@ func (c *Config) Remove() string {
 	fmt.Fprintln(w)
 	for _, path := range c.sources {
 		if c.Debug {
-			out.Bug("remove read: " + path)
+			out.PBug("remove read: " + path)
 		}
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			if c.Debug {
-				out.Bug("path is not exist: " + path)
+				out.PBug("path is not exist: " + path)
 			}
 
 			continue
@@ -247,7 +247,7 @@ func (c *Config) Remove() string {
 			continue
 		}
 		if c.Debug {
-			out.Bug("remove delete: " + path)
+			out.PBug("remove delete: " + path)
 		}
 		err = os.Remove(path)
 		fmt.Fprintln(w, printRM(path, err))
@@ -315,7 +315,7 @@ func (c *Config) WalkDirs() {
 	for _, bucket := range c.Buckets() {
 		s := string(bucket)
 		if c.Debug {
-			out.Bug("walkdir bucket: " + s)
+			out.PBug("walkdir bucket: " + s)
 		}
 		if err := c.WalkDir(bucket); err != nil {
 			if errors.Is(errors.Unwrap(err), ErrPathNoFound) &&
@@ -356,7 +356,7 @@ func (c *Config) WalkDir(name Bucket) error { //nolint:gocyclo
 	// walk the root directory
 	var wg sync.WaitGroup
 	if c.Debug {
-		out.Bug("walk directory: " + root)
+		out.PBug("walk directory: " + root)
 	}
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if c.Debug {
@@ -364,7 +364,7 @@ func (c *Config) WalkDir(name Bucket) error { //nolint:gocyclo
 			if d.IsDir() {
 				s = "walk subdirectory"
 			}
-			out.Bug(fmt.Sprintf("%s: %s", s, path))
+			out.PBug(fmt.Sprintf("%s: %s", s, path))
 		}
 		if err != nil {
 			if errors.Is(err, fs.ErrPermission) {
@@ -374,25 +374,25 @@ func (c *Config) WalkDir(name Bucket) error { //nolint:gocyclo
 		}
 		if err1 := skipDir(d); err1 != nil {
 			if c.Debug {
-				out.Bug(" - skipping directory")
+				out.PBug(" - skipping directory")
 			}
 			return err1
 		}
 		if skipFile(d.Name()) {
 			if c.Debug {
-				out.Bug(" - skipping file")
+				out.PBug(" - skipping file")
 			}
 			return nil
 		}
 		if !d.Type().IsRegular() {
 			if c.Debug {
-				out.Bug(" - skipping not regular file")
+				out.PBug(" - skipping not regular file")
 			}
 			return nil
 		}
 		if skipSelf(path, skip...) {
 			if c.Debug {
-				out.Bug(" - skipping self item")
+				out.PBug(" - skipping self item")
 			}
 			return nil
 		}
@@ -419,7 +419,7 @@ func (c *Config) WalkDir(name Bucket) error { //nolint:gocyclo
 func (c *Config) WalkSource() error {
 	root := c.ToCheck()
 	if c.Debug {
-		out.Bug("walksource to check: " + root)
+		out.PBug("walksource to check: " + root)
 	}
 	stat, err := os.Stat(root)
 	if errors.Is(err, os.ErrNotExist) {
@@ -430,7 +430,7 @@ func (c *Config) WalkSource() error {
 	if !stat.IsDir() {
 		c.sources = append(c.sources, root)
 		if c.Debug {
-			out.Bug("items dupe check: " + strings.Join(c.sources, " "))
+			out.PBug("items dupe check: " + strings.Join(c.sources, " "))
 		}
 		return nil
 	}
@@ -439,7 +439,7 @@ func (c *Config) WalkSource() error {
 		return nil
 	}
 	if c.Debug {
-		out.Bug("directories dupe check: " + strings.Join(c.sources, " "))
+		out.PBug("directories dupe check: " + strings.Join(c.sources, " "))
 	}
 	return nil
 }
@@ -447,7 +447,7 @@ func (c *Config) WalkSource() error {
 func (c *Config) walkerSource(root string) error {
 	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if c.Debug {
-			out.Bug(path)
+			out.PBug(path)
 		}
 		if err != nil {
 			return err
@@ -513,7 +513,7 @@ func (c *Config) init() {
 			c.SetCompares(b)
 			if c.Debug {
 				s := fmt.Sprintf("init %d: %s", i, b)
-				out.Bug(s)
+				out.PBug(s)
 			}
 		}
 	}
@@ -523,11 +523,11 @@ func (c *Config) init() {
 func (c *Config) lookupOne(sum checksum) string {
 	if c.Debug {
 		s := fmt.Sprintf("look up checksum in the compare data, %d items total: %x", len(c.compare), sum)
-		out.Bug(s)
+		out.PBug(s)
 	}
 	if f := c.compare[sum]; f != "" {
 		if c.Debug {
-			out.Bug("lookupOne match: " + f)
+			out.PBug("lookupOne match: " + f)
 		}
 		return f
 	}
@@ -543,7 +543,7 @@ func (c *Config) skipFiles() (files []string) {
 // update gets the checksum of the named file and saves it to the bucket.
 func (c *Config) update(name, bucket string) {
 	if c.Debug {
-		out.Bug("update: " + name)
+		out.PBug("update: " + name)
 	}
 	// read file, exit if it fails
 	sum, err := read(name)
@@ -744,7 +744,7 @@ func walkCompare(root, path string, c *Config) error {
 		}
 		h := b.Get([]byte(path))
 		if c.Debug {
-			out.Bug(fmt.Sprintf(" - %d/%d items: %x", len(c.compare), c.files, h))
+			out.PBug(fmt.Sprintf(" - %d/%d items: %x", len(c.compare), c.files, h))
 		}
 		if len(h) > 0 {
 			var sum checksum
