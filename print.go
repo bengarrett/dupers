@@ -192,8 +192,7 @@ func vers() string {
 }
 
 // dupeCmdErr parses the arguments of the dupe command.
-func dupeCmdErr(args, buckets int) {
-	const minArgs = 2
+func dupeCmdErr(args, buckets, minArgs int) {
 	if args < minArgs {
 		out.ErrCont(ErrNoArgs)
 		fmt.Println("\nThe dupe command requires a directory or file to check.")
