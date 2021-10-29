@@ -106,8 +106,8 @@ func chkWinDir(s string) error {
 // databaseCmd parses the database commands.
 func databaseCmd(c *dupe.Config, quiet bool, args ...string) {
 	checkDB()
-	arr := [2]string{}
-	copy(arr[:], args)
+	buckets := [2]string{}
+	copy(buckets[:], args)
 	switch args[0] {
 	case dbk:
 		backupDB(quiet)
@@ -120,21 +120,21 @@ func databaseCmd(c *dupe.Config, quiet bool, args ...string) {
 		}
 		fmt.Println(s)
 	case dex:
-		exportBucket(quiet, arr)
+		exportBucket(quiet, buckets)
 	case dim:
-		importBucket(quiet, arr)
+		importBucket(quiet, buckets)
 	case dls:
-		listBucket(quiet, arr)
+		listBucket(quiet, buckets)
 	case dmv:
-		arr := [3]string{}
-		copy(arr[:], args)
-		moveBucket(quiet, arr)
+		buckets := [3]string{}
+		copy(buckets[:], args)
+		moveBucket(quiet, buckets)
 	case drm:
-		removeBucket(quiet, arr)
+		removeBucket(quiet, buckets)
 	case dup:
-		rescanBucket(c, false, arr)
+		rescanBucket(c, false, buckets)
 	case dupp:
-		rescanBucket(c, true, arr)
+		rescanBucket(c, true, buckets)
 	default:
 		out.ErrFatal(ErrCmd)
 	}
@@ -147,6 +147,9 @@ func dupeCmd(c *dupe.Config, f *cmdFlags, args ...string) {
 		out.Bug(s)
 	}
 	l := len(args)
+	if l == 1 {
+		dupeCmdErr(l, 0, 2)
+	}
 	// fetch bucket info
 	b, err := database.AllBuckets(nil)
 	if err != nil {
