@@ -37,6 +37,8 @@ const (
 	oneMb  = oneKb * oneKb
 )
 
+var ErrArchiverType = errors.New("unsupported or unknown archiver type")
+
 // extension finds either a compressed file extension or mime type and returns its match.
 func extension(find string) string {
 	// mime types refer to data types and do not contain encoding information
@@ -326,19 +328,7 @@ func (c *Config) readArchiver(bucket, archive, ext string) { // nolint: gocyclo
 		out.Bug("read archiver: " + archive)
 	}
 	// catch any archiver panics such as as opening unsupported ZIP compression formats
-	defer func() {
-		if err := recover(); err != nil {
-			if !c.Quiet {
-				if !c.Debug {
-					fmt.Println()
-				}
-				color.Warn.Printf("Unsupported archive: '%s'\n", archive)
-			}
-			if c.Debug {
-				out.Bug(fmt.Sprint(err))
-			}
-		}
-	}()
+	defer c.readArcRecover(archive)
 	cnt, filename := 0, archive
 	// get the format by filename extension
 	if ext != "" {
@@ -349,26 +339,14 @@ func (c *Config) readArchiver(bucket, archive, ext string) { // nolint: gocyclo
 		out.ErrCont(err)
 		return
 	}
-	// commented archives not supported in archiver v3.5.0
-	switch f.(type) {
-	case
-		// *archiver.Brotli,
-		*archiver.Bz2,
-		*archiver.Gz,
-		*archiver.Lz4,
-		*archiver.Rar,
-		*archiver.Snappy,
-		*archiver.Tar,
-		// *archiver.TarBrotli,
-		*archiver.TarBz2,
-		*archiver.TarGz,
-		*archiver.TarLz4,
-		*archiver.TarSz,
-		*archiver.TarXz,
-		// *archiver.TarZstd,
-		*archiver.Xz,
-		*archiver.Zip:
-		w := f.(archiver.Walker)
+
+	switch readArcType(f) {
+	case true:
+		w, ok := f.(archiver.Walker)
+		if !ok {
+			out.ErrCont(ErrArchiverType)
+			return
+		}
 		if err := w.Walk(archive, func(f archiver.File) error {
 			if f.IsDir() {
 				return nil
@@ -405,6 +383,46 @@ func (c *Config) readArchiver(bucket, archive, ext string) { // nolint: gocyclo
 	if c.Debug && cnt > 0 {
 		s := fmt.Sprintf("read %d items within the archive", cnt)
 		out.Bug(s)
+	}
+}
+
+func (c *Config) readArcRecover(archive string) {
+	if err := recover(); err != nil {
+		if !c.Quiet {
+			if !c.Debug {
+				fmt.Println()
+			}
+			color.Warn.Printf("Unsupported archive: '%s'\n", archive)
+		}
+		if c.Debug {
+			out.Bug(fmt.Sprint(err))
+		}
+	}
+}
+
+func readArcType(f interface{}) bool {
+	// commented archive types were not supported in archiver v3.5.0
+	switch f.(type) {
+	case
+		// *archiver.Brotli,
+		*archiver.Bz2,
+		*archiver.Gz,
+		*archiver.Lz4,
+		*archiver.Rar,
+		*archiver.Snappy,
+		*archiver.Tar,
+		// *archiver.TarBrotli,
+		*archiver.TarBz2,
+		*archiver.TarGz,
+		*archiver.TarLz4,
+		*archiver.TarSz,
+		*archiver.TarXz,
+		// *archiver.TarZstd,
+		*archiver.Xz,
+		*archiver.Zip:
+		return true
+	default:
+		return false
 	}
 }
 

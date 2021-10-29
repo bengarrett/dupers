@@ -12,6 +12,8 @@ linters:
 
     - paralleltest
     - exhaustivestruct
+    - forbidigo
+    - wsl
 
 linters-settings:
   cyclop:

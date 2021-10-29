@@ -19,7 +19,7 @@ const (
 	testDst = "../test/tmp/ppFlTD6QQYlS"
 )
 
-func init() {
+func init() { //nolint:gochecknoinits
 	color.Enable = false
 	testMode = true
 }
@@ -80,6 +80,7 @@ func TestCompact(t *testing.T) {
 	}{
 		{"temp", false},
 	}
+
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
@@ -325,8 +326,7 @@ func TestInfo(t *testing.T) {
 	if err != nil {
 		t.Errorf("Info() returned an error = %v", err)
 	}
-	want := mock.Bucket1()
-	if !strings.Contains(info, want) {
+	if want := mock.Bucket1(); !strings.Contains(info, want) {
 		t.Errorf("Info() should display the mock database path, %v\ngot:\n%v", want, info)
 	}
 	if err := mock.TestRemove(); err != nil {

@@ -17,7 +17,7 @@ import (
 	"github.com/gookit/color"
 )
 
-func init() {
+func init() { //nolint:gochecknoinits
 	color.Enable = false
 	testMode = true
 }
@@ -29,9 +29,11 @@ func TestBackup(t *testing.T) {
 	}{
 		{"backup", false},
 	}
+
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotName, gotWritten, err := Backup()
@@ -93,6 +95,7 @@ func TestCopyFile(t *testing.T) {
 
 func TestExportCSV(t *testing.T) {
 	color.Enable = false
+
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}

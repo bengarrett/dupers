@@ -108,7 +108,7 @@ func parse(a *aliases, c *dupe.Config, f *cmdFlags) (exit bool) {
 		color.Enable = false
 	}
 	if s := options(a, f); s != "" {
-		fmt.Print(s)
+		fmt.Printf("%s", s)
 		return true
 	}
 	if *f.debug {
@@ -147,6 +147,7 @@ func main() {
 	if c.Debug {
 		out.Bug("command selection: " + selection)
 	}
+
 	switch selection {
 	case "dupe":
 		dupeCmd(&c, &f, flag.Args()...)

@@ -5,6 +5,7 @@ package main
 
 import (
 	"bytes"
+	_ "embed"
 	"errors"
 	"flag"
 	"fmt"
@@ -20,8 +21,6 @@ import (
 	"github.com/gookit/color"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
-
-	_ "embed"
 )
 
 const (

@@ -57,6 +57,7 @@ func EnterKey() byte {
 	if runtime.GOOS == winOS {
 		return cr
 	}
+
 	return lf
 }
 
@@ -65,6 +66,7 @@ func ErrAppend(err error) {
 	if err == nil {
 		return
 	}
+
 	s := strings.ToLower(err.Error())
 	fmt.Fprint(os.Stderr, color.Warn.Sprintf("%s.\n", strings.TrimSpace(s)))
 }
@@ -74,16 +76,21 @@ func ErrCont(err error) {
 	if err == nil {
 		return
 	}
+
 	const nf = "bucket not found:"
+
 	s := err.Error()
+
 	switch {
 	case strings.HasPrefix(s, nf):
 		color.Info.Printf("%s\n",
 			strings.Replace(s, nf, "New database bucket:", 1))
 		return
+
 	case strings.HasPrefix(s, "bucket not found"):
 		s = "bucket does not exist"
 	}
+
 	fmt.Fprintln(os.Stderr, color.Warn.Sprintf("\rThe %s", s))
 }
 
@@ -92,6 +99,7 @@ func ErrFatal(err error) {
 	if err != nil {
 		color.Error.Tips(" " + err.Error())
 	}
+
 	os.Exit(1)
 }
 
@@ -100,6 +108,7 @@ func Example(cmd string) {
 	if cmd == "" {
 		return
 	}
+
 	color.Debug.Println(cmd)
 }
 
@@ -108,13 +117,15 @@ func Response(s string, quiet bool) {
 	if quiet {
 		return
 	}
-	fmt.Println(s)
+
+	fmt.Printf("%s\n", s)
 }
 
 func RMLine() string {
 	if runtime.GOOS == winOS {
 		return ""
 	}
+
 	return fmt.Sprintf("%s%s", EraseLine, cr)
 }
 
@@ -134,25 +145,31 @@ func Status(count, total int, m Mode) string {
 			return ""
 		}
 	}
+
 	var (
 		check = "%sChecking %d of %d items "
 		look  = "%sLooking up %d items     "
 		scan  = "%sScanning %d files       "
 		read  = "%sReading %d of %d items  "
 	)
+
 	skipping, updating := (count >= mod), (count != total)
+
 	if skipping && updating {
 		check = "%sChecking %d+ of %d items "
 		look = "%sLooking up %d+ items     "
 		scan = "%sScanning %d+ files       "
 		read = "%sReading %d+ of %d items  "
 	}
+
 	pre, p := cr, message.NewPrinter(language.English)
+
 	if runtime.GOOS != winOS {
 		// erasing the line makes for a less flickering counter.
 		// not all Windows terminals support ANSI controls.
 		pre = EraseLine + pre
 	}
+
 	switch m {
 	case Check:
 		return p.Sprintf(check, pre, number.Decimal(count), number.Decimal(total))
@@ -163,6 +180,7 @@ func Status(count, total int, m Mode) string {
 	case Read:
 		return p.Sprintf(read, pre, number.Decimal(count), number.Decimal(total))
 	}
+
 	return ""
 }
 
@@ -170,21 +188,25 @@ func Status(count, total int, m Mode) string {
 // The prompt will loop unless a y or n value is given or Ctrl-C is pressed.
 func YN(question string, recommend YND) bool {
 	const no, yes, cursorUp = "n", "y", "\x1b[1A"
+
 	p, def := ynDefine(recommend)
 	prompt := fmt.Sprintf("\r%s?%s[%s]: ", question, def, p)
-	fmt.Print(prompt)
+	fmt.Printf("%s", prompt)
+
 	for {
 		r := bufio.NewReader(os.Stdin)
 		b, err := r.ReadByte()
 		if err != nil {
 			ErrFatal(err)
 		}
+
 		switch strings.ToLower(string(b)) {
 		case yes:
 			return true
 		case no:
 			return false
 		}
+
 		if b == EnterKey() {
 			switch recommend {
 			case Yes:
@@ -202,6 +224,7 @@ func YN(question string, recommend YND) bool {
 
 func ynDefine(recommend YND) (p string, def string) {
 	p, def = "", " "
+
 	switch recommend {
 	case Nil:
 		p = "Y/N"
@@ -212,6 +235,7 @@ func ynDefine(recommend YND) (p string, def string) {
 		p = "N/y"
 		def = " (default: no) "
 	}
+
 	return p, def
 }
 
@@ -219,12 +243,15 @@ func ynDefine(recommend YND) (p string, def string) {
 // The prompt will loop until Enter key or Ctrl-C are pressed.
 func Prompt(question string) string {
 	r := bufio.NewReader(os.Stdin)
+
 	fmt.Printf("\r%s?: ", question)
+
 	for {
 		s, err := r.ReadString(EnterKey())
 		if err != nil {
 			ErrFatal(err)
 		}
+
 		if s != "" {
 			// remove the Enter key newline from the string
 			// as this character will break directory and filepaths

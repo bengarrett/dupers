@@ -33,7 +33,7 @@ const (
 	hash2 = "4acc274c2e6dc2241029c735758f672b3dc1109ab76a91fe29aeb2bac6949eb7"
 )
 
-func init() {
+func init() { // nolint:gochecknoinits
 	color.Enable = false
 }
 
@@ -297,11 +297,13 @@ func TestConfig_WalkDir(t *testing.T) {
 		t.Errorf("Config.WalkDir() should return an error with an empty Config.")
 	}
 	f := mock.Item1()
-	if err := c.WalkDir(Bucket(f)); err != nil {
+	err = c.WalkDir(Bucket(f))
+	if err != nil {
 		t.Errorf("Config.WalkDir(%s) should skip files.", f)
 	}
 	b := mock.Bucket1()
-	if err := c.WalkDir(Bucket(b)); err != nil {
+	err = c.WalkDir(Bucket(b))
+	if err != nil {
 		t.Errorf("Config.WalkDir(%s) returned the error: %v", b, err)
 	}
 }

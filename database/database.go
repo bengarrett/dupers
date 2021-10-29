@@ -72,9 +72,11 @@ func Abs(bucket string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	if runtime.GOOS == "windows" {
 		return strings.ToLower(s), nil
 	}
+
 	return s, nil
 }
 
@@ -92,6 +94,7 @@ func AllBuckets(db *bolt.DB) (names []string, err error) {
 		}
 		defer db.Close()
 	}
+
 	if errV := db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 			if v := tx.Bucket(name); v == nil {
@@ -103,6 +106,7 @@ func AllBuckets(db *bolt.DB) (names []string, err error) {
 	}); errV != nil {
 		return nil, errV
 	}
+
 	return names, nil
 }
 
@@ -116,6 +120,7 @@ func Exist(bucket string, db *bolt.DB) error {
 		}
 		defer db.Close()
 	}
+
 	return db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
 		if b == nil {
@@ -130,30 +135,41 @@ func Exist(bucket string, db *bolt.DB) error {
 func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funlen
 	if debug {
 		out.Bug("running database clean")
-		s := fmt.Sprintf("list of buckets:\n%s", strings.Join(buckets, "\n"))
+
+		s := fmt.Sprintf("list of buckets:\n%s",
+			strings.Join(buckets, "\n"))
 		out.Bug(s)
 	}
+
 	path, err := DB()
 	if err != nil {
 		return err
 	}
+
 	if debug {
 		out.Bug("database path: " + path)
 	}
+
 	db, err := bolt.Open(path, PrivateFile, write())
+
 	if err != nil {
 		return err
 	}
+
 	defer db.Close()
 	buckets, err = cleanAll(buckets, debug, db)
+
 	if err != nil {
 		return err
 	}
+
 	cnt, errs, finds, total := 0, 0, 0, 0
 	total, err = totals(buckets, db)
+
 	if err != nil {
 		return err
 	}
+
 	for _, bucket := range buckets {
 		abs, err := Abs(bucket)
 		if err != nil {
@@ -163,118 +179,146 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 			out.Bug("bucket: " + abs)
 		}
 		// check the bucket directory exists on the file system
-		if fi, errS := os.Stat(abs); os.IsNotExist(errS) {
+		fi, errS := os.Stat(abs)
+		switch {
+		case os.IsNotExist(errS):
 			out.ErrCont(fmt.Errorf("%w: %s", ErrBucketSkip, abs))
 			errs++
+
 			if i, errc := Count(bucket, db); errc == nil {
 				cnt += i
 			}
+
 			continue
-		} else if err != nil {
+		case err != nil:
 			out.ErrCont(err)
 			errs++
+
 			continue
-		} else if !fi.IsDir() {
+		case !fi.IsDir():
 			out.ErrCont(fmt.Errorf("%w: %s", ErrBucketAsFile, abs))
 			errs++
 			if i, errc := Count(bucket, db); errc == nil {
 				cnt += i
 			}
+
 			continue
 		}
-		if err = db.View(func(tx *bolt.Tx) error {
-			b := tx.Bucket([]byte(abs))
-			if b == nil {
-				return fmt.Errorf("%w: %s", ErrBucketNotFound, abs)
-			}
-			err = b.ForEach(func(k, v []byte) error {
-				cnt++
-				if !debug && !quiet {
-					fmt.Print(out.Status(cnt, total, out.Check))
-				}
-				if debug {
-					out.Bug("clean: " + string(k))
-				}
-				if _, errS := os.Stat(string(k)); errS != nil {
-					f := string(k)
-					if st, err2 := os.Stat(filepath.Dir(f)); err2 == nil {
-						if !st.IsDir() && st.Size() > 0 {
-							return nil
-						}
-					}
-					if debug {
-						out.Bug(fmt.Sprintf("%s: %s", k, errS))
-					}
-					if errUp := db.Update(func(tx *bolt.Tx) error {
-						return tx.Bucket([]byte(abs)).Delete(k)
-					}); errUp != nil {
-						return errUp
-					}
-					finds++
-					return nil
-				}
-				return nil
-			})
-			if err != nil {
-				errs++
-				out.ErrCont(err)
-			}
-			return nil
-		}); err != nil {
-			errs++
-			out.ErrCont(err)
-		}
+
+		cnt, finds, errs = cleanBucket(db, abs, debug, quiet, cnt, total, finds, errs)
 	}
+
 	if quiet {
 		return nil
 	}
+
 	if len(buckets) == errs {
 		return nil
 	}
+
 	if debug && finds == 0 {
-		fmt.Println()
+		fmt.Println("")
 		return ErrDBClean
 	}
+
 	if finds > 0 {
 		fmt.Printf("\rThe database removed %d stale items\n", finds)
 	} else {
-		fmt.Println()
+		fmt.Println("")
 	}
+
 	return nil
+}
+
+func cleanBucket(db *bolt.DB, abs string, debug, quiet bool, cnt, total, finds, errs int) (int, int, int) {
+	if err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(abs))
+		if b == nil {
+			return fmt.Errorf("%w: %s", ErrBucketNotFound, abs)
+		}
+		err := b.ForEach(func(k, v []byte) error {
+			cnt++
+			if !debug && !quiet {
+				fmt.Printf("%s", out.Status(cnt, total, out.Check))
+			}
+			if debug {
+				out.Bug("clean: " + string(k))
+			}
+			if _, errS := os.Stat(string(k)); errS != nil {
+				f := string(k)
+				if st, err2 := os.Stat(filepath.Dir(f)); err2 == nil {
+					if !st.IsDir() && st.Size() > 0 {
+						return nil
+					}
+				}
+				if debug {
+					out.Bug(fmt.Sprintf("%s: %s", k, errS))
+				}
+				if errUp := db.Update(func(tx *bolt.Tx) error {
+					return tx.Bucket([]byte(abs)).Delete(k)
+				}); errUp != nil {
+					return errUp
+				}
+				finds++
+				return nil
+			}
+			return nil
+		})
+		if err != nil {
+			errs++
+			out.ErrCont(err)
+		}
+		return nil
+	}); err != nil {
+		errs++
+
+		out.ErrCont(err)
+	}
+
+	return cnt, finds, errs
 }
 
 func cleanAll(buckets []string, debug bool, db *bolt.DB) ([]string, error) {
 	if len(buckets) > 0 {
 		return buckets, nil
 	}
+
 	if debug {
 		out.Bug("fetching all buckets")
 	}
+
 	var err1 error
 	buckets, err1 = AllBuckets(db)
+
 	if err1 != nil {
 		return nil, err1
 	}
+
 	if len(buckets) == 0 {
 		return nil, ErrDBEmpty
 	}
+
 	return buckets, nil
 }
 
 func totals(buckets []string, db *bolt.DB) (int, error) {
 	count := 0
+
 	for _, bucket := range buckets {
 		abs, err := Abs(bucket)
 		if err != nil {
 			out.ErrCont(err)
 			continue
 		}
+
 		items, err := Count(abs, db)
 		if err != nil {
 			return -1, err
 		}
+
 		count += items
 	}
+
 	return count, nil
 }
 
@@ -534,7 +578,7 @@ func Info() (string, error) {
 		fmt.Fprintf(w, " (%v)", s.Mode())
 	}
 	fmt.Fprintf(w, "\n")
-	bucketsB := 0
+	var bucketsB int
 	w, bucketsB, err = info(path, w)
 	if err != nil {
 		fmt.Fprintln(w)

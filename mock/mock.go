@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	PrivateFile fs.FileMode = 0600
-	PrivateDir  fs.FileMode = 0700
+	PrivateFile fs.FileMode = 0o600
+	PrivateDir  fs.FileMode = 0o700
 
 	CSV1     = "../test/export-bucket1.csv"
 	Test1    = "../test/bucket1"
@@ -42,9 +42,11 @@ func Bucket1() string {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	if runtime.GOOS == win {
 		b = strings.ToLower(b)
 	}
+
 	return b
 }
 
@@ -54,9 +56,11 @@ func Bucket2() string {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	if runtime.GOOS == win {
 		b = strings.ToLower(b)
 	}
+
 	return b
 }
 
@@ -65,6 +69,7 @@ func CreateItem(bucket, file string, db *bolt.DB) error {
 	if db == nil {
 		return bolt.ErrDatabaseNotOpen
 	}
+
 	return db.Update(func(tx *bolt.Tx) error {
 		b, err := tx.CreateBucketIfNotExists([]byte(bucket))
 		if err != nil {
@@ -84,6 +89,7 @@ func Export1() string {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	return f
 }
 
@@ -93,6 +99,7 @@ func Item1() string {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	return b
 }
 
@@ -102,11 +109,13 @@ func Open() (*bolt.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	fmt.Println("open mock db:", path)
 	db, err := bolt.Open(path, PrivateFile, nil)
 	if err != nil {
 		return nil, err
 	}
+
 	return db, nil
 }
 
@@ -115,17 +124,21 @@ func Name() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		dir, err = os.UserHomeDir()
+
 		if err != nil {
 			return "", err
 		}
 	}
+
 	dir = filepath.Join(dir, dbPath, "test")
+
 	_, err = os.Stat(dir)
 	if os.IsNotExist(err) {
 		if err1 := os.MkdirAll(dir, PrivateDir); err != nil {
 			return "", err1
 		}
 	}
+
 	return filepath.Join(dir, dbName), nil
 }
 
@@ -141,7 +154,9 @@ func Read(name string) (sum [32]byte, err error) {
 	if _, err := io.CopyBuffer(h, f, buf); err != nil {
 		return [32]byte{}, err
 	}
+
 	copy(sum[:], h.Sum(nil))
+
 	return sum, nil
 }
 
@@ -154,11 +169,13 @@ func TestOpen() error {
 	if err != nil {
 		return err
 	}
+
 	db, err := bolt.Open(path, PrivateFile, nil)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
+
 	if err := db.Update(func(tx *bolt.Tx) error {
 		// delete any existing buckets from the mock database
 		if err := tx.ForEach(func(name []byte, b *bolt.Bucket) error {
@@ -179,6 +196,7 @@ func TestOpen() error {
 	}); err != nil {
 		return err
 	}
+
 	return db.Close()
 }
 
@@ -188,10 +206,12 @@ func TestRemove() error {
 	if err != nil {
 		return err
 	}
+
 	err = os.Remove(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
 	}
+
 	if runtime.GOOS == "windows" {
 		var e *os.PathError
 		if errors.As(err, &e) {
@@ -199,8 +219,10 @@ func TestRemove() error {
 			return nil
 		}
 	}
+
 	if err != nil {
 		return err
 	}
+
 	return nil
 }

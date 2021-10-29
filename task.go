@@ -108,6 +108,7 @@ func databaseCmd(c *dupe.Config, quiet bool, args ...string) {
 	checkDB()
 	buckets := [2]string{}
 	copy(buckets[:], args)
+
 	switch args[0] {
 	case dbk:
 		backupDB(quiet)
@@ -237,7 +238,7 @@ func dupeLookup(c *dupe.Config, f *cmdFlags) {
 		}
 		c.Buckets()[i] = dupe.Bucket(abs)
 	}
-	buckets := make([]string, len(c.Buckets()))
+	buckets := make([]string, 0, len(c.Buckets()))
 	for _, b := range c.Buckets() {
 		buckets = append(buckets, string(b))
 	}
@@ -401,7 +402,7 @@ func listBucket(quiet bool, args [2]string) {
 		out.ErrCont(err)
 	}
 	// sort the filenames
-	names := make([]string, len(ls))
+	names := make([]string, 0, len(ls))
 	for name := range ls {
 		names = append(names, string(name))
 	}
