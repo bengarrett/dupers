@@ -165,8 +165,8 @@ func TestConfig_CheckPaths(t *testing.T) {
 		wantBucketCnt int
 	}{
 		{"empty", f, args{}, true, 0, 0},
-		{"source", f, args{source: bucket2}, false, 2, 0},
-		{"okay", f, args{source: bucket2, buckets: []Bucket{bucket1}}, true, 2, 1},
+		{"source", f, args{source: bucket2}, false, 3, 0},
+		{"okay", f, args{source: bucket2, buckets: []Bucket{bucket1}}, true, 3, 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
