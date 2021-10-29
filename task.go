@@ -234,15 +234,15 @@ func dupeLookup(c *dupe.Config, f *cmdFlags) {
 		}
 		c.Buckets()[i] = dupe.Bucket(abs)
 	}
-	var bkts []string
+	var buckets []string
 	for _, b := range c.Buckets() {
-		bkts = append(bkts, string(b))
+		buckets = append(buckets, string(b))
 	}
-	if !*f.lookup && len(bkts) > 0 {
+	if !*f.lookup && len(buckets) > 0 {
 		if c.Debug {
 			out.Bug("non-fast mode, database cleanup.")
 		}
-		if err := database.Clean(c.Quiet, c.Debug, bkts...); err != nil {
+		if err := database.Clean(c.Quiet, c.Debug, buckets...); err != nil {
 			out.ErrCont(err)
 		}
 	}
@@ -280,7 +280,7 @@ func searchCmd(f *cmdFlags, args ...string) {
 	)
 	const minArgs = 2
 	if l > minArgs {
-		buckets = args[2:]
+		buckets = args[minArgs:]
 	}
 	if *f.filename {
 		if !*f.exact {
@@ -483,7 +483,6 @@ func removeBucket(quiet bool, args [2]string) {
 			return
 		}
 	}
-
 	if !quiet {
 		fmt.Printf("%s\t%s\n", color.Secondary.Sprint("Bucket:"), color.Debug.Sprint(name))
 		p := message.NewPrinter(language.English)
@@ -509,7 +508,6 @@ func removeBucket(quiet bool, args [2]string) {
 
 func bucketNoFound(name string, err error) {
 	out.ErrCont(err)
-
 	fmt.Printf("Bucket to remove: %s\n", color.Danger.Sprint(name))
 	buckets, err2 := database.AllBuckets(nil)
 	if err2 != nil {
