@@ -12,6 +12,7 @@ import (
 )
 
 func Test_extension(t *testing.T) {
+	t.Parallel()
 	const xz = ".xz"
 	tests := []struct {
 		name string
@@ -29,6 +30,7 @@ func Test_extension(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			if got := extension(tt.find); got != tt.want {
 				t.Errorf("extension() = %v, want %v", got, tt.want)
 			}
@@ -125,6 +127,7 @@ func TestConfig_WalkArchiver(t *testing.T) {
 }
 
 func TestConfig_read7Zip(t *testing.T) {
+	t.Parallel()
 	type fields struct {
 		Debug    bool
 		Quiet    bool
@@ -148,6 +151,7 @@ func TestConfig_read7Zip(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			c := &Config{
 				Debug:    tt.fields.Debug,
 				Quiet:    tt.fields.Quiet,
