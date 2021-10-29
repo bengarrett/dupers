@@ -135,10 +135,10 @@ func Status(count, total int, m Mode) string {
 		}
 	}
 	const (
-		check = "%sChecking %d of %d items "
-		look  = "%sLooking up %d items     "
-		scan  = "%sScanning %d files       "
-		read  = "%sReading %d of %d items  "
+		check = "%sChecking %d+ of %d items "
+		look  = "%sLooking up %d+ items     "
+		scan  = "%sScanning %d+ files       "
+		read  = "%sReading %d+ of %d items  "
 	)
 	pre, p := cr, message.NewPrinter(language.English)
 	if runtime.GOOS != winOS {
