@@ -232,11 +232,12 @@ func dupeLookup(c *dupe.Config, f *cmdFlags) {
 		if err != nil {
 			out.ErrCont(err)
 			c.Buckets()[i] = ""
+
 			continue
 		}
 		c.Buckets()[i] = dupe.Bucket(abs)
 	}
-	var buckets = make([]string, len(c.Buckets()))
+	buckets := make([]string, len(c.Buckets()))
 	for _, b := range c.Buckets() {
 		buckets = append(buckets, string(b))
 	}
@@ -400,7 +401,7 @@ func listBucket(quiet bool, args [2]string) {
 		out.ErrCont(err)
 	}
 	// sort the filenames
-	var names = make([]string, len(ls))
+	names := make([]string, len(ls))
 	for name := range ls {
 		names = append(names, string(name))
 	}

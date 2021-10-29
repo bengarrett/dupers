@@ -96,6 +96,7 @@ func TestExportCSV(t *testing.T) {
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
+
 	t.Run("csv export", func(t *testing.T) {
 		gotName, err := ExportCSV(mock.Bucket1(), nil)
 		if err != nil {

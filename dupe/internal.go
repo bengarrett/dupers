@@ -110,7 +110,7 @@ func (i *internal) Buckets() []Bucket {
 
 // PrintBuckets returns a list of buckets used by the database.
 func (i *internal) PrintBuckets() string {
-	var s []string
+	s := make([]string, len(i.Buckets()))
 	for _, b := range i.Buckets() {
 		s = append(s, string(b))
 	}

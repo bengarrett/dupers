@@ -28,6 +28,7 @@ require (
 	github.com/bodgit/plumbing v1.1.0 // indirect
 	github.com/bodgit/windows v1.0.0 // indirect
 	github.com/connesc/cipherio v0.2.1 // indirect
+	github.com/daixiang0/gci v0.2.9 // indirect
 	github.com/rogpeppe/go-internal v1.8.0 // indirect
 	github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect

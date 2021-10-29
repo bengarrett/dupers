@@ -86,7 +86,8 @@ func flags(f *cmdFlags) {
 	f.sensen = flag.Bool("sensen", false, "delete everything in the <directory to check>"+
 		"\n\t\texcept for directories containing unique Windows programs and assets")
 	f.rm = flag.Bool("delete", false, "delete the duplicate files found in the <directory to check>")
-	f.rmPlus = flag.Bool("delete+", false, "delete the duplicate files and remove empty directories from the <directory to check>")
+	f.rmPlus = flag.Bool("delete+", false,
+		"delete the duplicate files and remove empty directories from the <directory to check>")
 	f.version = flag.Bool("version", false, "version and information for this program")
 }
 

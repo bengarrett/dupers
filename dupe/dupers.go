@@ -211,6 +211,7 @@ func (c *Config) Print() string {
 			continue
 		}
 		finds++
+
 		fmt.Fprintln(w, match(path, l))
 	}
 	if finds == 0 {
@@ -235,6 +236,7 @@ func (c *Config) Remove() string {
 			if c.Debug {
 				out.Bug("path is not exist: " + path)
 			}
+
 			continue
 		}
 		h, err := read(path)
@@ -256,8 +258,7 @@ func (c *Config) Remove() string {
 // RemoveAll removes directories from the source directory that do not contain unique MS-DOS or Windows programs.
 func (c *Config) RemoveAll() string {
 	root := c.ToCheck()
-	_, err := os.Stat(root)
-	if errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(root); errors.Is(err, os.ErrNotExist) {
 		e := fmt.Errorf("%w: %s", ErrPathNoFound, root)
 		out.ErrFatal(e)
 	} else if err != nil {
@@ -340,6 +341,7 @@ func (c *Config) WalkDir(name Bucket) error { //nolint:gocyclo
 		return ErrNoBucket
 	}
 	root := string(name)
+
 	c.init()
 	skip := c.skipFiles()
 	// open database
@@ -432,7 +434,18 @@ func (c *Config) WalkSource() error {
 		}
 		return nil
 	}
-	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	if err := c.walkerSource(root); err != nil {
+		out.ErrCont(fmt.Errorf("item has a problem: %w", err))
+		return nil
+	}
+	if c.Debug {
+		out.Bug("directories dupe check: " + strings.Join(c.sources, " "))
+	}
+	return nil
+}
+
+func (c *Config) walkerSource(root string) error {
+	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if c.Debug {
 			out.Bug(path)
 		}
@@ -453,20 +466,12 @@ func (c *Config) WalkSource() error {
 		}
 		c.sources = append(c.sources, path)
 		return nil
-	}); err != nil {
-		out.ErrCont(fmt.Errorf("item has a problem: %w", err))
-		return nil
-	}
-	if c.Debug {
-		out.Bug("directories dupe check: " + strings.Join(c.sources, " "))
-	}
-	return nil
+	})
 }
 
 // createBucket an empty bucket in the database.
 func (c *Config) createBucket(name Bucket) error {
-	_, err := os.Stat(string(name))
-	if errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(string(name)); errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("%w: %s", ErrPathNoFound, name)
 	} else if err != nil {
 		return err
@@ -495,6 +500,7 @@ func (c *Config) init() {
 		if err != nil {
 			out.ErrCont(err)
 			c.Buckets()[i] = ""
+
 			continue
 		}
 		c.Buckets()[i] = Bucket(abs)
@@ -659,6 +665,7 @@ func read(name string) (sum checksum, err error) {
 // removeAll removes directories that do not contain MS-DOS or Windows programs.
 func removeAll(root string, files []fs.DirEntry) string {
 	w := new(bytes.Buffer)
+
 	for _, item := range files {
 		if !item.IsDir() {
 			continue
@@ -699,6 +706,7 @@ func skipDir(d fs.DirEntry) error {
 // skipFile returns true if the file matches a known Windows or macOS system file.
 func skipFile(name string) bool {
 	const macOS, windows, macOSExtension = true, true, "._"
+
 	switch strings.ToLower(name) {
 	case ".ds_store", ".trashes":
 		return macOS

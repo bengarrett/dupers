@@ -235,6 +235,7 @@ func bucketChk(name string, db *bolt.DB) (bucket string, err error) {
 		}
 		defer db.Close()
 	}
+
 	for {
 		if err := db.View(func(tx *bolt.Tx) error {
 			if b := tx.Bucket([]byte(name)); b == nil {
@@ -281,11 +282,13 @@ func bucketStat(name string) string {
 	printName := func() {
 		fmt.Printf("\nImport bucket directory: %s\n\n", color.Debug.Sprint(name))
 	}
+
 	for {
 		name = strings.TrimSpace(name)
 		abs, err := Abs(name)
 		if err != nil {
 			out.ErrCont(fmt.Errorf("%w: %s", err, name))
+
 			continue
 		}
 		s, err := os.Stat(abs)
@@ -298,6 +301,7 @@ func bucketStat(name string) string {
 				return abs
 			}
 			name = out.Prompt(whichBkt)
+
 			continue
 		} else if err == nil && !s.IsDir() {
 			err = ErrBucketNotDir
@@ -307,6 +311,7 @@ func bucketStat(name string) string {
 			printName()
 			fmt.Println("You cannot use this path as a bucket, please choose an absolute directory path.")
 			name = out.Prompt(whichBkt)
+
 			continue
 		}
 		return abs
@@ -349,6 +354,7 @@ func csvScanner(file *os.File) (string, *Lists, error) {
 	scanner.Split(bufio.ScanLines)
 	bucket, row := "", 0
 	lists := make(Lists)
+
 	for scanner.Scan() {
 		row++
 		line := scanner.Text()
@@ -356,6 +362,7 @@ func csvScanner(file *os.File) (string, *Lists, error) {
 			if bucket = bucketName(line); bucket == "" {
 				return "", nil, fmt.Errorf("%w, invalid header: %s", ErrImportFile, line)
 			}
+
 			continue
 		}
 		sum, key, err := importCSV(line, bucket)
@@ -363,6 +370,7 @@ func csvScanner(file *os.File) (string, *Lists, error) {
 			if row == firstItem {
 				return "", nil, err
 			}
+
 			continue
 		}
 		if loops != 0 && row > loops+1 {
@@ -408,6 +416,7 @@ func isUNC(path string) bool {
 // pathWindows returns a Windows or UNC usable path from the source path.
 func pathWindows(src string) string {
 	const drive = "C:"
+
 	switch src {
 	case "":
 		return ""

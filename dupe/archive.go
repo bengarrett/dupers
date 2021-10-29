@@ -368,7 +368,7 @@ func (c *Config) readArchiver(bucket, archive, ext string) { // nolint: gocyclo
 		// *archiver.TarZstd,
 		*archiver.Xz,
 		*archiver.Zip:
-		var w = f.(archiver.Walker)
+		w := f.(archiver.Walker)
 		if err := w.Walk(archive, func(f archiver.File) error {
 			if f.IsDir() {
 				return nil
