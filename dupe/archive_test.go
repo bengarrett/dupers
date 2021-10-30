@@ -29,6 +29,7 @@ func Test_extension(t *testing.T) {
 		t.Error(err)
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			if got := extension(tt.find); got != tt.want {
@@ -42,6 +43,7 @@ func Test_extension(t *testing.T) {
 }
 
 func TestIsArchive(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		filename   string
@@ -56,7 +58,9 @@ func TestIsArchive(t *testing.T) {
 		{"zip", "../test/randomfiles.zip", true, appZip, false},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			gotResult, gotMime, err := IsArchive(tt.filename)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("IsArchive() error = %v, wantErr %v", err, tt.wantErr)
@@ -73,6 +77,7 @@ func TestIsArchive(t *testing.T) {
 }
 
 func TestIsExtension(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		filename   string
@@ -84,7 +89,9 @@ func TestIsExtension(t *testing.T) {
 		{"zip", "file.zip", true, appZip},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			gotResult, gotMime := IsExtension(tt.filename)
 			if gotResult != tt.wantResult {
 				t.Errorf("IsExtension() gotResult = %v, want %v", gotResult, tt.wantResult)
@@ -97,6 +104,7 @@ func TestIsExtension(t *testing.T) {
 }
 
 func TestConfig_WalkArchiver(t *testing.T) {
+	t.Parallel()
 	type args struct {
 		name Bucket
 	}
@@ -109,7 +117,9 @@ func TestConfig_WalkArchiver(t *testing.T) {
 		{"bucket1", args{Bucket(mock.Bucket1())}, false},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			var err error
 			c := Config{
 				Test: true,
@@ -150,6 +160,7 @@ func TestConfig_read7Zip(t *testing.T) {
 		t.Error(err)
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			c := &Config{
