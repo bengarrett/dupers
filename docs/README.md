@@ -109,7 +109,7 @@ dupers search "2010" D:\photos
 
 ## Performance
 
-Due to the nature of duplicate file checking, several issues can affect duper's performance.
+Due to the nature of duplicate file checking, several issues can affect performance.
 
 #### Hardware
 With its constant opening and reading of files, hardware directly affects dupers' performance, CPU used and the read/write speed of the hard drive. Fast multithreaded CPUs and SSD drives help here.
