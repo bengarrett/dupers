@@ -98,7 +98,7 @@ func helpDB(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintf(w, "    dupers %s  <bucket>\t%s\n", dup, "add or update the bucket to the database")
 	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", dupp, "add or update the bucket using an archive scan "+
 		color.Danger.Sprint("(SLOW)")+
-		"\n\tthe scan reads all the files stored within file archives")
+		"\n\tthe scan reads every file archived with known package formats")
 	fmt.Fprintf(w, "\n    dupers %s  <bucket>\t%s\n", drm, "remove the bucket from the database")
 	fmt.Fprintf(w, "    dupers %s  <bucket> <new directory>\t%s\n", dmv, "move the bucket to a new directory path")
 	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", dex, "export the bucket to a text file in: "+home())
