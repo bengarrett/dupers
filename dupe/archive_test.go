@@ -12,7 +12,6 @@ import (
 )
 
 func Test_extension(t *testing.T) {
-
 	const xz = ".xz"
 	tests := []struct {
 		name string
@@ -29,9 +28,7 @@ func Test_extension(t *testing.T) {
 		t.Error(err)
 	}
 	for _, tt := range tests {
-
 		t.Run(tt.name, func(t *testing.T) {
-
 			if got := extension(tt.find); got != tt.want {
 				t.Errorf("extension() = %v, want %v", got, tt.want)
 			}
@@ -43,7 +40,6 @@ func Test_extension(t *testing.T) {
 }
 
 func TestIsArchive(t *testing.T) {
-
 	tests := []struct {
 		name       string
 		filename   string
@@ -58,9 +54,7 @@ func TestIsArchive(t *testing.T) {
 		{"zip", "../test/randomfiles.zip", true, appZip, false},
 	}
 	for _, tt := range tests {
-
 		t.Run(tt.name, func(t *testing.T) {
-
 			gotResult, gotMime, err := IsArchive(tt.filename)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("IsArchive() error = %v, wantErr %v", err, tt.wantErr)
@@ -77,7 +71,6 @@ func TestIsArchive(t *testing.T) {
 }
 
 func TestIsExtension(t *testing.T) {
-
 	tests := []struct {
 		name       string
 		filename   string
@@ -89,9 +82,7 @@ func TestIsExtension(t *testing.T) {
 		{"zip", "file.zip", true, appZip},
 	}
 	for _, tt := range tests {
-
 		t.Run(tt.name, func(t *testing.T) {
-
 			gotResult, gotMime := IsExtension(tt.filename)
 			if gotResult != tt.wantResult {
 				t.Errorf("IsExtension() gotResult = %v, want %v", gotResult, tt.wantResult)
@@ -104,7 +95,6 @@ func TestIsExtension(t *testing.T) {
 }
 
 func TestConfig_WalkArchiver(t *testing.T) {
-
 	type args struct {
 		name Bucket
 	}
@@ -117,9 +107,7 @@ func TestConfig_WalkArchiver(t *testing.T) {
 		{"bucket1", args{Bucket(mock.Bucket1())}, false},
 	}
 	for _, tt := range tests {
-
 		t.Run(tt.name, func(t *testing.T) {
-
 			var err error
 			c := Config{
 				Test: true,
@@ -137,7 +125,6 @@ func TestConfig_WalkArchiver(t *testing.T) {
 }
 
 func TestConfig_read7Zip(t *testing.T) {
-
 	type fields struct {
 		Debug    bool
 		Quiet    bool
@@ -160,9 +147,7 @@ func TestConfig_read7Zip(t *testing.T) {
 		t.Error(err)
 	}
 	for _, tt := range tests {
-
 		t.Run(tt.name, func(t *testing.T) {
-
 			c := &Config{
 				Debug:    tt.fields.Debug,
 				Quiet:    tt.fields.Quiet,

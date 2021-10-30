@@ -46,7 +46,6 @@ func ExamplePrint() {
 }
 
 func Test_contains(t *testing.T) {
-
 	type args struct {
 		s    []string
 		find string
@@ -64,9 +63,7 @@ func Test_contains(t *testing.T) {
 		{"find upper", args{str, "DEF"}, false},
 	}
 	for _, tt := range tests {
-
 		t.Run(tt.name, func(t *testing.T) {
-
 			if got := contains(tt.args.find, tt.args.s...); got != tt.want {
 				t.Errorf("contains() = %v, want %v", got, tt.want)
 			}
@@ -75,7 +72,6 @@ func Test_contains(t *testing.T) {
 }
 
 func Test_containsBin(t *testing.T) {
-
 	d, err := filepath.Abs(bucket1)
 	if err != nil {
 		t.Error(err)
@@ -88,9 +84,7 @@ func Test_containsBin(t *testing.T) {
 		{"test dir", d, false},
 	}
 	for _, tt := range tests {
-
 		t.Run(tt.name, func(t *testing.T) {
-
 			if got := containsBin(tt.root); got != tt.want {
 				t.Errorf("containsBin() = %v, want %v", got, tt.want)
 			}
@@ -99,7 +93,6 @@ func Test_containsBin(t *testing.T) {
 }
 
 func Test_read(t *testing.T) {
-
 	tests := []struct {
 		name     string
 		path     string
@@ -111,9 +104,7 @@ func Test_read(t *testing.T) {
 		{"file2", file2, hash2, false},
 	}
 	for _, tt := range tests {
-
 		t.Run(tt.name, func(t *testing.T) {
-
 			gotHash, err := read(tt.path)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("read() error = %v, wantErr %v", err, tt.wantErr)
@@ -128,18 +119,15 @@ func Test_read(t *testing.T) {
 }
 
 func Test_SetBuckets(t *testing.T) {
-
 	const test = "test"
 	i := internal{}
 	i.SetBuckets(test)
 	t.Run("test set", func(t *testing.T) {
-
 		if l := len(i.buckets); l != 1 {
 			t.Errorf("SetBuckets() got = %v, want %v", l, 1)
 		}
 	})
 	t.Run("print", func(t *testing.T) {
-
 		if s := i.PrintBuckets(); s != test {
 			t.Errorf("SetBuckets() got = %v, want %v", s, test)
 		}
@@ -147,11 +135,9 @@ func Test_SetBuckets(t *testing.T) {
 }
 
 func Test_SetToCheck(t *testing.T) {
-
 	c := Config{}
 	c.SetToCheck(bucket1)
 	t.Run("test set", func(t *testing.T) {
-
 		if s := c.source; s == "" {
 			t.Errorf("SetToCheck() got = %v, want the absolute path of: %v", s, bucket1)
 		}
@@ -159,7 +145,6 @@ func Test_SetToCheck(t *testing.T) {
 }
 
 func TestConfig_CheckPaths(t *testing.T) {
-
 	type fields struct {
 		Debug    bool
 		Quiet    bool
@@ -184,9 +169,7 @@ func TestConfig_CheckPaths(t *testing.T) {
 		{"okay", f, args{source: bucket2, buckets: []Bucket{bucket1}}, true, 3, 1},
 	}
 	for _, tt := range tests {
-
 		t.Run(tt.name, func(t *testing.T) {
-
 			c := &Config{
 				Debug:    tt.fields.Debug,
 				Quiet:    tt.fields.Quiet,
@@ -210,7 +193,6 @@ func TestConfig_CheckPaths(t *testing.T) {
 }
 
 func TestConfig_Print(t *testing.T) {
-
 	b1, _ := filepath.Abs(file1)
 	b2, _ := filepath.Abs(file2)
 	c := Config{}
@@ -225,7 +207,6 @@ func TestConfig_Print(t *testing.T) {
 }
 
 func TestConfig_Remove(t *testing.T) {
-
 	c := Config{Test: true}
 	if r := strings.TrimSpace(c.Remove()); r != "No duplicate files to remove." {
 		t.Errorf("Config.Remove() should have returned a nothing to remove message, not %v.", r)
@@ -256,7 +237,6 @@ func TestConfig_Remove(t *testing.T) {
 }
 
 func TestConfig_Clean(t *testing.T) {
-
 	c := Config{Test: true}
 	if r := strings.TrimSpace(c.Clean()); r != "" {
 		t.Errorf("Config.Clean() should have returned blank, not %v.", r)
@@ -275,7 +255,7 @@ func TestConfig_Clean(t *testing.T) {
 	// make empty test dir
 	c.source = filepath.Dir(rmDst)
 	dir := filepath.Join(c.source, "empty directory placeholder")
-	if err := os.MkdirAll(dir, 0700); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Error(err)
 	}
 	// clean
@@ -285,7 +265,6 @@ func TestConfig_Clean(t *testing.T) {
 }
 
 func TestConfig_Status(t *testing.T) {
-
 	c := Config{Test: true}
 	c.files = 2
 	const want = "Scanned 2 files"
@@ -295,7 +274,6 @@ func TestConfig_Status(t *testing.T) {
 }
 
 func TestConfig_WalkDirs(t *testing.T) {
-
 	var err error
 	c := Config{Test: true, Debug: true}
 	c.db, err = mock.Open()
@@ -308,7 +286,6 @@ func TestConfig_WalkDirs(t *testing.T) {
 }
 
 func TestConfig_WalkDir(t *testing.T) {
-
 	var err error
 	c := Config{Test: true, Debug: true}
 	c.db, err = mock.Open()
@@ -332,7 +309,6 @@ func TestConfig_WalkDir(t *testing.T) {
 }
 
 func TestConfig_WalkSource(t *testing.T) {
-
 	c := Config{}
 	if err := c.WalkSource(); err == nil {
 		t.Errorf("Config.WalkSource() should return an error with an empty Config.")
@@ -344,7 +320,6 @@ func TestConfig_WalkSource(t *testing.T) {
 }
 
 func Test_printWalk(t *testing.T) {
-
 	c := Config{Test: false, Quiet: false, Debug: false}
 	s := strings.TrimSpace(printWalk(false, &c))
 	want := ""
@@ -383,7 +358,6 @@ func Test_printWalk(t *testing.T) {
 }
 
 func TestRemoveAll(t *testing.T) {
-
 	c := Config{Test: true, Quiet: false, Debug: true}
 	if err := cleanDir(bucket0); err != nil {
 		t.Error(err)
@@ -426,7 +400,7 @@ func cleanDir(name string) error {
 }
 
 func mirrorDir(src, dst string) error {
-	const dirAllAccess fs.FileMode = 0777
+	const dirAllAccess fs.FileMode = 0o777
 	from, err := filepath.Abs(src)
 	if err != nil {
 		return err
