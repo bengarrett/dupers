@@ -54,8 +54,10 @@ var (
 )
 
 // CheckPaths counts the files in the directory to check and the buckets.
-func (c *Config) CheckPaths() (ok bool, checkCnt, bucketCnt int) { //nolint: gocyclo
-	const notDirectory = true
+func (c *Config) CheckPaths() (ok bool, checkCnt, bucketCnt int) {
+	check := func() bool {
+		return bucketCnt >= checkCnt/2
+	}
 	if c.Debug {
 		out.PBug("count the files within the paths")
 	}
@@ -63,23 +65,61 @@ func (c *Config) CheckPaths() (ok bool, checkCnt, bucketCnt int) { //nolint: goc
 	if c.Debug {
 		out.PBug("path to check: " + root)
 	}
-	stat, err := os.Stat(root)
-	if err != nil {
-		if c.Debug {
-			out.PBug("path is not found")
-		}
+
+	const notDirectory = true
+	if c.checkPath(root, notDirectory) {
 		return notDirectory, 0, 0
 	}
-	if !stat.IsDir() {
-		if c.Debug {
-			out.PBug("path is a file")
+
+	bucketCnt = 0
+	checkCnt = c.walkPath(root)
+	if c.Debug {
+		s := fmt.Sprintf("all buckets: %s", c.Buckets())
+		out.PBug(s)
+	}
+	for _, b := range c.Buckets() {
+		var err error
+		bucketCnt, err = c.walkBucket(b, bucketCnt, checkCnt)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			if c.Debug {
+				out.PBug(err.Error())
+			}
 		}
-		return notDirectory, 0, 0
 	}
-	checkCnt, bucketCnt = 0, 0
-	check := func() bool {
-		return bucketCnt >= checkCnt/2
-	}
+	return check(), checkCnt, bucketCnt
+}
+
+func (c *Config) walkBucket(b Bucket, bucketCnt, checkCnt int) (int, error) {
+	return bucketCnt, filepath.WalkDir(string(b), func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			out.ErrFatal(err)
+			return nil
+		}
+		if c.Debug {
+			out.PBug("walking bucket item: " + path)
+		}
+		if err := skipDir(d); err != nil {
+			return err
+		}
+		if !d.Type().IsRegular() {
+			return nil
+		}
+		if d.IsDir() {
+			return nil
+		}
+		bucketCnt++
+		if bucketCnt >= checkCnt/2 {
+			return io.EOF
+		}
+		return nil
+	})
+}
+
+func (c *Config) walkPath(root string) int {
+	checkCnt := 0
 	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if c.Debug {
 			out.PBug("counting: " + path)
@@ -103,43 +143,24 @@ func (c *Config) CheckPaths() (ok bool, checkCnt, bucketCnt int) { //nolint: goc
 			out.PBug(err.Error())
 		}
 	}
-	if c.Debug {
-		s := fmt.Sprintf("all buckets: %s", c.Buckets())
-		out.PBug(s)
-	}
-	for _, b := range c.Buckets() {
-		if err := filepath.WalkDir(string(b), func(path string, d fs.DirEntry, err error) error {
-			if err != nil {
-				out.ErrFatal(err)
-				return nil
-			}
-			if c.Debug {
-				out.PBug("walking bucket item: " + path)
-			}
-			if err := skipDir(d); err != nil {
-				return err
-			}
-			if !d.Type().IsRegular() {
-				return nil
-			}
-			if d.IsDir() {
-				return nil
-			}
-			bucketCnt++
-			if check() {
-				return io.EOF
-			}
-			return nil
-		}); err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			if c.Debug {
-				out.PBug(err.Error())
-			}
+	return checkCnt
+}
+
+func (c *Config) checkPath(root string, notDirectory bool) (ok bool) {
+	stat, err := os.Stat(root)
+	if err != nil {
+		if c.Debug {
+			out.PBug("path is not found")
 		}
+		return notDirectory
 	}
-	return check(), checkCnt, bucketCnt
+	if !stat.IsDir() {
+		if c.Debug {
+			out.PBug("path is a file")
+		}
+		return notDirectory
+	}
+	return false
 }
 
 // Clean removes all empty directories from c.Source.
@@ -273,7 +294,8 @@ func (c *Config) RemoveAll() string {
 	}
 	if !c.Test {
 		fmt.Printf("%s %s\n", color.Secondary.Sprint("Target directory:"), color.Debug.Sprint(root))
-		fmt.Println("Delete everything in the target directory, except for directories\ncontaining unique Windows or MS-DOS programs and assets?")
+		fmt.Println("Delete everything in the target directory, except for directories" +
+			"\ncontaining unique Windows or MS-DOS programs and assets?")
 		if input := out.YN("Please confirm", out.Nil); !input {
 			os.Exit(0)
 		}
@@ -336,7 +358,7 @@ func (c *Config) WalkDirs() {
 }
 
 // WalkDir walks the named bucket directory for any new files and saves their checksums to the bucket.
-func (c *Config) WalkDir(name Bucket) error { //nolint:gocyclo
+func (c *Config) WalkDir(name Bucket) error {
 	if name == "" {
 		return ErrNoBucket
 	}
@@ -354,11 +376,15 @@ func (c *Config) WalkDir(name Bucket) error { //nolint:gocyclo
 		return err
 	}
 	// walk the root directory
+	return c.walkDir(root, skip)
+}
+
+func (c *Config) walkDir(root string, skip []string) error {
 	var wg sync.WaitGroup
 	if c.Debug {
 		out.PBug("walk directory: " + root)
 	}
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if c.Debug {
 			s := "walk file"
 			if d.IsDir() {
@@ -373,28 +399,16 @@ func (c *Config) WalkDir(name Bucket) error { //nolint:gocyclo
 			return err
 		}
 		if err1 := skipDir(d); err1 != nil {
-			if c.Debug {
-				out.PBug(" - skipping directory")
-			}
-			return err1
+			return c.walkDirSkip(" - skipping directory", err1)
 		}
 		if skipFile(d.Name()) {
-			if c.Debug {
-				out.PBug(" - skipping file")
-			}
-			return nil
+			return c.walkDirSkip(" - skipping file", nil)
 		}
 		if !d.Type().IsRegular() {
-			if c.Debug {
-				out.PBug(" - skipping not regular file")
-			}
-			return nil
+			return c.walkDirSkip(" - skipping not regular file", nil)
 		}
 		if skipSelf(path, skip...) {
-			if c.Debug {
-				out.PBug(" - skipping self item")
-			}
-			return nil
+			return c.walkDirSkip(" - skipping self item", nil)
 		}
 		c.files++
 		if errW := walkCompare(root, path, c); errW != nil {
@@ -412,6 +426,12 @@ func (c *Config) WalkDir(name Bucket) error { //nolint:gocyclo
 		wg.Wait()
 		return err
 	})
+}
+
+func (c *Config) walkDirSkip(s string, err error) error {
+	if c.Debug {
+		out.PBug(s)
+	}
 	return err
 }
 

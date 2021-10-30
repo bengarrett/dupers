@@ -134,13 +134,7 @@ func Print(quiet bool, m *database.Matches) string {
 	}
 	w := new(bytes.Buffer)
 	// collect the bucket names which will be used to sort the results
-	buckets, bucket := []string{}, ""
-	for _, bucket := range *m {
-		if !contains(string(bucket), buckets...) {
-			buckets = append(buckets, string(bucket))
-		}
-	}
-	sort.Strings(buckets)
+	bucket, buckets := matchBuckets(m)
 	for i, buck := range buckets {
 		cnt := 0
 		if i > 0 {
@@ -173,6 +167,17 @@ func Print(quiet bool, m *database.Matches) string {
 		}
 	}
 	return w.String()
+}
+
+func matchBuckets(m *database.Matches) (string, []string) {
+	bucket, buckets := "", []string{}
+	for _, bucket := range *m {
+		if !contains(string(bucket), buckets...) {
+			buckets = append(buckets, string(bucket))
+		}
+	}
+	sort.Strings(buckets)
+	return bucket, buckets
 }
 
 // contains returns true if find exists in s.

@@ -323,7 +323,7 @@ func (c *Config) read7Zip(bucket, name string) {
 }
 
 // readArchiver opens the named file archive, hashes its content and saves those to the bucket.
-func (c *Config) readArchiver(bucket, archive, ext string) { // nolint: gocyclo
+func (c *Config) readArchiver(bucket, archive, ext string) {
 	if c.Debug {
 		out.PBug("read archiver: " + archive)
 	}
@@ -347,33 +347,8 @@ func (c *Config) readArchiver(bucket, archive, ext string) { // nolint: gocyclo
 			out.ErrCont(ErrArchiverType)
 			return
 		}
-		if err := w.Walk(archive, func(f archiver.File) error {
-			if f.IsDir() {
-				return nil
-			}
-			if !f.FileInfo.Mode().IsRegular() {
-				return nil
-			}
-			if skipFile(f.Name()) {
-				return nil
-			}
-			fp := filepath.Join(archive, f.Name())
-			if c.findItem(fp) {
-				return nil
-			}
-			buf, h := make([]byte, oneMb), sha256.New()
-			if _, err := io.CopyBuffer(h, f, buf); err != nil {
-				out.ErrAppend(err)
-				return nil
-			}
-			var sum checksum
-			copy(sum[:], h.Sum(nil))
-			if err := c.updateArchiver(fp, bucket, sum); err != nil {
-				out.ErrAppend(err)
-			}
-			cnt++
-			return nil
-		}); err != nil {
+		cnt, err = c.readArcWalk(archive, bucket, cnt, w)
+		if err != nil {
 			out.ErrAppend(err)
 		}
 	default:
@@ -384,6 +359,36 @@ func (c *Config) readArchiver(bucket, archive, ext string) { // nolint: gocyclo
 		s := fmt.Sprintf("read %d items within the archive", cnt)
 		out.PBug(s)
 	}
+}
+
+func (c *Config) readArcWalk(archive, bucket string, cnt int, w archiver.Walker) (int, error) {
+	return cnt, w.Walk(archive, func(f archiver.File) error {
+		if f.IsDir() {
+			return nil
+		}
+		if !f.FileInfo.Mode().IsRegular() {
+			return nil
+		}
+		if skipFile(f.Name()) {
+			return nil
+		}
+		fp := filepath.Join(archive, f.Name())
+		if c.findItem(fp) {
+			return nil
+		}
+		buf, h := make([]byte, oneMb), sha256.New()
+		if _, err := io.CopyBuffer(h, f, buf); err != nil {
+			out.ErrAppend(err)
+			return nil
+		}
+		var sum checksum
+		copy(sum[:], h.Sum(nil))
+		if err := c.updateArchiver(fp, bucket, sum); err != nil {
+			out.ErrAppend(err)
+		}
+		cnt++
+		return nil
+	})
 }
 
 func (c *Config) readArcRecover(archive string) {

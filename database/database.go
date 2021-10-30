@@ -36,8 +36,8 @@ type (
 )
 
 const (
-	PrivateFile fs.FileMode = 0600
-	PrivateDir  fs.FileMode = 0700
+	PrivateFile fs.FileMode = 0o600
+	PrivateDir  fs.FileMode = 0o700
 
 	NotFound = "This is okay as one will be created when using the dupe or search commands."
 	Timeout  = 3 * time.Second
@@ -130,9 +130,7 @@ func Exist(bucket string, db *bolt.DB) error {
 	})
 }
 
-// Clean the stale items from database buckets.
-// Stale items are file pointers that no longer exist on the host file system.
-func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funlen
+func cleanDebug(debug bool, buckets []string) {
 	if debug {
 		out.PBug("running database clean")
 
@@ -140,7 +138,12 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 			strings.Join(buckets, "\n"))
 		out.PBug(s)
 	}
+}
 
+// Clean the stale items from database buckets.
+// Stale items are file pointers that no longer exist on the host file system.
+func Clean(quiet, debug bool, buckets ...string) error {
+	cleanDebug(debug, buckets)
 	path, err := DB()
 	if err != nil {
 		return err
@@ -151,7 +154,6 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 	}
 
 	db, err := bolt.Open(path, PrivateFile, write())
-
 	if err != nil {
 		return err
 	}
@@ -163,48 +165,18 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 		return err
 	}
 
-	cnt, errs, finds, total := 0, 0, 0, 0
-	total, err = totals(buckets, db)
-
+	cnt, errs, finds := 0, 0, 0
+	total, err := totals(buckets, db)
 	if err != nil {
 		return err
 	}
 
 	for _, bucket := range buckets {
-		abs, err := Abs(bucket)
-		if err != nil {
-			out.ErrCont(err)
-			continue
-		} else if debug {
-			out.PBug("bucket: " + abs)
-		}
-		// check the bucket directory exists on the file system
-		fi, errS := os.Stat(abs)
-		switch {
-		case os.IsNotExist(errS):
-			out.ErrCont(fmt.Errorf("%w: %s", ErrBucketSkip, abs))
-			errs++
-
-			if i, errc := Count(bucket, db); errc == nil {
-				cnt += i
-			}
-
-			continue
-		case err != nil:
-			out.ErrCont(err)
-			errs++
-
-			continue
-		case !fi.IsDir():
-			out.ErrCont(fmt.Errorf("%w: %s", ErrBucketAsFile, abs))
-			errs++
-			if i, errc := Count(bucket, db); errc == nil {
-				cnt += i
-			}
-
+		var abs string
+		var cont bool
+		if cnt, errs, abs, cont = parseBucket(bucket, db, cnt, errs, debug); cont {
 			continue
 		}
-
 		cnt, finds, errs = cleanBucket(db, abs, debug, quiet, cnt, total, finds, errs)
 	}
 
@@ -230,6 +202,43 @@ func Clean(quiet, debug bool, buckets ...string) error { // nolint: gocyclo,funl
 	return nil
 }
 
+func parseBucket(bucket string, db *bolt.DB, cnt, errs int, debug bool) (int, int, string, bool) {
+	abs, err := Abs(bucket)
+	if err != nil {
+		out.ErrCont(err)
+		return cnt, errs, "", true
+	} else if debug {
+		out.PBug("bucket: " + abs)
+	}
+	// check the bucket directory exists on the file system
+	fi, errS := os.Stat(abs)
+	switch {
+	case os.IsNotExist(errS):
+		out.ErrCont(fmt.Errorf("%w: %s", ErrBucketSkip, abs))
+		errs++
+
+		if i, errc := Count(bucket, db); errc == nil {
+			cnt += i
+		}
+
+		return cnt, errs, "", true
+	case err != nil:
+		out.ErrCont(err)
+		errs++
+
+		return cnt, errs, "", true
+	case !fi.IsDir():
+		out.ErrCont(fmt.Errorf("%w: %s", ErrBucketAsFile, abs))
+		errs++
+		if i, errc := Count(bucket, db); errc == nil {
+			cnt += i
+		}
+
+		return cnt, errs, "", true
+	}
+	return cnt, errs, abs, false
+}
+
 func cleanBucket(db *bolt.DB, abs string, debug, quiet bool, cnt, total, finds, errs int) (int, int, int) {
 	if err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(abs))
@@ -238,12 +247,7 @@ func cleanBucket(db *bolt.DB, abs string, debug, quiet bool, cnt, total, finds, 
 		}
 		err := b.ForEach(func(k, v []byte) error {
 			cnt++
-			if !debug && !quiet {
-				fmt.Printf("%s", out.Status(cnt, total, out.Check))
-			}
-			if debug {
-				out.PBug("clean: " + string(k))
-			}
+			printStat(debug, quiet, cnt, total, k)
 			if _, errS := os.Stat(string(k)); errS != nil {
 				f := string(k)
 				if st, err2 := os.Stat(filepath.Dir(f)); err2 == nil {
@@ -276,6 +280,15 @@ func cleanBucket(db *bolt.DB, abs string, debug, quiet bool, cnt, total, finds, 
 	}
 
 	return cnt, finds, errs
+}
+
+func printStat(debug, quiet bool, cnt, total int, k []byte) {
+	if !debug && !quiet {
+		fmt.Printf("%s", out.Status(cnt, total, out.Check))
+	}
+	if debug {
+		out.PBug("clean: " + string(k))
+	}
 }
 
 func cleanAll(buckets []string, debug bool, db *bolt.DB) ([]string, error) {
@@ -410,14 +423,8 @@ func compare(term []byte, noCase, base bool, buckets ...string) (*Matches, error
 	}
 	defer db.Close()
 
-	if len(buckets) == 0 {
-		buckets, err = AllBuckets(nil)
-		if err != nil {
-			return nil, err
-		}
-		if len(buckets) == 0 {
-			return nil, ErrDBEmpty
-		}
+	if buckets, err = checkBuckets(buckets); err != nil {
+		return nil, err
 	}
 	finds := make(Matches)
 	for _, bucket := range buckets {
@@ -435,10 +442,7 @@ func compare(term []byte, noCase, base bool, buckets ...string) (*Matches, error
 				s = bytes.ToLower(term)
 			}
 			err = b.ForEach(func(key, _ []byte) error {
-				k := key
-				if noCase {
-					k = bytes.ToLower(key)
-				}
+				k := compareKey(key, noCase)
 				if base {
 					k = []byte(filepath.Base(string(k)))
 					if bytes.Contains(k, s) {
@@ -459,6 +463,28 @@ func compare(term []byte, noCase, base bool, buckets ...string) (*Matches, error
 		}
 	}
 	return &finds, nil
+}
+
+func checkBuckets(buckets []string) ([]string, error) {
+	if len(buckets) != 0 {
+		return buckets, nil
+	}
+	all, err := AllBuckets(nil)
+	if err != nil {
+		return nil, err
+	}
+	if len(all) == 0 {
+		return nil, ErrDBEmpty
+	}
+	return all, nil
+}
+
+func compareKey(key []byte, noCase bool) []byte {
+	k := key
+	if noCase {
+		k = bytes.ToLower(key)
+	}
+	return k
 }
 
 // Count the number of records in the bucket.

@@ -240,19 +240,13 @@ func bucketChk(name string, db *bolt.DB) (bucket string, err error) {
 		if err := db.View(func(tx *bolt.Tx) error {
 			if b := tx.Bucket([]byte(name)); b == nil {
 				bucket = name
-				for {
-					fmt.Println()
-					if bucket = bucketStat(bucket); bucket != "" {
-						return nil
-					}
+				if stat(bucket) {
+					return nil
 				}
 			}
 			if bucket = bucketRename(name); bucket != "" {
-				for {
-					fmt.Println()
-					if bucket = bucketStat(bucket); bucket != "" {
-						return nil
-					}
+				if stat(bucket) {
+					return nil
 				}
 			}
 			return nil
@@ -261,6 +255,15 @@ func bucketChk(name string, db *bolt.DB) (bucket string, err error) {
 		}
 		if bucket != "" {
 			return bucket, nil
+		}
+	}
+}
+
+func stat(bucket string) bool {
+	for {
+		fmt.Println()
+		if bucket = bucketStat(bucket); bucket != "" {
+			return true
 		}
 	}
 }
@@ -517,42 +520,38 @@ func Import(name Bucket, ls *Lists, db *bolt.DB) (imported int, err error) {
 		batch[path] = sum
 		items++
 		if items%batchItems == 0 {
-			for path, sum := range batch {
-				if err := db.Update(func(tx *bolt.Tx) error {
-					b, err := tx.CreateBucketIfNotExists([]byte(name))
-					if err != nil {
-						return err
-					}
-					fmt.Print(out.Status(imported, total, out.Read))
-					if err := b.Put([]byte(string(path)), sum[:]); err != nil {
-						return err
-					}
-					imported++
-					return nil
-				}); err != nil {
-					return 0, err
-				}
+			imported, err = batch.iterate(db, name, imported, total)
+			if err != nil {
+				return 0, err
 			}
 			batch = make(Lists, batchItems)
 			continue
 		}
 	}
 	if len(batch) > 0 {
-		for path, sum := range batch {
-			if err := db.Update(func(tx *bolt.Tx) error {
-				b, err := tx.CreateBucketIfNotExists([]byte(name))
-				if err != nil {
-					return err
-				}
-				fmt.Print(out.Status(imported, total, out.Read))
-				if err := b.Put([]byte(string(path)), sum[:]); err != nil {
-					return err
-				}
-				imported++
-				return nil
-			}); err != nil {
-				return 0, err
+		imported, err = batch.iterate(db, name, imported, total)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return imported, nil
+}
+
+func (batch Lists) iterate(db *bolt.DB, name Bucket, imported, total int) (int, error) {
+	for path, sum := range batch {
+		if err := db.Update(func(tx *bolt.Tx) error {
+			b, err := tx.CreateBucketIfNotExists([]byte(name))
+			if err != nil {
+				return err
 			}
+			fmt.Print(out.Status(imported, total, out.Read))
+			if err := b.Put([]byte(string(path)), sum[:]); err != nil {
+				return err
+			}
+			imported++
+			return nil
+		}); err != nil {
+			return 0, err
 		}
 	}
 	return imported, nil
