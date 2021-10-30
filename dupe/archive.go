@@ -20,7 +20,7 @@ import (
 	"github.com/bodgit/sevenzip"
 	"github.com/gookit/color"
 	"github.com/h2non/filetype"
-	"github.com/mholt/archiver"
+	"github.com/mholt/archiver/v3"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -37,7 +37,7 @@ const (
 	oneMb  = oneKb * oneKb
 )
 
-var ErrArchiverType = errors.New("unsupported or unknown archiver type")
+var ErrArchiverType = errors.New("archiver type is unsupported")
 
 // extension finds either a compressed file extension or mime type and returns its match.
 func extension(find string) string {
@@ -46,14 +46,11 @@ func extension(find string) string {
 	ext := map[string]string{
 		ext7z:      app7z,
 		".bz2":     appBZ2,
-		".gz":      appGZ,
-		".rar":     appRAR,
-		".tar":     appTar,
-		".zip":     appZip,
+		".gz":      appGZ,                         // gzip
 		".lz4":     "application/x-lz4",           // LZ4*
+		".rar":     appRAR,                        // rar
 		".sz":      "application/x-snappy-framed", // Snappy*
-		".xz":      appXZ,                         // XZ Utils
-		".zst":     "application/zstd",            // Zstandard (zstd)*
+		".tar":     appTar,                        // tar
 		".tar.br":  appTar,                        // tar + Brotli compression
 		".tbr":     appTar,                        //
 		".tar.gz":  appTar,                        // tar + gzip compression
@@ -67,6 +64,9 @@ func extension(find string) string {
 		".tar.sz":  appTar,                        // tar + snappy compression
 		".tsz":     appTar,                        //
 		".tar.zst": appTar,                        // tar + Zstandard compression
+		".xz":      appXZ,                         // XZ Utils
+		".zip":     appZip,
+		".zst":     "application/zstd", // Zstandard (zstd)*
 	}
 	f := strings.ToLower(find)
 	for k, v := range ext {
@@ -339,12 +339,11 @@ func (c *Config) readArchiver(bucket, archive, ext string) {
 		out.ErrCont(err)
 		return
 	}
-
 	switch readArcType(f) {
 	case true:
 		w, ok := f.(archiver.Walker)
 		if !ok {
-			out.ErrCont(ErrArchiverType)
+			out.ErrCont(fmt.Errorf("%w: %T: %s", ErrArchiverType, w, filename))
 			return
 		}
 		cnt, err = c.readArcWalk(archive, bucket, cnt, w)
@@ -406,25 +405,25 @@ func (c *Config) readArcRecover(archive string) {
 }
 
 func readArcType(f interface{}) bool {
-	// commented archive types were not supported in archiver v3.5.0
 	switch f.(type) {
 	case
-		// *archiver.Brotli,
+		*archiver.Brotli,
 		*archiver.Bz2,
 		*archiver.Gz,
 		*archiver.Lz4,
 		*archiver.Rar,
 		*archiver.Snappy,
 		*archiver.Tar,
-		// *archiver.TarBrotli,
+		*archiver.TarBrotli,
 		*archiver.TarBz2,
 		*archiver.TarGz,
 		*archiver.TarLz4,
 		*archiver.TarSz,
 		*archiver.TarXz,
-		// *archiver.TarZstd,
+		*archiver.TarZstd,
 		*archiver.Xz,
-		*archiver.Zip:
+		*archiver.Zip,
+		*archiver.Zstd:
 		return true
 	default:
 		return false
