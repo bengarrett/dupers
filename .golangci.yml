@@ -10,7 +10,7 @@ linters:
     - testpackage
     - wrapcheck
 
-    - paralleltest
+    - paralleltest # breaks tests
     - exhaustivestruct
     - forbidigo
     - wsl

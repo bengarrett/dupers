@@ -25,6 +25,7 @@ func init() { //nolint:gochecknoinits
 }
 
 func TestAllBuckets(t *testing.T) {
+
 	color.Enable = false
 	tests := []struct {
 		name     string
@@ -37,7 +38,9 @@ func TestAllBuckets(t *testing.T) {
 		t.Error(err)
 	}
 	for _, tt := range tests {
+
 		t.Run(tt.name, func(t *testing.T) {
+
 			gotNames, err := AllBuckets(nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("AllBuckets() error = %v, wantErr %v", err, tt.wantErr)
@@ -52,6 +55,7 @@ func TestAllBuckets(t *testing.T) {
 }
 
 func TestClean(t *testing.T) {
+
 	type args struct {
 		quiet bool
 	}
@@ -63,7 +67,9 @@ func TestClean(t *testing.T) {
 		{"temp", args{quiet: true}, false},
 	}
 	for _, tt := range tests {
+
 		t.Run(tt.name, func(t *testing.T) {
+
 			if err := mock.TestOpen(); err != nil {
 				t.Error(err)
 			} else if err := Clean(tt.args.quiet, true); (err != nil) != tt.wantErr {
