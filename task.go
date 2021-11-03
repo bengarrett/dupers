@@ -282,7 +282,7 @@ func searchCmd(f *cmdFlags, args ...string) {
 		buckets = args[minArgs:]
 	}
 	m := searchCompare(f, term, buckets)
-	fmt.Print(dupe.Print(*f.quiet, m))
+	fmt.Print(dupe.Print(*f.quiet, *f.exact, term, m))
 	if !*f.quiet {
 		l := 0
 		if m != nil {

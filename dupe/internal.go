@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -128,7 +129,7 @@ func (i *internal) Timer() time.Duration {
 }
 
 // Print the results of the database comparisons.
-func Print(quiet bool, m *database.Matches) string {
+func Print(quiet, exact bool, term string, m *database.Matches) string {
 	if m == nil || len(*m) == 0 {
 		return ""
 	}
@@ -159,14 +160,38 @@ func Print(quiet bool, m *database.Matches) string {
 				fmt.Fprintf(w, "%s\n", file)
 				continue
 			}
+			mark := marker(file, term, exact)
 			if cnt == 1 {
-				fmt.Fprintf(w, "%s%s\n", color.Success.Sprint(out.MatchPrefix), file)
+				fmt.Fprintf(w, "%s%s\n", color.Success.Sprint(out.MatchPrefix),
+					mark)
 				continue
 			}
-			fmt.Fprintf(w, "  %s%s\t%s\n", color.Primary.Sprint(cnt), color.Secondary.Sprint("."), file)
+			fmt.Fprintf(w, "  %s%s\t%s\n", color.Primary.Sprint(cnt),
+				color.Secondary.Sprint("."), mark)
 		}
 	}
 	return w.String()
+}
+
+func marker(file database.Filepath, term string, exact bool) string {
+	s := string(file)
+	switch {
+	case !color.Enable:
+		return s
+	case !exact:
+		return markInsensitive(s, term)
+	default:
+		return markExact(s, term)
+	}
+}
+
+func markExact(s, substr string) string {
+	return strings.ReplaceAll(s, substr, color.Info.Sprint(substr))
+}
+
+func markInsensitive(s, substr string) string {
+	re := regexp.MustCompile(fmt.Sprintf("(?i)(%s)", substr))
+	return re.ReplaceAllString(s, color.Info.Sprint("$1"))
 }
 
 func matchBuckets(m *database.Matches) (string, []string) {

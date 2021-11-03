@@ -40,7 +40,7 @@ func init() { // nolint:gochecknoinits
 func ExamplePrint() {
 	matches := database.Matches{}
 	matches[database.Filepath(file1)] = database.Bucket(bucket1)
-	s := Print(true, &matches)
+	s := Print(true, true, "", &matches)
 	fmt.Print(s)
 	// Output: ../test/bucket1/0vlLaUEvzAWP
 }
