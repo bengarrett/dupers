@@ -47,7 +47,7 @@ scoop install dupers
 
 ## Usage
 
-https://user-images.githubusercontent.com/513842/133888424-ae1d7872-c67e-47a3-b328-897f833e3aa5.mp4
+https://user-images.githubusercontent.com/513842/140050025-04adc6ad-f7a4-4680-b83f-3fa3016f1504.mp4
 
 ## Example usage
 #### Dupe check
