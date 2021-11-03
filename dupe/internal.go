@@ -152,7 +152,7 @@ func Print(quiet bool, m *database.Matches) string {
 					if cnt > 1 {
 						fmt.Fprintln(w)
 					}
-					fmt.Fprintf(w, "%s: %s\n", color.Info.Sprint("Results from"), b)
+					fmt.Fprintf(w, "%s: %s", color.Info.Sprint("Search results in"), b)
 				}
 			}
 			if quiet {
@@ -160,7 +160,7 @@ func Print(quiet bool, m *database.Matches) string {
 				continue
 			}
 			if cnt == 1 {
-				fmt.Fprintf(w, "%s%s\n", color.Success.Sprint("  ⤷\t"), file)
+				fmt.Fprintf(w, "%s%s\n", color.Success.Sprint(out.MatchPrefix), file)
 				continue
 			}
 			fmt.Fprintf(w, "  %s%s\t%s\n", color.Primary.Sprint(cnt), color.Secondary.Sprint("."), file)

@@ -44,6 +44,8 @@ const (
 	EraseLine = "\u001b[2K"
 	cr        = "\r"
 	winOS     = "windows"
+
+	MatchPrefix = "\n  ⤷\t"
 )
 
 // PBug prints the string to a newline.

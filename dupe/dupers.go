@@ -624,7 +624,7 @@ func isProgram(path string) bool {
 // match prints 'Found duplicate match'.
 func match(path, match string) string {
 	s := "\n"
-	s += color.Info.Sprint("Found duplicate match") +
+	s += color.Info.Sprint("Match") +
 		":" +
 		fmt.Sprintf("\t%s", path) +
 		matchItem(match)
@@ -633,14 +633,14 @@ func match(path, match string) string {
 
 // matchItem prints 'Found duplicate match' along with file stat info.
 func matchItem(match string) string {
-	s := color.Success.Sprint("\n  ⤷ ") +
+	s := color.Success.Sprint(out.MatchPrefix) +
 		fmt.Sprint(match)
 	stat, err := os.Stat(match)
 	if err != nil {
 		return s
 	}
 	s += "\n    " +
-		fmt.Sprintf("%s, ", stat.ModTime().Format(modFmt)) +
+		fmt.Sprintf("\t%s, ", stat.ModTime().Format(modFmt)) +
 		humanize.Bytes(uint64(stat.Size()))
 	return s
 }
