@@ -30,7 +30,7 @@ const (
 
 // logo.txt by sensenstahl
 //go:embed logo.txt
-var brand string // nolint: gochecknoglobals
+var brand string
 
 // Help, usage and examples.
 func help() string {
