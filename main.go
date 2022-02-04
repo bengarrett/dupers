@@ -20,9 +20,7 @@ import (
 	"github.com/gookit/color"
 )
 
-var (
-	ErrCmd = errors.New("command is unknown")
-)
+var ErrCmd = errors.New("command is unknown")
 
 // logo.txt by sensenstahl
 //go:embed logo.txt
@@ -35,19 +33,18 @@ var (
 )
 
 const (
-	dbf   = "database"
-	dbs   = "db"
-	dbk   = "backup"
-	dcn   = "clean"
-	dex   = "export"
-	dim   = "import"
-	dls   = "ls"
-	dmv   = "mv"
-	drm   = "rm"
-	dup   = "up"
-	dupp  = "up+"
-	fhlp  = "-help"
-	winOS = "windows"
+	dbf  = "database"
+	dbs  = "db"
+	dbk  = "backup"
+	dcn  = "clean"
+	dex  = "export"
+	dim  = "import"
+	dls  = "ls"
+	dmv  = "mv"
+	drm  = "rm"
+	dup  = "up"
+	dupp = "up+"
+	fhlp = "-help"
 )
 
 func main() {
@@ -140,7 +137,7 @@ func options(a *cmd.Aliases, f *cmd.Flags) string {
 
 // vers prints out the program information and version.
 func vers() string {
-	const copyright, year = "\u00A9", 2021
+	const copyright, year = "\u00A9", "2021-22"
 	exe, err := cmd.Self()
 	if err != nil {
 		out.ErrCont(err)
@@ -148,7 +145,7 @@ func vers() string {
 	w := new(bytes.Buffer)
 	fmt.Fprintln(w, brand+"\n")
 	fmt.Fprintf(w, "                                dupers v%s\n", version)
-	fmt.Fprintf(w, "                           %s %d Ben Garrett\n", copyright, year)
+	fmt.Fprintf(w, "                        %s %s Ben Garrett\n", copyright, year)
 	fmt.Fprintf(w, "         %s\n\n", color.Primary.Sprint("https://github.com/bengarrett/dupers"))
 	fmt.Fprintf(w, "  %s    %s (%s)\n", color.Secondary.Sprint("build:"), commit, date)
 	fmt.Fprintf(w, "  %s %s/%s\n", color.Secondary.Sprint("platform:"), runtime.GOOS, runtime.GOARCH)

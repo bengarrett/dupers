@@ -37,7 +37,10 @@ var (
 )
 
 func RootDir() string {
-	_, b, _, _ := runtime.Caller(0)
+	_, b, _, ok := runtime.Caller(0)
+	if !ok {
+		return ""
+	}
 	return filepath.Join(filepath.Dir(b), "../..")
 }
 

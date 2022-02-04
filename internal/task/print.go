@@ -5,7 +5,6 @@ package task
 
 import (
 	"bytes"
-	_ "embed"
 	"errors"
 	"flag"
 	"fmt"
