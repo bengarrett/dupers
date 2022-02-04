@@ -108,6 +108,29 @@ func AllBuckets(db *bolt.DB) (names []string, err error) {
 	return names, nil
 }
 
+// Check checks the database file.
+func Check() error {
+	path, err := DB()
+	if err != nil {
+		return err
+	}
+	i, err1 := os.Stat(path)
+	if os.IsNotExist(err1) {
+		out.ErrCont(ErrDBNotFound)
+		fmt.Printf("\n%s\nThe database will be located at: %s\n", NotFound, path)
+		return ErrDBNotFound // 0
+	} else if err1 != nil {
+		return err
+	}
+	if i.Size() == 0 {
+		out.ErrCont(ErrDBZeroByte)
+		s := "This error occures when dupers cannot save any data to the file system."
+		fmt.Printf("\n%s\nThe database is located at: %s\n", s, path)
+		return ErrDBZeroByte // 1
+	}
+	return nil
+}
+
 // Exist returns an nil value if the bucket exists in the database.
 func Exist(bucket string, db *bolt.DB) error {
 	var err error
@@ -548,7 +571,7 @@ func DB() (string, error) {
 	path := filepath.Join(dir, boltName)
 	i, errP := os.Stat(path)
 	if os.IsNotExist(errP) {
-		if errDB := createDB(path); errDB != nil {
+		if errDB := Create(path); errDB != nil {
 			return "", errDB
 		}
 		return path, nil
@@ -560,14 +583,15 @@ func DB() (string, error) {
 		if errRM := os.Remove(path); errRM != nil {
 			return "", errRM
 		}
-		if errDB := createDB(path); errDB != nil {
+		if errDB := Create(path); errDB != nil {
 			return "", errDB
 		}
 	}
 	return path, nil
 }
 
-func createDB(path string) error {
+// Create creates a new Bolt database at the given path.
+func Create(path string) error {
 	db, err := bolt.Open(path, PrivateFile, write())
 	if err != nil {
 		return fmt.Errorf("could not create a new database: %w: %s", err, path)

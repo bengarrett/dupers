@@ -1,54 +1,33 @@
-// © Ben Garrett https://github.com/bengarrett/dupers
-
-// Package dupers is the blazing-fast file duplicate checker and filename search.
-package task
+package help
 
 import (
-	"bytes"
-	"errors"
 	"flag"
 	"fmt"
-	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"text/tabwriter"
 
-	"github.com/bengarrett/dupers/database"
-	"github.com/bengarrett/dupers/dupe"
 	"github.com/bengarrett/dupers/internal/cmd"
-	"github.com/bengarrett/dupers/internal/out"
 	"github.com/gookit/color"
-	"golang.org/x/text/language"
-	"golang.org/x/text/message"
-)
-
-var (
-	ErrNoArgs = errors.New("request is missing arguments")
-	ErrSearch = errors.New("search request needs an expression")
 )
 
 const (
-	tabPadding  = 4
-	description = "Dupers is the blazing-fast file duplicate checker and filename search tool."
+	dbf   = "database"
+	dbk   = "backup"
+	dcn   = "clean"
+	dex   = "export"
+	dim   = "import"
+	dls   = "ls"
+	dmv   = "mv"
+	drm   = "rm"
+	dup   = "up"
+	dupp  = "up+"
+	fhlp  = "-help"
+	winOS = "windows"
 )
 
-// Help, usage and examples.
-func Help() string {
-	b, f := bytes.Buffer{}, flag.Flag{}
-	w := tabwriter.NewWriter(&b, 0, 0, tabPadding, ' ', 0)
-
-	defer w.Flush()
-	fmt.Fprintf(w, "%s\n", description)
-	helpDupe(f, w)
-	helpSearch(f, w)
-	helpDB(f, w)
-	fmt.Fprintln(w)
-	return b.String()
-}
-
-// helpDupe creates the dupe command help.
-func helpDupe(f flag.Flag, w *tabwriter.Writer) {
+// Dupe creates the dupe command help.
+func Dupe(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintf(w, "\n%s\n  Scan for duplicate files, matching files that share the identical content.\n",
 		color.Primary.Sprint("Dupe:"))
 	fmt.Fprintln(w, "  The \"directory or file to check\" is never added to the database.")
@@ -61,34 +40,38 @@ func helpDupe(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintln(w, "\n  Usage:")
 	fmt.Fprintln(w, "    dupers [options] dupe <directory or file to check> [buckets to lookup]")
 	fmt.Fprintln(w, "\n  Options:")
-	f = *flag.Lookup("fast")
-	fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
-	f = *flag.Lookup("delete")
-	fmt.Fprintf(w, "        -%v\t\t%v\n", f.Name, f.Usage)
-	f = *flag.Lookup("delete+")
-	fmt.Fprintf(w, "        -%v\t\t%v\n", f.Name, f.Usage)
-	f = *flag.Lookup("sensen")
-	fmt.Fprintf(w, "        -%v\t\t%v\n", f.Name, f.Usage)
+	if flag.Lookup("fast") != nil {
+		f = *flag.Lookup("fast")
+		fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
+		f = *flag.Lookup("delete")
+		fmt.Fprintf(w, "        -%v\t\t%v\n", f.Name, f.Usage)
+		f = *flag.Lookup("delete+")
+		fmt.Fprintf(w, "        -%v\t\t%v\n", f.Name, f.Usage)
+		f = *flag.Lookup("sensen")
+		fmt.Fprintf(w, "        -%v\t\t%v\n", f.Name, f.Usage)
+	}
 	exampleDupe(w)
 }
 
 // helpSearch creates the search command help.
-func helpSearch(f flag.Flag, w *tabwriter.Writer) {
+func Search(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintf(w, "\n%s\n  Lookup a file or a directory name in the database.\n",
 		color.Primary.Sprint("Search:"))
 	fmt.Fprintf(w, "  The <search expression> can be a partial or complete, file or directory name.\n")
 	fmt.Fprintln(w, "\n  Usage:")
 	fmt.Fprintln(w, "    dupers [options] search <search expression> [optional, buckets to search]")
 	fmt.Fprintln(w, "\n  Options:")
-	f = *flag.Lookup("exact")
-	fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
-	f = *flag.Lookup("name")
-	fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
+	if flag.Lookup("exact") != nil {
+		f = *flag.Lookup("exact")
+		fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
+		f = *flag.Lookup("name")
+		fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
+	}
 	exampleSearch(w)
 }
 
-// helpDB creates the database commands help.
-func helpDB(f flag.Flag, w *tabwriter.Writer) {
+// DB creates the database commands help.
+func DB(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintf(w, "\n%s\n  View information and run optional maintenance on the internal database.\n",
 		color.Primary.Sprint("Database:"))
 	fmt.Fprintln(w, "\n  Usage:")
@@ -105,12 +88,14 @@ func helpDB(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", dex, "export the bucket to a text file in: "+cmd.Home())
 	fmt.Fprintf(w, "    dupers %s <export file>\t%s\n", dim, "import a bucket text file into the database")
 	fmt.Fprintln(w, "\nOptions:")
-	f = *flag.Lookup("mono")
-	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
-	f = *flag.Lookup("quiet")
-	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
-	f = *flag.Lookup("version")
-	fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
+	if flag.Lookup("mono") != nil {
+		f = *flag.Lookup("mono")
+		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
+		f = *flag.Lookup("quiet")
+		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
+		f = *flag.Lookup("version")
+		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
+	}
 	fmt.Fprintf(w, "    -h, %s\tshow this list of options\n", fhlp)
 }
 
@@ -153,80 +138,4 @@ func exampleSearch(w *tabwriter.Writer) *tabwriter.Writer {
 	fmt.Fprint(w, "    "+color.Info.Sprint("dupers -name search '.zip'"))
 	fmt.Fprintln(w)
 	return w
-}
-
-// checkDupePaths checks the path arguments supplied to the dupe command.
-func checkDupePaths(c *dupe.Config) {
-	if ok, cc, bc := c.CheckPaths(); !ok {
-		p := message.NewPrinter(language.English)
-		verb := "Buckets"
-		if len(c.Buckets()) == 1 {
-			verb = "Bucket"
-		}
-		fmt.Printf("Directory to check:\n %s (%s)\n", c.ToCheck(), color.Info.Sprintf("%s files", p.Sprint(cc)))
-		fmt.Printf("%s to lookup, for finding duplicates:\n %s (%s)\n\n",
-			verb, c.PrintBuckets(), color.Info.Sprintf("%s files", p.Sprint(bc)))
-		color.Warn.Println("\"Directory to check\" is NOT saved to the database.")
-		if !out.YN("Is this what you want", out.No) {
-			os.Exit(0)
-		}
-	}
-}
-
-// dupeCmdErr parses the arguments of the dupe command.
-func dupeCmdErr(args, buckets, minArgs int) {
-	if args < minArgs {
-		out.ErrCont(ErrNoArgs)
-		fmt.Println("\nThe dupe command requires a directory or file to check.")
-		if runtime.GOOS == winOS {
-			fmt.Println("The optional bucket can be one or more directories or drive letters.")
-		} else {
-			fmt.Println("The optional bucket can be one or more directory paths.")
-		}
-		out.Example("\ndupers dupe <directory or file to check> [buckets to lookup]")
-	}
-	if buckets == 0 && args == minArgs {
-		color.Warn.Println("The database is empty.\n")
-		if runtime.GOOS == winOS {
-			fmt.Println("This dupe request requires at least one directory or drive letter to lookup.")
-		} else {
-			fmt.Println("This dupe request requires at least one directory to lookup.")
-		}
-		fmt.Println("These lookup directories will be stored to the database as buckets.")
-		s := fmt.Sprintf("\ndupers dupe %s <one or more directories>\n", flag.Args()[1])
-		out.Example(s)
-	}
-	out.ErrFatal(nil)
-}
-
-// searchCmdErr parses the arguments of the search command.
-func searchCmdErr(l int) {
-	if l <= 1 {
-		out.ErrCont(ErrSearch)
-		fmt.Println("A search expression can be a partial or complete filename,")
-		fmt.Println("or a partial or complete directory.")
-		out.Example("\ndupers search <search expression> [optional, directories to search]")
-		out.ErrFatal(nil)
-	}
-}
-
-// searchErr parses the errors from search compares.
-func searchErr(err error) {
-	if errors.Is(err, database.ErrDBEmpty) {
-		out.ErrCont(err)
-		return
-	}
-	if errors.As(err, &database.ErrBucketNotFound) {
-		out.ErrCont(err)
-		fmt.Println("\nTo add this directory to the database, run:")
-		dir := err.Error()
-		if errors.Unwrap(err) == nil {
-			s := fmt.Sprintf("%s: ", errors.Unwrap(err))
-			dir = strings.ReplaceAll(err.Error(), s, "")
-		}
-		s := fmt.Sprintf("dupers up %s\n", dir)
-		out.Example(s)
-		out.ErrFatal(nil)
-	}
-	out.ErrFatal(err)
 }

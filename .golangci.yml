@@ -14,6 +14,7 @@ linters:
     - nlreturn # opinionated
     - paralleltest # causes tests to randomly fail
     - testpackage # removes the ability to test internal functions
+    - varnamelen # opinionated
     - wrapcheck # wrapping 3rd party errors such as those from bolt are unnecessary
     - wsl # whitespace linter, slow, aggressive and opinionated
 
@@ -21,5 +22,3 @@ linters-settings:
   cyclop:
     # the maximal code complexity to report
     max-complexity: 15
-  varnamelen:
-    min-name-length: 1

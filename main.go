@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/bengarrett/dupers/database"
 	"github.com/bengarrett/dupers/dupe"
 	"github.com/bengarrett/dupers/internal/cmd"
 	"github.com/bengarrett/dupers/internal/out"
@@ -56,10 +57,10 @@ func main() {
 		task.Help()
 	}
 	flag.Parse()
-	if parse(&a, &c, &f) {
-		os.Exit(0)
+	parse(&a, &c, &f)
+	if err := task.ChkWinDirs(); err != nil {
+		out.ErrFatal(err)
 	}
-	task.ChkWinDirs()
 	selection := strings.ToLower(flag.Args()[0])
 	if c.Debug {
 		out.PBug("command selection: " + selection)
@@ -67,24 +68,34 @@ func main() {
 
 	switch selection {
 	case "dupe":
-		task.DupeCmd(&c, &f, flag.Args()...)
+		if err := task.Dupe(&c, &f, flag.Args()...); err != nil {
+			out.ErrFatal(err)
+		}
 	case "search":
-		task.SearchCmd(&f, flag.Args()...)
+		task.Search(&f, flag.Args()...)
 	case dbf, dbs, dbk, dcn, dex, dim, dls, dmv, drm, dup, dupp:
-		task.DatabaseCmd(&c, *f.Quiet, flag.Args()...)
+		if err := task.Database(&c, *f.Quiet, flag.Args()...); err != nil {
+			if errors.Is(err, database.ErrDBNotFound) {
+				os.Exit(0)
+			}
+			if errors.Is(err, database.ErrDBZeroByte) {
+				os.Exit(1)
+			}
+			out.ErrFatal(err)
+		}
 	default:
 		defaultCmd(selection)
 	}
 }
 
 // parse the command aliases and flags and returns true if the program should exit.
-func parse(a *cmd.Aliases, c *dupe.Config, f *cmd.Flags) (exit bool) {
+func parse(a *cmd.Aliases, c *dupe.Config, f *cmd.Flags) {
 	if *a.Mono || *f.Mono {
 		color.Enable = false
 	}
 	if s := options(a, f); s != "" {
 		fmt.Printf("%s", s)
-		return true
+		os.Exit(0)
 	}
 	if *f.Debug {
 		c.Debug = true
@@ -102,7 +113,6 @@ func parse(a *cmd.Aliases, c *dupe.Config, f *cmd.Flags) (exit bool) {
 	if *a.Lookup {
 		*f.Lookup = true
 	}
-	return false
 }
 
 func defaultCmd(selection string) {

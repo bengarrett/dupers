@@ -3,7 +3,9 @@ package database_test
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -55,19 +57,37 @@ func TestAllBuckets(t *testing.T) {
 func TestClean(t *testing.T) {
 	type args struct {
 		quiet bool
+		debug bool
 	}
 	tests := []struct {
 		name    string
 		args    args
 		wantErr bool
 	}{
-		{"temp", args{quiet: true}, false},
+		{"1", args{quiet: false, debug: false}, false},
+		{"2", args{quiet: true, debug: false}, false},
+		{"3", args{quiet: false, debug: true}, true},
+		{"4", args{quiet: true, debug: true}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := mock.TestOpen(); err != nil {
 				t.Error(err)
-			} else if err := database.Clean(tt.args.quiet, true); (err != nil) != tt.wantErr {
+				return
+			}
+			err := database.Clean(tt.args.quiet, tt.args.debug)
+			if tt.args.quiet == true {
+				if (err != nil) != tt.wantErr {
+					t.Errorf("Clean() error = %v, wantErr %v", err, tt.wantErr)
+					return
+				}
+				return
+			}
+			if tt.args.debug == true && !errors.Is(database.ErrDBClean, err) {
+				t.Errorf("Clean() expected %v error, got %v", database.ErrDBClean, err)
+				return
+			}
+			if (err != nil) != tt.wantErr {
 				t.Errorf("Clean() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -88,10 +108,10 @@ func TestCompact(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := database.Compact(false); (err != nil) != tt.wantErr {
-				if errors.As(err, &database.ErrDBCompact) {
+				if !errors.As(err, &database.ErrDBCompact) {
+					t.Errorf("Compact() error = %v, wantErr %t", err, tt.wantErr)
 					return
 				}
-				t.Errorf("Compact() error = %v, wantErr %t", err, tt.wantErr)
 			}
 		})
 	}
@@ -356,4 +376,92 @@ func TestRename(t *testing.T) {
 	if err := mock.TestRemove(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func TestCreate(t *testing.T) {
+	tmp, err := ioutil.TempFile(os.TempDir(), "dupers_create_test.db")
+	if err != nil {
+		t.Error(err)
+	}
+	tests := []struct {
+		name    string
+		path    string
+		wantErr bool
+	}{
+		{"empty", "", true},
+		{"dir", ".", true},
+		{"temp file", tmp.Name(), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := database.Create(tt.path); (err != nil) != tt.wantErr {
+				t.Errorf("Create() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.name == "temp file" {
+				defer os.Remove(tmp.Name())
+			}
+		})
+	}
+}
+
+func TestDB(t *testing.T) {
+	var (
+		path string
+		err  error
+	)
+	t.Run("sequence 1", func(t *testing.T) {
+		path, err = database.DB()
+		if err != nil {
+			t.Errorf("DB() #1 error = %v", err)
+			return
+		}
+		if (path == "") != false {
+			t.Errorf("DB() returned an empty path")
+		}
+		if err := os.RemoveAll(path); err != nil {
+			t.Errorf("DB RemoveAll() error = %v", err)
+			return
+		}
+	})
+	t.Run("sequence 2", func(t *testing.T) {
+		path, err = database.DB()
+		if err != nil {
+			t.Errorf("DB() #2 error = %v", err)
+			return
+		}
+		if (path == "") != false {
+			t.Errorf("DB() returned an empty path")
+			return
+		}
+	})
+	t.Run("sequence 3", func(t *testing.T) {
+		err = os.WriteFile(path, []byte(""), 0o600)
+		if err != nil {
+			t.Errorf("DB WriteFile() error = %v", err)
+			return
+		}
+		s, err := os.Stat(path)
+		if err != nil {
+			t.Errorf("DB Stat error = %v", err)
+			return
+		}
+		if s.Size() != 0 {
+			t.Errorf("DB Stat error, expected a zero-byte file: %s", path)
+		}
+		path, err = database.DB()
+		if err != nil {
+			t.Errorf("DB() #3 error = %v", err)
+			return
+		}
+		s, err = os.Stat(path)
+		if err != nil {
+			t.Errorf("DB Stat error = %v", err)
+			return
+		}
+		fmt.Println("size", s.Size())
+		if s.Size() == 0 {
+			t.Errorf("DB Stat error, expected a new database file: %s", path)
+			return
+		}
+	})
 }
