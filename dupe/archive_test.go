@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bengarrett/dupers/mock"
+	"github.com/bengarrett/dupers/internal/mock"
 )
 
 func Test_extension(t *testing.T) {

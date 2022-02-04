@@ -15,7 +15,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/bengarrett/dupers/out"
+	"github.com/bengarrett/dupers/internal/out"
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"
@@ -46,7 +46,6 @@ const (
 	boltName   = "dupers.db"
 	csvName    = "dupers-export.csv"
 	subdir     = "dupers"
-	csvHeader  = "sha256_sum,path#"
 	winOS      = "windows"
 	tabPadding = 4
 	tabWidth   = 8
@@ -61,9 +60,8 @@ var (
 	ErrDBEmpty        = errors.New("database is empty and contains no items")
 	ErrDBNotFound     = errors.New("database file does not exist")
 	ErrDBZeroByte     = errors.New("database is a zero byte file")
-	ErrImportFile     = errors.New("not a valid dupers export file")
 
-	testMode = false // nolint: gochecknoglobals
+	TestMode = false // nolint: gochecknoglobals
 )
 
 // Abs returns an absolute representation of the named bucket.
@@ -536,7 +534,7 @@ func DB() (string, error) {
 		}
 	}
 	dir = filepath.Join(dir, subdir)
-	if testMode {
+	if TestMode {
 		dir = filepath.Join(dir, "test")
 	}
 	// create database directory if it doesn't exist

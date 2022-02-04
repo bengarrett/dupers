@@ -1,7 +1,7 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
 
 // Package dupers is the blazing-fast file duplicate checker and filename search.
-package main
+package task
 
 import (
 	"bytes"
@@ -17,10 +17,16 @@ import (
 
 	"github.com/bengarrett/dupers/database"
 	"github.com/bengarrett/dupers/dupe"
-	"github.com/bengarrett/dupers/out"
+	"github.com/bengarrett/dupers/internal/cmd"
+	"github.com/bengarrett/dupers/internal/out"
 	"github.com/gookit/color"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
+)
+
+var (
+	ErrNoArgs = errors.New("request is missing arguments")
+	ErrSearch = errors.New("search request needs an expression")
 )
 
 const (
@@ -28,12 +34,8 @@ const (
 	description = "Dupers is the blazing-fast file duplicate checker and filename search tool."
 )
 
-// logo.txt by sensenstahl
-//go:embed logo.txt
-var brand string
-
 // Help, usage and examples.
-func help() string {
+func Help() string {
 	b, f := bytes.Buffer{}, flag.Flag{}
 	w := tabwriter.NewWriter(&b, 0, 0, tabPadding, ' ', 0)
 
@@ -92,7 +94,7 @@ func helpDB(f flag.Flag, w *tabwriter.Writer) {
 		color.Primary.Sprint("Database:"))
 	fmt.Fprintln(w, "\n  Usage:")
 	fmt.Fprintf(w, "    dupers %s\tdisplay statistics and bucket information\n", dbf)
-	fmt.Fprintf(w, "    dupers %s\t%s\n", dbk, "make a copy of the database to: "+home())
+	fmt.Fprintf(w, "    dupers %s\t%s\n", dbk, "make a copy of the database to: "+cmd.Home())
 	fmt.Fprintf(w, "    dupers %s\t%s\n", dcn, "compact and remove all items in the database that point to missing files")
 	fmt.Fprintf(w, "    dupers %s  <bucket>\t%s\n", dls, "list the hashes and files in the bucket")
 	fmt.Fprintf(w, "    dupers %s  <bucket>\t%s\n", dup, "add or update the bucket to the database")
@@ -101,7 +103,7 @@ func helpDB(f flag.Flag, w *tabwriter.Writer) {
 		"\n\tthe scan reads every file archived with known package formats")
 	fmt.Fprintf(w, "\n    dupers %s  <bucket>\t%s\n", drm, "remove the bucket from the database")
 	fmt.Fprintf(w, "    dupers %s  <bucket> <new directory>\t%s\n", dmv, "move the bucket to a new directory path")
-	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", dex, "export the bucket to a text file in: "+home())
+	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", dex, "export the bucket to a text file in: "+cmd.Home())
 	fmt.Fprintf(w, "    dupers %s <export file>\t%s\n", dim, "import a bucket text file into the database")
 	fmt.Fprintln(w, "\nOptions:")
 	f = *flag.Lookup("mono")
@@ -119,19 +121,19 @@ func exampleDupe(w *tabwriter.Writer) *tabwriter.Writer {
 	fmt.Fprint(w, color.Secondary.Sprint("    # find identical copies of file.txt in the Downloads directory\n"))
 	if runtime.GOOS == winOS {
 		fmt.Fprint(w, color.Info.Sprintf("    dupers dupe \"%s\" \"%s\"",
-			filepath.Join(home(), "file.txt"), filepath.Join(home(), "Downloads")))
+			filepath.Join(cmd.Home(), "file.txt"), filepath.Join(cmd.Home(), "Downloads")))
 		fmt.Fprint(w,
 			color.Secondary.Sprint("\n    # search the database for files in Documents that also exist on drives D: and E:\n"))
 		fmt.Fprint(w, color.Info.Sprintf("    dupers dupe \"%s\" %s %s",
-			filepath.Join(home(), "Documents"), "D:", "E:"))
+			filepath.Join(cmd.Home(), "Documents"), "D:", "E:"))
 		fmt.Fprintln(w)
 		return w
 	}
 	fmt.Fprint(w, color.Info.Sprintf("    dupers dupe '%s' '%s'",
-		filepath.Join(home(), "file.txt"), filepath.Join(home(), "Downloads")))
+		filepath.Join(cmd.Home(), "file.txt"), filepath.Join(cmd.Home(), "Downloads")))
 	fmt.Fprint(w, color.Secondary.Sprint("\n    # search for files in Documents that also exist in /var/www\n"))
 	fmt.Fprint(w, color.Info.Sprintf("    dupers dupe '%s' '%s'",
-		filepath.Join(home(), "Documents"), "/var/www"))
+		filepath.Join(cmd.Home(), "Documents"), "/var/www"))
 	fmt.Fprintln(w)
 	return w
 }
@@ -141,13 +143,13 @@ func exampleSearch(w *tabwriter.Writer) *tabwriter.Writer {
 	fmt.Fprintln(w, "\n  Examples:")
 	fmt.Fprint(w, color.Secondary.Sprint("    # search for the expression foo in your home directory\n"))
 	if runtime.GOOS == winOS {
-		fmt.Fprint(w, "    "+color.Info.Sprintf("dupers search \"foo\" \"%s\"", home()))
+		fmt.Fprint(w, "    "+color.Info.Sprintf("dupers search \"foo\" \"%s\"", cmd.Home()))
 		fmt.Fprint(w, color.Secondary.Sprint("\n    # search for filenames containing .zip\n"))
 		fmt.Fprint(w, "    "+color.Info.Sprint("dupers -name search \".zip\""))
 		fmt.Fprintln(w)
 		return w
 	}
-	fmt.Fprint(w, "    "+color.Info.Sprintf("dupers search 'foo' '%s'", home()))
+	fmt.Fprint(w, "    "+color.Info.Sprintf("dupers search 'foo' '%s'", cmd.Home()))
 	fmt.Fprint(w, color.Secondary.Sprint("\n    # search for filenames containing .zip\n"))
 	fmt.Fprint(w, "    "+color.Info.Sprint("dupers -name search '.zip'"))
 	fmt.Fprintln(w)
@@ -170,25 +172,6 @@ func checkDupePaths(c *dupe.Config) {
 			os.Exit(0)
 		}
 	}
-}
-
-// vers prints out the program information and version.
-func vers() string {
-	const copyright, year = "\u00A9", 2021
-	exe, err := self()
-	if err != nil {
-		out.ErrCont(err)
-	}
-	w := new(bytes.Buffer)
-	fmt.Fprintln(w, brand+"\n")
-	fmt.Fprintf(w, "                                dupers v%s\n", version)
-	fmt.Fprintf(w, "                           %s %d Ben Garrett\n", copyright, year)
-	fmt.Fprintf(w, "         %s\n\n", color.Primary.Sprint("https://github.com/bengarrett/dupers"))
-	fmt.Fprintf(w, "  %s    %s (%s)\n", color.Secondary.Sprint("build:"), commit, date)
-	fmt.Fprintf(w, "  %s %s/%s\n", color.Secondary.Sprint("platform:"), runtime.GOOS, runtime.GOARCH)
-	fmt.Fprintf(w, "  %s       %s\n", color.Secondary.Sprint("go:"), strings.Replace(runtime.Version(), "go", "v", 1))
-	fmt.Fprintf(w, "  %s     %s\n", color.Secondary.Sprint("path:"), exe)
-	return w.String()
 }
 
 // dupeCmdErr parses the arguments of the dupe command.
@@ -247,25 +230,4 @@ func searchErr(err error) {
 		out.ErrFatal(nil)
 	}
 	out.ErrFatal(err)
-}
-
-// Home returns the user's home directory.
-// Or if that fails, returns the current working directory.
-func home() string {
-	h, err := os.UserHomeDir()
-	if err != nil {
-		if h, err = os.Getwd(); err != nil {
-			out.ErrCont(err)
-		}
-	}
-	return h
-}
-
-// Self returns the path to this dupers executable file.
-func self() (string, error) {
-	exe, err := os.Executable()
-	if err != nil {
-		return "", fmt.Errorf("self error: %w", err)
-	}
-	return exe, nil
 }

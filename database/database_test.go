@@ -1,4 +1,4 @@
-package database
+package database_test
 
 import (
 	"errors"
@@ -10,7 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bengarrett/dupers/mock"
+	"github.com/bengarrett/dupers/database"
+	"github.com/bengarrett/dupers/internal/mock"
 	"github.com/gookit/color"
 )
 
@@ -21,7 +22,7 @@ const (
 
 func init() { //nolint:gochecknoinits
 	color.Enable = false
-	testMode = true
+	database.TestMode = true
 }
 
 func TestAllBuckets(t *testing.T) {
@@ -38,7 +39,7 @@ func TestAllBuckets(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotNames, err := AllBuckets(nil)
+			gotNames, err := database.AllBuckets(nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("AllBuckets() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -66,7 +67,7 @@ func TestClean(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := mock.TestOpen(); err != nil {
 				t.Error(err)
-			} else if err := Clean(tt.args.quiet, true); (err != nil) != tt.wantErr {
+			} else if err := database.Clean(tt.args.quiet, true); (err != nil) != tt.wantErr {
 				t.Errorf("Clean() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -86,8 +87,8 @@ func TestCompact(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := Compact(false); (err != nil) != tt.wantErr {
-				if errors.As(err, &ErrDBCompact) {
+			if err := database.Compact(false); (err != nil) != tt.wantErr {
+				if errors.As(err, &database.ErrDBCompact) {
 					return
 				}
 				t.Errorf("Compact() error = %v, wantErr %t", err, tt.wantErr)
@@ -107,14 +108,14 @@ func TestCompare(t *testing.T) {
 		s       string
 		buckets []string
 	}
-	empty, find := Matches{}, Matches{}
+	empty, find := database.Matches{}, database.Matches{}
 	item := mock.Item1()
-	k := Filepath(item)
-	find[k] = Bucket(mock.Bucket1())
+	k := database.Filepath(item)
+	find[k] = database.Bucket(mock.Bucket1())
 	tests := []struct {
 		name    string
 		args    args
-		want    *Matches
+		want    *database.Matches
 		wantErr bool
 	}{
 		{"match all", args{"UEvz", nil}, &find, false},
@@ -124,7 +125,7 @@ func TestCompare(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := Compare(tt.args.s, tt.args.buckets...)
+			got, err := database.Compare(tt.args.s, tt.args.buckets...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Compare() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -144,14 +145,14 @@ func TestCompareBase(t *testing.T) {
 		s       string
 		buckets []string
 	}
-	empty, find := Matches{}, Matches{}
+	empty, find := database.Matches{}, database.Matches{}
 	item := mock.Item1()
-	s, k := filepath.Base(item), Filepath(item)
-	find[k] = Bucket(mock.Bucket1())
+	s, k := filepath.Base(item), database.Filepath(item)
+	find[k] = database.Bucket(mock.Bucket1())
 	tests := []struct {
 		name    string
 		args    args
-		want    *Matches
+		want    *database.Matches
 		wantErr bool
 	}{
 		{"match", args{s, nil}, &find, false},
@@ -160,7 +161,7 @@ func TestCompareBase(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := CompareBase(tt.args.s, tt.args.buckets...)
+			got, err := database.CompareBase(tt.args.s, tt.args.buckets...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CompareBase() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -173,7 +174,7 @@ func TestCompareBase(t *testing.T) {
 	tests = []struct {
 		name    string
 		args    args
-		want    *Matches
+		want    *database.Matches
 		wantErr bool
 	}{
 		{"match", args{s, nil}, &find, false},
@@ -182,7 +183,7 @@ func TestCompareBase(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := CompareBaseNoCase(tt.args.s, tt.args.buckets...)
+			got, err := database.CompareBaseNoCase(tt.args.s, tt.args.buckets...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CompareBaseNoCase() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -202,14 +203,14 @@ func TestCompareNoCase(t *testing.T) {
 		s       string
 		buckets []string
 	}
-	empty, find := Matches{}, Matches{}
+	empty, find := database.Matches{}, database.Matches{}
 	item := mock.Item1()
-	s, k := filepath.Base(item), Filepath(item)
-	find[k] = Bucket(mock.Bucket1())
+	s, k := filepath.Base(item), database.Filepath(item)
+	find[k] = database.Bucket(mock.Bucket1())
 	tests := []struct {
 		name    string
 		args    args
-		want    *Matches
+		want    *database.Matches
 		wantErr bool
 	}{
 		{"match", args{"vz", nil}, &find, false},
@@ -219,7 +220,7 @@ func TestCompareNoCase(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := CompareNoCase(tt.args.s, tt.args.buckets...)
+			got, err := database.CompareNoCase(tt.args.s, tt.args.buckets...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CompareNoCase() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -236,13 +237,13 @@ func TestExist(t *testing.T) {
 		t.Error(err)
 	}
 	t.Run("exist", func(t *testing.T) {
-		if err := Exist(mock.Bucket1(), nil); err != nil {
+		if err := database.Exist(mock.Bucket1(), nil); err != nil {
 			t.Errorf("Exist() bucket1 error = %v, want nil", err)
 		}
-		if err := Exist(mock.Bucket2(), nil); err == nil {
+		if err := database.Exist(mock.Bucket2(), nil); err == nil {
 			t.Error("Exist() bucket2 error = nil, want error")
 		}
-		if err := Exist("", nil); err == nil {
+		if err := database.Exist("", nil); err == nil {
 			t.Error("Exist() empty bucket error = nil, want error")
 		}
 	})
@@ -258,7 +259,7 @@ func TestIsEmpty(t *testing.T) {
 	t.Run("is empty", func(t *testing.T) {
 		// test db with bucket
 		wantErr, want := false, false
-		got, err := IsEmpty()
+		got, err := database.IsEmpty()
 		if (err != nil) != wantErr {
 			t.Errorf("IsEmpty() error = %v, wantErr %v", err, wantErr)
 			return
@@ -267,12 +268,12 @@ func TestIsEmpty(t *testing.T) {
 			t.Errorf("IsEmpty() = %v, want %v", got, want)
 		}
 		// test & use remove bucket, leaving the db empty
-		if err1 := RM(mock.Bucket1()); err1 != nil {
+		if err1 := database.RM(mock.Bucket1()); err1 != nil {
 			fmt.Println(err1)
 		}
 		// test empty db
 		wantErr, want = false, true
-		got, err = IsEmpty()
+		got, err = database.IsEmpty()
 		if (err != nil) != wantErr {
 			t.Errorf("IsEmpty() error = %v, wantErr %v", err, wantErr)
 			return
@@ -302,7 +303,7 @@ func TestList(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotLs, err := List(tt.bucket, nil)
+			gotLs, err := database.List(tt.bucket, nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("List() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -322,7 +323,7 @@ func TestInfo(t *testing.T) {
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
-	info, err := Info()
+	info, err := database.Info()
 	if err != nil {
 		t.Errorf("Info() returned an error = %v", err)
 	}
@@ -339,16 +340,16 @@ func TestRename(t *testing.T) {
 		t.Error(err)
 	}
 	t.Run("rename", func(t *testing.T) {
-		if err := Rename(mock.Bucket2(), mock.Bucket1()); err == nil {
+		if err := database.Rename(mock.Bucket2(), mock.Bucket1()); err == nil {
 			t.Error("Rename() bucket2 to bucket1 error = nil, want error")
 		}
-		if err := Rename("", ""); err == nil {
+		if err := database.Rename("", ""); err == nil {
 			t.Error("Rename() empty buckets error = nil, want error")
 		}
-		if err := Rename(mock.Bucket1(), ""); err == nil {
+		if err := database.Rename(mock.Bucket1(), ""); err == nil {
 			t.Error("Rename() empty new bucket error = nil, want error")
 		}
-		if err := Rename("", mock.Bucket2()); err == nil {
+		if err := database.Rename("", mock.Bucket2()); err == nil {
 			t.Error("Rename() empty bucket error = nil, want error")
 		}
 	})

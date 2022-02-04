@@ -16,7 +16,7 @@ import (
 	"sync"
 
 	"github.com/bengarrett/dupers/database"
-	"github.com/bengarrett/dupers/out"
+	"github.com/bengarrett/dupers/internal/out"
 	"github.com/bodgit/sevenzip"
 	"github.com/gookit/color"
 	"github.com/h2non/filetype"

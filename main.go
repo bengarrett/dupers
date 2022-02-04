@@ -4,31 +4,34 @@
 package main
 
 import (
+	"bytes"
+	_ "embed"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/bengarrett/dupers/dupe"
-	"github.com/bengarrett/dupers/out"
+	"github.com/bengarrett/dupers/internal/cmd"
+	"github.com/bengarrett/dupers/internal/out"
+	"github.com/bengarrett/dupers/internal/task"
 	"github.com/gookit/color"
 )
+
+var (
+	ErrCmd = errors.New("command is unknown")
+)
+
+// logo.txt by sensenstahl
+//go:embed logo.txt
+var brand string
 
 var (
 	version = "0.0.0"
 	commit  = "unset" // nolint: gochecknoglobals
 	date    = "unset" // nolint: gochecknoglobals
-)
-
-var (
-	ErrCmd          = errors.New("command is unknown")
-	ErrDatabaseName = errors.New("database has no bucket name")
-	ErrImport       = errors.New("import filepath is missing")
-	ErrNewName      = errors.New("a new directory is required")
-	ErrNoArgs       = errors.New("request is missing arguments")
-	ErrSearch       = errors.New("search request needs an expression")
-	ErrWindowsDir   = errors.New("cannot parse the directory path")
 )
 
 const (
@@ -47,102 +50,19 @@ const (
 	winOS = "windows"
 )
 
-// cmdFlags are options for commands.
-type cmdFlags struct {
-	debug    *bool
-	exact    *bool
-	filename *bool
-	help     *bool
-	lookup   *bool
-	mono     *bool
-	quiet    *bool
-	rm       *bool
-	rmPlus   *bool
-	sensen   *bool
-	version  *bool
-}
-
-// aliases are single letter options for commands.
-type aliases struct {
-	exact    *bool
-	filename *bool
-	help     *bool
-	lookup   *bool
-	mono     *bool
-	quiet    *bool
-	version  *bool
-}
-
-// flags defines options for the commands.
-func flags(f *cmdFlags) {
-	f.exact = flag.Bool("exact", false, "match case")
-	f.debug = flag.Bool("debug", false, "debug mode") // hidden flag
-	f.filename = flag.Bool("name", false, "search for filenames, and ignore directories")
-	f.help = flag.Bool("help", false, "print help") // only used in certain circumstances
-	f.lookup = flag.Bool("fast", false, "query the database for a much faster match,"+
-		"\n\t\tthe results maybe stale as it does not look for any file changes on your system")
-	f.mono = flag.Bool("mono", false, "monochrome mode to remove all color output")
-	f.quiet = flag.Bool("quiet", false, "quiet mode hides all but essential feedback")
-	f.sensen = flag.Bool("sensen", false, "delete everything in the <directory to check>"+
-		"\n\t\texcept for directories containing unique Windows programs and assets")
-	f.rm = flag.Bool("delete", false, "delete the duplicate files found in the <directory to check>")
-	f.rmPlus = flag.Bool("delete+", false,
-		"delete the duplicate files and remove empty directories from the <directory to check>")
-	f.version = flag.Bool("version", false, "version and information for this program")
-}
-
-// shortFlags defines options for the command aliases.
-func shortFlags(a *aliases) {
-	a.exact = flag.Bool("e", false, "alias for exact")
-	a.lookup = flag.Bool("f", false, "alias for fast")
-	a.filename = flag.Bool("n", false, "alias for name")
-	a.help = flag.Bool("h", false, "alias for help")
-	a.mono = flag.Bool("m", false, "alias for mono")
-	a.quiet = flag.Bool("q", false, "alias for quiet")
-	a.version = flag.Bool("v", false, "alias for version")
-}
-
-// parse the command aliases and flags and returns true if the program should exit.
-func parse(a *aliases, c *dupe.Config, f *cmdFlags) (exit bool) {
-	if *a.mono || *f.mono {
-		color.Enable = false
-	}
-	if s := options(a, f); s != "" {
-		fmt.Printf("%s", s)
-		return true
-	}
-	if *f.debug {
-		c.Debug = true
-	}
-	if *a.quiet || *f.quiet {
-		*f.quiet = true
-		c.Quiet = true
-	}
-	if *a.exact {
-		*f.exact = true
-	}
-	if *a.filename {
-		*f.filename = true
-	}
-	if *a.lookup {
-		*f.lookup = true
-	}
-	return false
-}
-
 func main() {
-	a, c, f := aliases{}, dupe.Config{}, cmdFlags{}
+	a, c, f := cmd.Aliases{}, dupe.Config{}, cmd.Flags{}
 	c.SetTimer()
-	flags(&f)
-	shortFlags(&a)
+	cmd.Define(&f)
+	cmd.DefineShort(&a)
 	flag.Usage = func() {
-		help()
+		task.Help()
 	}
 	flag.Parse()
 	if parse(&a, &c, &f) {
 		os.Exit(0)
 	}
-	chkWinDirs()
+	task.ChkWinDirs()
 	selection := strings.ToLower(flag.Args()[0])
 	if c.Debug {
 		out.PBug("command selection: " + selection)
@@ -150,14 +70,42 @@ func main() {
 
 	switch selection {
 	case "dupe":
-		dupeCmd(&c, &f, flag.Args()...)
+		task.DupeCmd(&c, &f, flag.Args()...)
 	case "search":
-		searchCmd(&f, flag.Args()...)
+		task.SearchCmd(&f, flag.Args()...)
 	case dbf, dbs, dbk, dcn, dex, dim, dls, dmv, drm, dup, dupp:
-		databaseCmd(&c, *f.quiet, flag.Args()...)
+		task.DatabaseCmd(&c, *f.Quiet, flag.Args()...)
 	default:
 		defaultCmd(selection)
 	}
+}
+
+// parse the command aliases and flags and returns true if the program should exit.
+func parse(a *cmd.Aliases, c *dupe.Config, f *cmd.Flags) (exit bool) {
+	if *a.Mono || *f.Mono {
+		color.Enable = false
+	}
+	if s := options(a, f); s != "" {
+		fmt.Printf("%s", s)
+		return true
+	}
+	if *f.Debug {
+		c.Debug = true
+	}
+	if *a.Quiet || *f.Quiet {
+		*f.Quiet = true
+		c.Quiet = true
+	}
+	if *a.Exact {
+		*f.Exact = true
+	}
+	if *a.Filename {
+		*f.Filename = true
+	}
+	if *a.Lookup {
+		*f.Lookup = true
+	}
+	return false
 }
 
 func defaultCmd(selection string) {
@@ -168,24 +116,43 @@ func defaultCmd(selection string) {
 }
 
 // options parses universal aliases, flags and any misuse.
-func options(a *aliases, f *cmdFlags) string {
-	if *a.help || *f.help {
-		return help()
+func options(a *cmd.Aliases, f *cmd.Flags) string {
+	if *a.Help || *f.Help {
+		return task.Help()
 	}
 	// handle misuse when a flag is passed as an argument
 	for _, arg := range flag.Args() {
 		switch strings.ToLower(arg) {
 		case "-h", fhlp, "--help":
-			return help()
+			return task.Help()
 		case "-v", "-version", "--version":
 			return vers()
 		}
 	}
-	if *a.version || *f.version {
+	if *a.Version || *f.Version {
 		return vers()
 	}
 	if len(flag.Args()) == 0 {
-		return help()
+		return task.Help()
 	}
 	return ""
+}
+
+// vers prints out the program information and version.
+func vers() string {
+	const copyright, year = "\u00A9", 2021
+	exe, err := cmd.Self()
+	if err != nil {
+		out.ErrCont(err)
+	}
+	w := new(bytes.Buffer)
+	fmt.Fprintln(w, brand+"\n")
+	fmt.Fprintf(w, "                                dupers v%s\n", version)
+	fmt.Fprintf(w, "                           %s %d Ben Garrett\n", copyright, year)
+	fmt.Fprintf(w, "         %s\n\n", color.Primary.Sprint("https://github.com/bengarrett/dupers"))
+	fmt.Fprintf(w, "  %s    %s (%s)\n", color.Secondary.Sprint("build:"), commit, date)
+	fmt.Fprintf(w, "  %s %s/%s\n", color.Secondary.Sprint("platform:"), runtime.GOOS, runtime.GOARCH)
+	fmt.Fprintf(w, "  %s       %s\n", color.Secondary.Sprint("go:"), strings.Replace(runtime.Version(), "go", "v", 1))
+	fmt.Fprintf(w, "  %s     %s\n", color.Secondary.Sprint("path:"), exe)
+	return w.String()
 }

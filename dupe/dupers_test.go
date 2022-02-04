@@ -13,8 +13,8 @@ import (
 	"testing"
 
 	"github.com/bengarrett/dupers/database"
-	"github.com/bengarrett/dupers/mock"
-	"github.com/bengarrett/dupers/out"
+	"github.com/bengarrett/dupers/internal/mock"
+	"github.com/bengarrett/dupers/internal/out"
 	"github.com/gookit/color"
 )
 

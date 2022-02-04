@@ -5,20 +5,17 @@ package database
 
 import (
 	"bufio"
-	"bytes"
-	"encoding/csv"
-	"encoding/hex"
+	csvEnc "encoding/csv"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
-	"runtime"
 	"strings"
 	"time"
 
-	"github.com/bengarrett/dupers/out"
+	"github.com/bengarrett/dupers/database/internal/csv"
+	"github.com/bengarrett/dupers/internal/out"
 	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"
 	"golang.org/x/text/language"
@@ -26,25 +23,55 @@ import (
 	"golang.org/x/text/number"
 )
 
-const loops = 0
-
 const (
-	backslash = "\u005C"
-	fwdslash  = "\u002F"
-	uncPath   = backslash + backslash
-	whichBkt  = "What bucket name do you wish to use"
+	whichBkt = "What bucket name do you wish to use"
+	loops    = 0
 )
 
 var (
 	ErrBucketExists = errors.New("bucket already exists in the database")
 	ErrBucketNotDir = errors.New("bucket path is not a directory")
 	ErrBucketPath   = errors.New("directory used by the bucket does not exist on your system")
-	ErrChecksumLen  = errors.New("hexadecimal value is invalid")
-	ErrFileNoDesc   = errors.New("no file descriptor")
 	ErrImportList   = errors.New("import list is empty")
-	ErrImportSyntax = errors.New("import item has incorrect syntax")
-	ErrImportPath   = errors.New("import item has an invalid file path")
 )
+
+// Scanner reads the content of an export csv file.
+// It returns the stored bucket and csv data as a List ready for import.
+func Scanner(file *os.File) (string, *Lists, error) {
+	if file == nil {
+		return "", nil, csv.ErrFileNoDesc
+	}
+	const firstItem = 2
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanLines)
+	bucket, row := "", 0
+	lists := make(Lists)
+
+	for scanner.Scan() {
+		row++
+		line := scanner.Text()
+		if row == 1 {
+			if bucket = csv.BucketName(line); bucket == "" {
+				return "", nil, fmt.Errorf("%w, invalid header: %s", csv.ErrImportFile, line)
+			}
+
+			continue
+		}
+		sum, key, err := csv.Import(line, bucket)
+		if err != nil {
+			if row == firstItem {
+				return "", nil, err
+			}
+
+			continue
+		}
+		if loops != 0 && row > loops+1 {
+			break
+		}
+		lists[Filepath(key)] = sum
+	}
+	return bucket, &lists, nil
+}
 
 // read bolt option to open in read only mode with a file lock timeout.
 func read() *bolt.Options {
@@ -158,7 +185,7 @@ func ExportCSV(bucket string, db *bolt.DB) (name string, err error) {
 		rel := strings.TrimPrefix(string(file), bucket)
 		r = append(r, []string{fmt.Sprintf("%x", sum), rel})
 	}
-	w := csv.NewWriter(f)
+	w := csvEnc.NewWriter(f)
 	if err := w.WriteAll(r); err != nil {
 		return "", err
 	}
@@ -199,10 +226,10 @@ func ImportCSV(name string, db *bolt.DB) (records int, err error) {
 	}
 	defer file.Close()
 
-	if err1 := csvChecker(file); err1 != nil {
+	if err1 := csv.Checker(file); err1 != nil {
 		return 0, err1
 	}
-	bucket, lists, err2 := csvScanner(file)
+	bucket, lists, err2 := Scanner(file)
 	if err2 != nil {
 		return 0, err2
 	}
@@ -319,184 +346,6 @@ func bucketStat(name string) string {
 		}
 		return abs
 	}
-}
-
-// csvChecker reads the first line in the export csv file and returns nil if it uses the expected syntax.
-func csvChecker(file *os.File) error {
-	if file == nil {
-		return ErrFileNoDesc
-	}
-	l := len(csvHeader)
-	_, err := file.Seek(0, io.SeekStart)
-	if err != nil {
-		return fmt.Errorf("%w: %s", err, file.Name())
-	}
-	b := make([]byte, l)
-	_, err = io.ReadAtLeast(file, b, len(csvHeader))
-	if err != nil {
-		return err
-	}
-	if !bytes.Equal(b, []byte(csvHeader)) {
-		return fmt.Errorf("%w, missing header: %s", ErrImportFile, csvHeader)
-	}
-	_, err = file.Seek(0, io.SeekStart)
-	if err != nil {
-		return fmt.Errorf("%w: %s", err, file.Name())
-	}
-	return nil
-}
-
-// csvScanner reads the content of an export csv file.
-// It returns the stored bucket and csv data as a List ready for import.
-func csvScanner(file *os.File) (string, *Lists, error) {
-	if file == nil {
-		return "", nil, ErrFileNoDesc
-	}
-	const firstItem = 2
-	scanner := bufio.NewScanner(file)
-	scanner.Split(bufio.ScanLines)
-	bucket, row := "", 0
-	lists := make(Lists)
-
-	for scanner.Scan() {
-		row++
-		line := scanner.Text()
-		if row == 1 {
-			if bucket = bucketName(line); bucket == "" {
-				return "", nil, fmt.Errorf("%w, invalid header: %s", ErrImportFile, line)
-			}
-
-			continue
-		}
-		sum, key, err := importCSV(line, bucket)
-		if err != nil {
-			if row == firstItem {
-				return "", nil, err
-			}
-
-			continue
-		}
-		if loops != 0 && row > loops+1 {
-			break
-		}
-		lists[Filepath(key)] = sum
-	}
-	return bucket, &lists, nil
-}
-
-// bucketName validates an export csv file header and returns the bucket name.
-func bucketName(s string) string {
-	const expected = 2
-	ss := strings.Split(s, "#")
-	if len(ss) != expected {
-		return ""
-	}
-	path := ss[1]
-	if runtime.GOOS == winOS {
-		path = pathWindows(path)
-	} else {
-		path = pathPosix(path)
-	}
-	if filepath.IsAbs(path) {
-		return path
-	}
-	return ""
-}
-
-func isDrive(path string) bool {
-	valid := regexp.MustCompile(`^[a-z|A-Z]:\\?$`)
-	return valid.MatchString(path)
-}
-
-func isUNC(path string) bool {
-	const uncLen = 2
-	if len(path) < uncLen {
-		return false
-	}
-	return (path[0:uncLen] == "\\\\")
-}
-
-// pathWindows returns a Windows or UNC usable path from the source path.
-func pathWindows(src string) string {
-	const drive = "C:"
-
-	switch src {
-	case "":
-		return ""
-	case "/":
-		return drive
-	}
-	// source path is windows or unc
-	if isDrive(src) {
-		return src[0:2]
-	}
-	if isDrive(src[0:2]) {
-		return src
-	}
-	if isUNC(src) {
-		return src
-	}
-	// source path is posix
-	src = strings.ReplaceAll(src, fwdslash, backslash)
-	if !isDrive(src[0:2]) {
-		return drive + src
-	}
-	return src
-}
-
-// pathPosix returns POSIX path from the source path.
-func pathPosix(src string) string {
-	const driveLen, subStr = 2, 2
-	if len(src) < driveLen {
-		return src
-	}
-	if src[0:driveLen] == uncPath {
-		return fmt.Sprintf("%s%s", fwdslash,
-			strings.ReplaceAll(src[driveLen:], backslash, fwdslash))
-	}
-	ps := strings.SplitN(src, ":", subStr)
-	drive, valid := ps[0], regexp.MustCompile(`^[a-z|A-Z]$`)
-	if valid.MatchString(drive) {
-		src = strings.ReplaceAll(ps[1], backslash, fwdslash)
-		if src == "" {
-			src = fwdslash
-		}
-	}
-	return src
-}
-
-// importCSV reads, validates and returns a line of data from an export csv file.
-func importCSV(line, bucket string) (sum [32]byte, path string, err error) {
-	const expected = 2
-	empty := [32]byte{}
-	ss := strings.Split(line, ",")
-	if len(ss) != expected {
-		return empty, "", ErrImportSyntax
-	}
-	name := filepath.Join(bucket, ss[1])
-	if !filepath.IsAbs(name) {
-		return empty, "", ErrImportPath
-	}
-	sum, err = checksum(ss[0])
-	if err != nil {
-		return empty, "", err
-	}
-	return sum, name, nil
-}
-
-// checksum returns a 64 character hexadecimal string as a bytes representation.
-func checksum(s string) ([32]byte, error) {
-	const fixLength = 64
-	empty, bs := [32]byte{}, [32]byte{}
-	if len(s) != fixLength {
-		return empty, fmt.Errorf("%w: value must contain exactly %d characters", ErrChecksumLen, fixLength)
-	}
-	b, err := hex.DecodeString(s)
-	if err != nil {
-		return empty, err
-	}
-	copy(bs[:], b)
-	return bs, nil
 }
 
 // Import the list of data and save it to the database.

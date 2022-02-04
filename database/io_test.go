@@ -1,25 +1,22 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
 
 // Package database interacts with Dupers bbolt database and buckets.
-package database
+package database_test
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-	"reflect"
-	"runtime"
-	"strings"
 	"testing"
 
-	"github.com/bengarrett/dupers/mock"
+	"github.com/bengarrett/dupers/database"
+	"github.com/bengarrett/dupers/internal/mock"
 	"github.com/gookit/color"
 )
 
 func init() { //nolint:gochecknoinits
 	color.Enable = false
-	testMode = true
+	database.TestMode = true
 }
 
 func TestBackup(t *testing.T) {
@@ -36,7 +33,7 @@ func TestBackup(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotName, gotWritten, err := Backup()
+			gotName, gotWritten, err := database.Backup()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Backup() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -80,7 +77,7 @@ func TestCopyFile(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := CopyFile(tt.args.src, tt.args.dest)
+			got, err := database.CopyFile(tt.args.src, tt.args.dest)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CopyFile() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -101,7 +98,7 @@ func TestExportCSV(t *testing.T) {
 	}
 
 	t.Run("csv export", func(t *testing.T) {
-		gotName, err := ExportCSV(mock.Bucket1(), nil)
+		gotName, err := database.ExportCSV(mock.Bucket1(), nil)
 		if err != nil {
 			t.Errorf("Backup() error = %v, want nil", err)
 			return
@@ -117,36 +114,37 @@ func TestExportCSV(t *testing.T) {
 	})
 }
 
-func Test_csvChecker(t *testing.T) {
-	openBin, err := os.Open(mock.Item1())
+func TestImport(t *testing.T) {
+	db, err := mock.Open()
 	if err != nil {
 		t.Error(err)
 	}
-	defer openBin.Close()
+	defer db.Close()
+	r, err := database.Import("", nil, db)
+	if r != 0 {
+		t.Errorf("Import(empty) records != 0")
+	}
+	if err == nil {
+		t.Errorf("Import(empty) expect error, not nil")
+	}
 	openCSV, err := os.Open(mock.Export1())
 	if err != nil {
 		t.Error(err)
 	}
 	defer openCSV.Close()
-	tests := []struct {
-		name    string
-		file    *os.File
-		wantErr bool
-	}{
-		{"empty", nil, true},
-		{"binary file", openBin, true},
-		{"csv file", openCSV, false},
+	bucket, ls, err := database.Scanner(openCSV)
+	if err != nil {
+		t.Errorf("Import(csv) unexpected error, %v", err)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := csvChecker(tt.file); (err != nil) != tt.wantErr {
-				t.Errorf("csvChecker() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
+	if bucket == "" {
+		t.Error("Import(csv) unexpected empty bucket name")
+	}
+	if ls == nil || len(*ls) != 26 {
+		t.Errorf("Import(csv) List is empty")
 	}
 }
 
-func Test_csvScanner(t *testing.T) {
+func TestScanner(t *testing.T) {
 	openBin, err := os.Open(mock.Item1())
 	if err != nil {
 		t.Error(err)
@@ -170,7 +168,7 @@ func Test_csvScanner(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1, err := csvScanner(tt.file)
+			got, got1, err := database.Scanner(tt.file)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("csvScanner() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -184,192 +182,5 @@ func Test_csvScanner(t *testing.T) {
 				t.Errorf("csvScanner() got1 = %v, want %v", len(*got1), tt.wantLists)
 			}
 		})
-	}
-}
-
-func mockDir() string {
-	sep := string(os.PathSeparator)
-	dir := filepath.Join("home", "me", "Downloads")
-	if runtime.GOOS == winOS {
-		return filepath.Join("C:", sep, dir)
-	}
-	return filepath.Join(sep, dir)
-}
-
-func Test_bucketName(t *testing.T) {
-	tests := []struct {
-		name string
-		s    string
-		want string
-	}{
-		{"empty", "", ""},
-		{"invalid", "invalid header", ""},
-		{"no path", csvHeader, ""},
-		{"local path", csvHeader + mockDir(), mockDir()},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := bucketName(tt.s); got != tt.want {
-				t.Errorf("bucketName() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_pathWindows(t *testing.T) {
-	unc := fmt.Sprintf("%sserver%sshare%s", uncPath, backslash, backslash)
-	tests := []struct {
-		name string
-		path string
-		want string
-	}{
-		{"empty", "", ""},
-		{"win drive", "C:", "C:"},
-		{"win drive tail", "C:\\", "C:"},
-		{"windows", "C:\\Users\\Ben\\Downloads\\", "C:\\Users\\Ben\\Downloads\\"},
-		{"linux", "/home/ben/Downloads", "C:\\home\\ben\\Downloads"},
-		{"linux tail", "/home/ben/Downloads/", "C:\\home\\ben\\Downloads\\"},
-		{"root", "/", "C:"},
-		{"unc", unc, unc},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := pathWindows(tt.path); got != tt.want {
-				t.Errorf("pathWindows() = %q, want %q", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_pathPosix(t *testing.T) {
-	unc := fmt.Sprintf("%sserver%sshare%s", uncPath, backslash, backslash)
-	tests := []struct {
-		name string
-		path string
-		want string
-	}{
-		{"empty", "", ""},
-		{"linux", "/home/ben/Downloads", "/home/ben/Downloads"},
-		{"linux tail", "/home/ben/Downloads/", "/home/ben/Downloads/"},
-		{"drive", "C:", "/"},
-		{"windows", "C:\\Users\\Ben\\Downloads\\", "/Users/Ben/Downloads/"},
-		{"network", unc, "/server/share/"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := pathPosix(tt.path); got != tt.want {
-				t.Errorf("pathPosix() = %q, want %q", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_importCSV(t *testing.T) {
-	const (
-		helloWorld = "68656c6c6f20776f726c64"
-		sum        = "44dcc97a2b115c9fd51c95d6a3f2075f2f7c09067e34a33d9259cd22208bffba"
-		file       = "someimage.png"
-	)
-	path := "/home/me/downloads"
-	if runtime.GOOS == winOS {
-		path = "C:\\home\\me\\downloads"
-	}
-	abs := strings.Join([]string{path, file}, string(os.PathSeparator))
-	line := strings.Join([]string{sum, file}, ",")
-	bsum, err := checksum(sum)
-	if err != nil {
-		t.Error(err)
-	}
-	empty := [32]byte{}
-	type args struct {
-		line   string
-		bucket string
-	}
-	tests := []struct {
-		name     string
-		args     args
-		wantSum  [32]byte
-		wantPath string
-		wantErr  bool
-	}{
-		{"empty", args{"", ""}, empty, "", true},
-		{"invalid hash", args{helloWorld, ""}, empty, "", true},
-		{"invalid data", args{"invalid,csv data", path}, empty, "", true},
-		{"empty path", args{sum + ",", path}, bsum, path, false},
-		{"valid hash", args{line, path}, bsum, abs, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotSum, gotPath, err := importCSV(tt.args.line, tt.args.bucket)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("importCSV() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(gotSum, tt.wantSum) {
-				t.Errorf("importCSV() gotSum = %v, want %v", gotSum, tt.wantSum)
-			}
-			if gotPath != tt.wantPath {
-				t.Errorf("importCSV() gotPath = %v, want %v", gotPath, tt.wantPath)
-			}
-		})
-	}
-}
-
-func Test_checksum(t *testing.T) {
-	const (
-		sum  = "44dcc97a2b115c9fd51c95d6a3f2075f2f7c09067e34a33d9259cd22208bffba"
-		null = "0000000000000000000000000000000000000000000000000000000000000000"
-	)
-	tests := []struct {
-		name    string
-		s       string
-		want    string
-		wantErr bool
-	}{
-		{"empty", "", null, true},
-		{"null", null, null, false},
-		{"sum", sum, sum, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := checksum(tt.s)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("checksum() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if fmt.Sprintf("%x", got) != tt.want {
-				t.Errorf("checksum() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestImport(t *testing.T) {
-	db, err := mock.Open()
-	if err != nil {
-		t.Error(err)
-	}
-	defer db.Close()
-	r, err := Import("", nil, db)
-	if r != 0 {
-		t.Errorf("Import(empty) records != 0")
-	}
-	if err == nil {
-		t.Errorf("Import(empty) expect error, not nil")
-	}
-	openCSV, err := os.Open(mock.Export1())
-	if err != nil {
-		t.Error(err)
-	}
-	defer openCSV.Close()
-	bucket, ls, err := csvScanner(openCSV)
-	if err != nil {
-		t.Errorf("Import(csv) unexpected error, %v", err)
-	}
-	if bucket == "" {
-		t.Error("Import(csv) unexpected empty bucket name")
-	}
-	if ls == nil || len(*ls) != 26 {
-		t.Errorf("Import(csv) List is empty")
 	}
 }

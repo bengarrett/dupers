@@ -1,10 +1,9 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
 
 // Package dupers is the blazing-fast file duplicate checker and filename search.
-package main
+package task
 
 import (
-	"bytes"
 	"errors"
 	"flag"
 	"fmt"
@@ -16,7 +15,8 @@ import (
 
 	"github.com/bengarrett/dupers/database"
 	"github.com/bengarrett/dupers/dupe"
-	"github.com/bengarrett/dupers/out"
+	"github.com/bengarrett/dupers/internal/cmd"
+	"github.com/bengarrett/dupers/internal/out"
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
 	"golang.org/x/text/language"
@@ -24,87 +24,42 @@ import (
 	"golang.org/x/text/number"
 )
 
-// checkBkt prints the missing bucket name error.
-func checkBkt(term, cmd, name string) {
-	if name != "" {
-		return
-	}
-	out.ErrCont(ErrDatabaseName)
-	fmt.Printf("Cannot %s the bucket as no bucket name was provided.\n", term)
-	if cmd == dmv {
-		out.Example(fmt.Sprintf("\ndupers %s <bucket name> <new directory>", cmd))
-		out.ErrFatal(nil)
-	}
-	out.Example(fmt.Sprintf("\ndupers %s <bucket name>", cmd))
-	out.ErrFatal(nil)
-}
+var (
+	ErrCmd          = errors.New("command is unknown")
+	ErrDatabaseName = errors.New("database has no bucket name")
+	ErrImport       = errors.New("import filepath is missing")
+	ErrNewName      = errors.New("a new directory is required")
+)
 
-// checkDB checks the database file.
-func checkDB() {
-	path, err := database.DB()
-	if err != nil {
-		out.ErrFatal(err)
-	}
-	i, err1 := os.Stat(path)
-	if os.IsNotExist(err1) {
-		out.ErrCont(database.ErrDBNotFound)
-		fmt.Printf("\n%s\nThe database will be located at: %s\n", database.NotFound, path)
-		os.Exit(0)
-	} else if err1 != nil {
-		out.ErrFatal(err1)
-	}
-	if i.Size() == 0 {
-		out.ErrCont(database.ErrDBZeroByte)
-		s := "This error occures when dupers cannot save any data to the file system."
-		fmt.Printf("\n%s\nThe database is located at: %s\n", s, path)
-		os.Exit(1)
-	}
-}
+const (
+	dbf   = "database"
+	dbs   = "db"
+	dbk   = "backup"
+	dcn   = "clean"
+	dex   = "export"
+	dim   = "import"
+	dls   = "ls"
+	dmv   = "mv"
+	drm   = "rm"
+	dup   = "up"
+	dupp  = "up+"
+	fhlp  = "-help"
+	winOS = "windows"
+)
 
-// chkWinDirs checks the arguments for invalid escaped quoted paths when using using Windows cmd.exe.
-func chkWinDirs() {
+// ChkWinDirs checks the arguments for invalid escaped quoted paths when using using Windows cmd.exe.
+func ChkWinDirs() {
 	if runtime.GOOS == winOS && len(flag.Args()) > 1 {
 		for _, s := range flag.Args()[1:] {
-			if err := chkWinDir(s); err != nil {
+			if err := cmd.ChkWinDir(s); err != nil {
 				out.ErrFatal(err)
 			}
 		}
 	}
 }
 
-// chkWinDir checks the string for invalid escaped quoted paths when using using Windows cmd.exe.
-func chkWinDir(s string) error {
-	if s == "" {
-		return nil
-	}
-	const dblQuote rune = 34
-	r := []rune(s)
-	l := len(r)
-	first, last := r[0:1][0], r[l-1 : l][0]
-	if first == dblQuote && last == dblQuote {
-		return nil // okay as the string is fully quoted
-	}
-	if first != dblQuote && last != dblQuote {
-		return nil // okay as the string is not quoted
-	}
-	// otherwise there is a problem, as only the start or end of the string is quoted.
-	// this is caused by flag.Parse() treating the \" prefix on a quoted directory path as an escaped quote.
-	// so "C:\Example\" will be incorrectly parsed as C:\Example"
-	w := new(bytes.Buffer)
-	fmt.Fprint(w, "please remove the trailing backslash \\ character from any quoted directory paths")
-	if usr, err := os.UserHomeDir(); err == nil {
-		fmt.Fprint(w, "\n")
-		fmt.Fprint(w, color.Success.Sprint("Good: "))
-		fmt.Fprintf(w, "\"%s\" ", usr)
-		fmt.Fprint(w, "\n")
-		fmt.Fprint(w, color.Warn.Sprint("Bad: "))
-		fmt.Fprintf(w, "\"%s\\\"", usr)
-	}
-	return fmt.Errorf("%w\n%s", ErrWindowsDir, w.String())
-}
-
-// databaseCmd parses the database commands.
-func databaseCmd(c *dupe.Config, quiet bool, args ...string) {
+// DatabaseCmd parses the database commands.
+func DatabaseCmd(c *dupe.Config, quiet bool, args ...string) {
 	checkDB()
 	buckets := [2]string{}
 	copy(buckets[:], args)
@@ -141,8 +96,8 @@ func databaseCmd(c *dupe.Config, quiet bool, args ...string) {
 	}
 }
 
-// dupeCmd parses the dupe command.
-func dupeCmd(c *dupe.Config, f *cmdFlags, args ...string) {
+// DupeCmd parses the dupe command.
+func DupeCmd(c *dupe.Config, f *cmd.Flags, args ...string) {
 	if c.Debug {
 		s := fmt.Sprintf("dupeCmd: %s", strings.Join(args, " "))
 		out.PBug(s)
@@ -197,9 +152,46 @@ func dupeCmd(c *dupe.Config, f *cmdFlags, args ...string) {
 	}
 }
 
+// checkBkt prints the missing bucket name error.
+func checkBkt(term, cmd, name string) {
+	if name != "" {
+		return
+	}
+	out.ErrCont(ErrDatabaseName)
+	fmt.Printf("Cannot %s the bucket as no bucket name was provided.\n", term)
+	if cmd == dmv {
+		out.Example(fmt.Sprintf("\ndupers %s <bucket name> <new directory>", cmd))
+		out.ErrFatal(nil)
+	}
+	out.Example(fmt.Sprintf("\ndupers %s <bucket name>", cmd))
+	out.ErrFatal(nil)
+}
+
+// checkDB checks the database file.
+func checkDB() {
+	path, err := database.DB()
+	if err != nil {
+		out.ErrFatal(err)
+	}
+	i, err1 := os.Stat(path)
+	if os.IsNotExist(err1) {
+		out.ErrCont(database.ErrDBNotFound)
+		fmt.Printf("\n%s\nThe database will be located at: %s\n", database.NotFound, path)
+		os.Exit(0)
+	} else if err1 != nil {
+		out.ErrFatal(err1)
+	}
+	if i.Size() == 0 {
+		out.ErrCont(database.ErrDBZeroByte)
+		s := "This error occures when dupers cannot save any data to the file system."
+		fmt.Printf("\n%s\nThe database is located at: %s\n", s, path)
+		os.Exit(1)
+	}
+}
+
 // dupeCleanup runs the cleanup commands when the appropriate flags are set.
-func dupeCleanup(c *dupe.Config, f *cmdFlags) {
-	if *f.sensen {
+func dupeCleanup(c *dupe.Config, f *cmd.Flags) {
+	if *f.Sensen {
 		if c.Debug {
 			out.PBug("remove all non unique Windows and MS-DOS files.")
 		}
@@ -208,12 +200,12 @@ func dupeCleanup(c *dupe.Config, f *cmdFlags) {
 		fmt.Print(c.Clean())
 		return
 	}
-	if *f.rm || *f.rmPlus {
+	if *f.Rm || *f.RmPlus {
 		if c.Debug {
 			out.PBug("remove duplicate files.")
 		}
 		fmt.Print(c.Remove())
-		if *f.rmPlus {
+		if *f.RmPlus {
 			if c.Debug {
 				out.PBug("remove empty directories.")
 			}
@@ -223,7 +215,7 @@ func dupeCleanup(c *dupe.Config, f *cmdFlags) {
 }
 
 // dupeLookup cleans and updates buckets for changes on the file system.
-func dupeLookup(c *dupe.Config, f *cmdFlags) {
+func dupeLookup(c *dupe.Config, f *cmd.Flags) {
 	if c.Debug {
 		out.PBug("dupe lookup.")
 	}
@@ -242,7 +234,7 @@ func dupeLookup(c *dupe.Config, f *cmdFlags) {
 	for _, b := range c.Buckets() {
 		buckets = append(buckets, string(b))
 	}
-	if !*f.lookup && len(buckets) > 0 {
+	if !*f.Lookup && len(buckets) > 0 {
 		if c.Debug {
 			out.PBug("non-fast mode, database cleanup.")
 		}
@@ -250,7 +242,7 @@ func dupeLookup(c *dupe.Config, f *cmdFlags) {
 			out.ErrCont(err)
 		}
 	}
-	if *f.lookup {
+	if *f.Lookup {
 		if c.Debug {
 			out.PBug("read the hash values in the buckets.")
 		}
@@ -272,8 +264,8 @@ func dupeLookup(c *dupe.Config, f *cmdFlags) {
 	c.WalkDirs()
 }
 
-// searchCmd runs the search command.
-func searchCmd(f *cmdFlags, args ...string) {
+// SearchCmd runs the search command.
+func SearchCmd(f *cmd.Flags, args ...string) {
 	l := len(args)
 	searchCmdErr(l)
 	term, buckets := args[1], []string{}
@@ -282,67 +274,38 @@ func searchCmd(f *cmdFlags, args ...string) {
 		buckets = args[minArgs:]
 	}
 	m := searchCompare(f, term, buckets)
-	fmt.Print(dupe.Print(*f.quiet, *f.exact, term, m))
-	if !*f.quiet {
+	fmt.Print(dupe.Print(*f.Quiet, *f.Exact, term, m))
+	if !*f.Quiet {
 		l := 0
 		if m != nil {
 			l = len(*m)
 		}
-		fmt.Println(searchCmdSummary(l, term, *f.exact, *f.filename))
+		fmt.Println(cmd.SearchSummary(l, term, *f.Exact, *f.Filename))
 	}
 }
 
-func searchCompare(f *cmdFlags, term string, buckets []string) *database.Matches {
+func searchCompare(f *cmd.Flags, term string, buckets []string) *database.Matches {
 	var err error
 	var m *database.Matches
 	switch {
-	case *f.filename && !*f.exact:
+	case *f.Filename && !*f.Exact:
 		if m, err = database.CompareBaseNoCase(term, buckets...); err != nil {
 			searchErr(err)
 		}
-	case *f.filename && *f.exact:
+	case *f.Filename && *f.Exact:
 		if m, err = database.CompareBase(term, buckets...); err != nil {
 			searchErr(err)
 		}
-	case !*f.filename && !*f.exact:
+	case !*f.Filename && !*f.Exact:
 		if m, err = database.CompareNoCase(term, buckets...); err != nil {
 			searchErr(err)
 		}
-	case !*f.filename && *f.exact:
+	case !*f.Filename && *f.Exact:
 		if m, err = database.Compare(term, buckets...); err != nil {
 			searchErr(err)
 		}
 	}
 	return m
-}
-
-// searchCmdSummary formats the results of the search command.
-func searchCmdSummary(total int, term string, exact, filename bool) string {
-	str := func(t, s, term string) string {
-		return fmt.Sprintf("%s%s exist for '%s'.", t, color.Secondary.Sprint(s), color.Bold.Sprint(term))
-	}
-	s, r := "", "results"
-	if total == 0 {
-		return fmt.Sprintf("No results exist for '%s'.", term)
-	}
-	if total == 1 {
-		r = "result"
-	}
-	t := color.Primary.Sprint(total)
-	if exact && filename {
-		s += fmt.Sprintf(" exact filename %s", r)
-		return str(t, s, term)
-	}
-	if exact {
-		s += fmt.Sprintf(" exact %s", r)
-		return str(t, s, term)
-	}
-	if filename {
-		s += fmt.Sprintf(" filename %s", r)
-		return str(t, s, term)
-	}
-	s += fmt.Sprintf(" %s", r)
-	return str(t, s, term)
 }
 
 // exportBucket saves the bucket to a csv file.

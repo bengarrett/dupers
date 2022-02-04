@@ -19,11 +19,11 @@ const (
 	PrivateFile fs.FileMode = 0o600
 	PrivateDir  fs.FileMode = 0o700
 
-	CSV1     = "../test/export-bucket1.csv"
-	Test1    = "../test/bucket1"
-	Test2    = "../test/bucket2"
-	SevenZip = "../test/randomfiles.7z"
-	Source1  = Test1 + "/0vlLaUEvzAWP"
+	csv1     = "test/export-bucket1.csv"
+	test1    = "test/bucket1"
+	test2    = "test/bucket2"
+	SevenZip = "test/randomfiles.7z"
+	source1  = "/0vlLaUEvzAWP"
 	dbName   = "dupers.db"
 	dbPath   = "dupers"
 	win      = "windows"
@@ -36,9 +36,15 @@ var (
 	ErrCreate = errors.New("create bucket")
 )
 
+func RootDir() string {
+	_, b, _, _ := runtime.Caller(0)
+	return filepath.Join(filepath.Dir(b), "../..")
+}
+
 // Bucket1 returns the absolute path of bucket test 1.
 func Bucket1() string {
-	b, err := filepath.Abs(Test1)
+	path := filepath.Join(RootDir(), test1)
+	b, err := filepath.Abs(path)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -52,7 +58,8 @@ func Bucket1() string {
 
 // Bucket2 returns the absolute path of bucket test 2.
 func Bucket2() string {
-	b, err := filepath.Abs(Test2)
+	path := filepath.Join(RootDir(), test2)
+	b, err := filepath.Abs(path)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -85,7 +92,8 @@ func CreateItem(bucket, file string, db *bolt.DB) error {
 
 // Export1 returns the absolute path of export csv file 1.
 func Export1() string {
-	f, err := filepath.Abs(CSV1)
+	path := filepath.Join(RootDir(), csv1)
+	f, err := filepath.Abs(path)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -95,7 +103,8 @@ func Export1() string {
 
 // Item1 returns the absolute path of test source file 1.
 func Item1() string {
-	b, err := filepath.Abs(Source1)
+	path := filepath.Join(Bucket1(), source1)
+	b, err := filepath.Abs(path)
 	if err != nil {
 		log.Fatal(err)
 	}

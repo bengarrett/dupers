@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/bengarrett/dupers/database"
-	"github.com/bengarrett/dupers/out"
+	"github.com/bengarrett/dupers/internal/out"
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
 	"github.com/karrick/godirwalk"
