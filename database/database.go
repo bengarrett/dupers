@@ -15,6 +15,7 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/bengarrett/dupers/database/internal/bucket"
 	"github.com/bengarrett/dupers/internal/out"
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
@@ -53,8 +54,6 @@ const (
 
 var (
 	ErrBucketNotFound = bolt.ErrBucketNotFound
-	ErrBucketAsFile   = errors.New("bucket points to a file, not a directory")
-	ErrBucketSkip     = errors.New("bucket directory does not exist")
 	ErrDBClean        = errors.New("database has nothing to clean")
 	ErrDBCompact      = errors.New("database compression has not reduced the size")
 	ErrDBEmpty        = errors.New("database is empty and contains no items")
@@ -65,26 +64,17 @@ var (
 )
 
 // Abs returns an absolute representation of the named bucket.
-func Abs(bucket string) (string, error) {
-	s, err := filepath.Abs(bucket)
-	if err != nil {
-		return "", err
-	}
-
-	if runtime.GOOS == "windows" {
-		return strings.ToLower(s), nil
-	}
-
-	return s, nil
+func Abs(name string) (string, error) {
+	return bucket.Abs(name)
 }
 
-func AbsB(bucket string) ([]byte, error) {
-	s, err := Abs(bucket)
+func AbsB(name string) ([]byte, error) {
+	s, err := bucket.Abs(name)
 	return []byte(s), err
 }
 
-// AllBuckets lists all the stored bucket names in the database.
-func AllBuckets(db *bolt.DB) (names []string, err error) {
+// All lists every stored bucket name in the database.
+func All(db *bolt.DB) (names []string, err error) {
 	if db == nil {
 		db, err = OpenRead()
 		if err != nil {
@@ -151,6 +141,67 @@ func Exist(bucket string, db *bolt.DB) error {
 	})
 }
 
+// Clean the stale items from database buckets.
+// Stale items are file pointers that no longer exist on the host file system.
+func Clean(quiet, debug bool, buckets ...string) error {
+	cleanDebug(debug, buckets)
+	path, err := DB()
+	if err != nil {
+		return err
+	}
+	if debug {
+		out.PBug("database path: " + path)
+	}
+	db, err := bolt.Open(path, PrivateFile, write())
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	buckets, err = cleaner(buckets, debug, db)
+	if err != nil {
+		return err
+	}
+	cnt, errs, finds := 0, 0, 0
+	total, err := bucket.Total(buckets, db)
+	if err != nil {
+		return err
+	}
+	for _, name := range buckets {
+		var abs string
+		var cont bool
+		parser := bucket.Parser{
+			Name:  name,
+			DB:    db,
+			Cnt:   cnt,
+			Errs:  errs,
+			Debug: debug,
+		}
+		if cnt, errs, abs, cont = parser.Parse(); cont {
+			continue
+		}
+		cleaner := bucket.Cleaner{
+			DB: db, Abs: abs, Debug: debug, Quiet: quiet, Cnt: cnt, Total: total, Finds: finds, Errs: errs,
+		}
+		cnt, finds, errs = cleaner.Clean()
+	}
+	if quiet {
+		return nil
+	}
+	if len(buckets) == errs {
+		return nil
+	}
+	if debug && finds == 0 {
+		fmt.Println("")
+		return ErrDBClean
+	}
+	if finds > 0 {
+		fmt.Printf("\rThe database removed %d stale items\n", finds)
+	} else {
+		fmt.Println("")
+	}
+	return nil
+}
+
 func cleanDebug(debug bool, buckets []string) {
 	if debug {
 		out.PBug("running database clean")
@@ -161,158 +212,7 @@ func cleanDebug(debug bool, buckets []string) {
 	}
 }
 
-// Clean the stale items from database buckets.
-// Stale items are file pointers that no longer exist on the host file system.
-func Clean(quiet, debug bool, buckets ...string) error {
-	cleanDebug(debug, buckets)
-	path, err := DB()
-	if err != nil {
-		return err
-	}
-
-	if debug {
-		out.PBug("database path: " + path)
-	}
-
-	db, err := bolt.Open(path, PrivateFile, write())
-	if err != nil {
-		return err
-	}
-
-	defer db.Close()
-	buckets, err = cleanAll(buckets, debug, db)
-
-	if err != nil {
-		return err
-	}
-
-	cnt, errs, finds := 0, 0, 0
-	total, err := totals(buckets, db)
-	if err != nil {
-		return err
-	}
-
-	for _, bucket := range buckets {
-		var abs string
-		var cont bool
-		if cnt, errs, abs, cont = parseBucket(bucket, db, cnt, errs, debug); cont {
-			continue
-		}
-		cnt, finds, errs = cleanBucket(db, abs, debug, quiet, cnt, total, finds, errs)
-	}
-
-	if quiet {
-		return nil
-	}
-
-	if len(buckets) == errs {
-		return nil
-	}
-
-	if debug && finds == 0 {
-		fmt.Println("")
-		return ErrDBClean
-	}
-
-	if finds > 0 {
-		fmt.Printf("\rThe database removed %d stale items\n", finds)
-	} else {
-		fmt.Println("")
-	}
-
-	return nil
-}
-
-func parseBucket(bucket string, db *bolt.DB, cnt, errs int, debug bool) (int, int, string, bool) {
-	abs, err := Abs(bucket)
-	if err != nil {
-		out.ErrCont(err)
-		return cnt, errs, "", true
-	} else if debug {
-		out.PBug("bucket: " + abs)
-	}
-	// check the bucket directory exists on the file system
-	fi, errS := os.Stat(abs)
-	switch {
-	case os.IsNotExist(errS):
-		out.ErrCont(fmt.Errorf("%w: %s", ErrBucketSkip, abs))
-		errs++
-
-		if i, errc := Count(bucket, db); errc == nil {
-			cnt += i
-		}
-
-		return cnt, errs, "", true
-	case err != nil:
-		out.ErrCont(err)
-		errs++
-
-		return cnt, errs, "", true
-	case !fi.IsDir():
-		out.ErrCont(fmt.Errorf("%w: %s", ErrBucketAsFile, abs))
-		errs++
-		if i, errc := Count(bucket, db); errc == nil {
-			cnt += i
-		}
-
-		return cnt, errs, "", true
-	}
-	return cnt, errs, abs, false
-}
-
-func cleanBucket(db *bolt.DB, abs string, debug, quiet bool, cnt, total, finds, errs int) (int, int, int) {
-	if err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(abs))
-		if b == nil {
-			return fmt.Errorf("%w: %s", ErrBucketNotFound, abs)
-		}
-		err := b.ForEach(func(k, v []byte) error {
-			cnt++
-			printStat(debug, quiet, cnt, total, k)
-			if _, errS := os.Stat(string(k)); errS != nil {
-				f := string(k)
-				if st, err2 := os.Stat(filepath.Dir(f)); err2 == nil {
-					if !st.IsDir() && st.Size() > 0 {
-						return nil
-					}
-				}
-				if debug {
-					out.PBug(fmt.Sprintf("%s: %s", k, errS))
-				}
-				if errUp := db.Update(func(tx *bolt.Tx) error {
-					return tx.Bucket([]byte(abs)).Delete(k)
-				}); errUp != nil {
-					return errUp
-				}
-				finds++
-				return nil
-			}
-			return nil
-		})
-		if err != nil {
-			errs++
-			out.ErrCont(err)
-		}
-		return nil
-	}); err != nil {
-		errs++
-
-		out.ErrCont(err)
-	}
-
-	return cnt, finds, errs
-}
-
-func printStat(debug, quiet bool, cnt, total int, k []byte) {
-	if !debug && !quiet {
-		fmt.Printf("%s", out.Status(cnt, total, out.Check))
-	}
-	if debug {
-		out.PBug("clean: " + string(k))
-	}
-}
-
-func cleanAll(buckets []string, debug bool, db *bolt.DB) ([]string, error) {
+func cleaner(buckets []string, debug bool, db *bolt.DB) ([]string, error) {
 	if len(buckets) > 0 {
 		return buckets, nil
 	}
@@ -322,7 +222,7 @@ func cleanAll(buckets []string, debug bool, db *bolt.DB) ([]string, error) {
 	}
 
 	var err1 error
-	buckets, err1 = AllBuckets(db)
+	buckets, err1 = All(db)
 
 	if err1 != nil {
 		return nil, err1
@@ -333,27 +233,6 @@ func cleanAll(buckets []string, debug bool, db *bolt.DB) ([]string, error) {
 	}
 
 	return buckets, nil
-}
-
-func totals(buckets []string, db *bolt.DB) (int, error) {
-	count := 0
-
-	for _, bucket := range buckets {
-		abs, err := Abs(bucket)
-		if err != nil {
-			out.ErrCont(err)
-			continue
-		}
-
-		items, err := Count(abs, db)
-		if err != nil {
-			return -1, err
-		}
-
-		count += items
-	}
-
-	return count, nil
 }
 
 // Compact the database by reclaiming space.
@@ -444,7 +323,7 @@ func compare(term []byte, noCase, base bool, buckets ...string) (*Matches, error
 	}
 	defer db.Close()
 
-	if buckets, err = checkBuckets(buckets); err != nil {
+	if buckets, err = checker(buckets); err != nil {
 		return nil, err
 	}
 	finds := make(Matches)
@@ -486,11 +365,11 @@ func compare(term []byte, noCase, base bool, buckets ...string) (*Matches, error
 	return &finds, nil
 }
 
-func checkBuckets(buckets []string) ([]string, error) {
+func checker(buckets []string) ([]string, error) {
 	if len(buckets) != 0 {
 		return buckets, nil
 	}
-	all, err := AllBuckets(nil)
+	all, err := All(nil)
 	if err != nil {
 		return nil, err
 	}
@@ -510,41 +389,7 @@ func compareKey(key []byte, noCase bool) []byte {
 
 // Count the number of records in the bucket.
 func Count(name string, db *bolt.DB) (items int, err error) {
-	if db == nil {
-		db, err = OpenRead()
-		if err != nil {
-			return 0, err
-		}
-		defer db.Close()
-	}
-	if errV := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(name))
-		if b == nil {
-			return bolt.ErrBucketNotFound
-		}
-		items, err = count(b, db)
-		return nil
-	}); errV != nil {
-		return 0, errV
-	}
-	return items, nil
-}
-
-func count(b *bolt.Bucket, db *bolt.DB) (int, error) {
-	records := 0
-	if err := db.View(func(tx *bolt.Tx) error {
-		if b == nil {
-			return ErrBucketNotFound
-		}
-		c := b.Cursor()
-		for k, _ := c.First(); k != nil; k, _ = c.Next() {
-			records++
-		}
-		return nil
-	}); err != nil {
-		return records, err
-	}
-	return records, nil
+	return bucket.Count(name, db)
 }
 
 // DB returns the absolute path of the Bolt database.

@@ -12,6 +12,7 @@ import (
 	"github.com/bengarrett/dupers/database"
 	"github.com/bengarrett/dupers/internal/mock"
 	"github.com/gookit/color"
+	bolt "go.etcd.io/bbolt"
 )
 
 func init() { //nolint:gochecknoinits
@@ -180,6 +181,41 @@ func TestScanner(t *testing.T) {
 				t.Errorf("csvScanner() got1 = %v, want nil", got1)
 			} else if tt.wantLists > 0 && len(*got1) != tt.wantLists {
 				t.Errorf("csvScanner() got1 = %v, want %v", len(*got1), tt.wantLists)
+			}
+		})
+	}
+}
+
+func TestImportCSV(t *testing.T) {
+	mdb, err := mock.Open()
+	if err != nil {
+		t.Error(err)
+	}
+	defer mdb.Close()
+	type args struct {
+		name string
+		db   *bolt.DB
+	}
+	tests := []struct {
+		name        string
+		args        args
+		wantRecords int
+		wantErr     bool
+	}{
+		{"invalid", args{}, 0, true},
+		{"no path", args{"", mdb}, 0, true},
+		{"only file", args{os.TempDir(), mdb}, 0, true},
+		{"okay", args{"../test/export-bucket1.csv", mdb}, 26, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotRecords, err := database.ImportCSV(tt.args.name, tt.args.db)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ImportCSV() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotRecords != tt.wantRecords {
+				t.Errorf("ImportCSV() = %v, want %v", gotRecords, tt.wantRecords)
 			}
 		})
 	}

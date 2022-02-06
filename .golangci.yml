@@ -1,5 +1,7 @@
 # golangci-lint run
 # gofumpt -l -w .
+# gci -w .
+# go test -timeout 30s -coverprofile=/tmp/vscode-gohSFtcj/go-code-cover ./...
 
 linters:
   enable-all: true

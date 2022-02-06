@@ -1,6 +1,7 @@
 package cmd_test
 
 import (
+	"log"
 	"testing"
 
 	"github.com/bengarrett/dupers/internal/cmd"
@@ -38,6 +39,11 @@ func TestChkWinDir(t *testing.T) {
 }
 
 func TestDefine(t *testing.T) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("cannot run multiple counts of test:", err)
+		}
+	}()
 	f := cmd.Flags{}
 	cmd.Define(&f)
 	if *f.Version != false {
@@ -46,6 +52,11 @@ func TestDefine(t *testing.T) {
 }
 
 func TestDefineShort(t *testing.T) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("cannot run multiple counts of test:", err)
+		}
+	}()
 	a := cmd.Aliases{}
 	cmd.DefineShort(&a)
 	if *a.Version != false {

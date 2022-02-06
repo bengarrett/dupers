@@ -118,7 +118,7 @@ func Dupe(c *dupe.Config, f *cmd.Flags, args ...string) error {
 		duplicate.CmdErr(l, 0, minArgs, false)
 	}
 	// fetch bucket info
-	b, err := database.AllBuckets(nil)
+	b, err := database.All(nil)
 	if err != nil {
 		return err
 	}

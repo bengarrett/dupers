@@ -72,6 +72,9 @@ func ChkWinDir(s string) error {
 
 // Define options for the commands.
 func Define(f *Flags) {
+	if f == nil {
+		return
+	}
 	f.Exact = flag.Bool("exact", false, "match case")
 	f.Debug = flag.Bool("debug", false, "debug mode") // hidden flag
 	f.Filename = flag.Bool("name", false, "search for filenames, and ignore directories")
@@ -90,6 +93,9 @@ func Define(f *Flags) {
 
 // DefineShort options for the command aliases.
 func DefineShort(a *Aliases) {
+	if a == nil {
+		return
+	}
 	a.Exact = flag.Bool("e", false, "alias for exact")
 	a.Lookup = flag.Bool("f", false, "alias for fast")
 	a.Filename = flag.Bool("n", false, "alias for name")

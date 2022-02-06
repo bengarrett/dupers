@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bengarrett/dupers/database/internal/bucket"
 	"github.com/bengarrett/dupers/database/internal/csv"
 	"github.com/bengarrett/dupers/internal/out"
 	"github.com/gookit/color"
@@ -24,16 +25,10 @@ import (
 )
 
 const (
-	whichBkt = "What bucket name do you wish to use"
-	loops    = 0
+	loops = 0
 )
 
-var (
-	ErrBucketExists = errors.New("bucket already exists in the database")
-	ErrBucketNotDir = errors.New("bucket path is not a directory")
-	ErrBucketPath   = errors.New("directory used by the bucket does not exist on your system")
-	ErrImportList   = errors.New("import list is empty")
-)
+var ErrImportList = errors.New("import list is empty")
 
 // Scanner reads the content of an export csv file.
 // It returns the stored bucket and csv data as a List ready for import.
@@ -142,20 +137,20 @@ func CopyFile(name, dest string) (int64, error) {
 	}
 	defer f.Close()
 	// create backup file
-	bu, err := os.Create(dest)
+	bf, err := os.Create(dest)
 	if err != nil {
 		return 0, err
 	}
-	defer bu.Close()
+	defer bf.Close()
 	// duplicate data
-	return io.Copy(bu, f)
+	return io.Copy(bf, f)
 }
 
 // ExportCSV saves the bucket data to an export csv file.
 // The generated file is RFC 4180 compatible using comma-separated values.
-func ExportCSV(bucket string, db *bolt.DB) (name string, err error) {
+func ExportCSV(bucket string, db *bolt.DB) (string, error) {
 	if db == nil {
-		db, err = OpenRead()
+		db, err := OpenRead()
 		if err != nil {
 			return "", err
 		}
@@ -166,7 +161,7 @@ func ExportCSV(bucket string, db *bolt.DB) (name string, err error) {
 	if err != nil {
 		return "", err
 	}
-	name = filepath.Join(dir, export())
+	name := filepath.Join(dir, export())
 	f, err := os.Create(name)
 	if err != nil {
 		return "", err
@@ -229,13 +224,15 @@ func ImportCSV(name string, db *bolt.DB) (records int, err error) {
 	if err1 := csv.Checker(file); err1 != nil {
 		return 0, err1
 	}
-	bucket, lists, err2 := Scanner(file)
+	name, lists, err2 := Scanner(file)
 	if err2 != nil {
 		return 0, err2
 	}
-	bucket, err = bucketChk(bucket, db)
-	if err != nil {
-		return 0, err
+	if db == nil {
+		name, err = Usage(name, db)
+		if err != nil {
+			return 0, err
+		}
 	}
 	items := 0
 	for range *lists {
@@ -248,104 +245,9 @@ func ImportCSV(name string, db *bolt.DB) (records int, err error) {
 		color.Secondary.Sprint(" in the CSV file.")
 	fmt.Println(s)
 	s = color.Secondary.Sprint("These will be added to the bucket: ")
-	s += color.Debug.Sprint(bucket)
+	s += color.Debug.Sprint(name)
 	fmt.Println(s)
-	return Import(Bucket(bucket), lists, db)
-}
-
-// bucketChk checks the validity and usage of the named bucket in the database.
-func bucketChk(name string, db *bolt.DB) (bucket string, err error) {
-	if db == nil {
-		db, err = OpenRead()
-		if err != nil {
-			return "", err
-		}
-		defer db.Close()
-	}
-
-	for {
-		if err := db.View(func(tx *bolt.Tx) error {
-			if b := tx.Bucket([]byte(name)); b == nil {
-				bucket = name
-				if stat(bucket) {
-					return nil
-				}
-			}
-			if bucket = bucketRename(name); bucket != "" {
-				if stat(bucket) {
-					return nil
-				}
-			}
-			return nil
-		}); err != nil {
-			return "", err
-		}
-		if bucket != "" {
-			return bucket, nil
-		}
-	}
-}
-
-func stat(bucket string) bool {
-	for {
-		fmt.Println()
-		if bucket = bucketStat(bucket); bucket != "" {
-			return true
-		}
-	}
-}
-
-// bucketRename prompts for confirmation for the use of the named bucket.
-func bucketRename(name string) string {
-	out.ErrCont(ErrBucketExists)
-	fmt.Printf("\nImport bucket name: %s\n\n", color.Debug.Sprint(name))
-	fmt.Println("The existing data in this bucket will overridden and any new data will be appended.")
-	if out.YN("Do you want to continue using this bucket", out.Yes) {
-		return name
-	}
-	fmt.Println("\nPlease choose a new bucket, which must be an absolute directory path.")
-	return out.Prompt(whichBkt)
-}
-
-// bucketStat checks the validity of the named bucket and prompts for user confirmation on errors.
-func bucketStat(name string) string {
-	printName := func() {
-		fmt.Printf("\nImport bucket directory: %s\n\n", color.Debug.Sprint(name))
-	}
-
-	for {
-		name = strings.TrimSpace(name)
-		abs, err := Abs(name)
-		if err != nil {
-			out.ErrCont(fmt.Errorf("%w: %s", err, name))
-
-			continue
-		}
-		s, err := os.Stat(abs)
-		if errors.Is(err, os.ErrNotExist) {
-			out.ErrCont(ErrBucketPath)
-			printName()
-			fmt.Println("You may still run dupe checks and searches without the actual files on your system.")
-			fmt.Println("Choosing no will prompt for a new bucket.")
-			if out.YN("Do you want to continue using this bucket", out.Yes) {
-				return abs
-			}
-			name = out.Prompt(whichBkt)
-
-			continue
-		} else if err == nil && !s.IsDir() {
-			err = ErrBucketNotDir
-		}
-		if err != nil {
-			out.ErrCont(ErrBucketNotDir)
-			printName()
-			fmt.Println("You cannot use this path as a bucket, please choose an absolute directory path.")
-			name = out.Prompt(whichBkt)
-
-			continue
-		}
-		return abs
-	}
+	return Import(Bucket(name), lists, db)
 }
 
 // Import the list of data and save it to the database.
@@ -404,4 +306,38 @@ func (batch Lists) iterate(db *bolt.DB, name Bucket, imported, total int) (int, 
 		}
 	}
 	return imported, nil
+}
+
+// Usage checks the validity and usage of the named bucket in the database.
+func Usage(name string, db *bolt.DB) (string, error) {
+	if db == nil {
+		db, err := OpenRead()
+		if err != nil {
+			return "", err
+		}
+		defer db.Close()
+	}
+
+	for {
+		path := ""
+		if err := db.View(func(tx *bolt.Tx) error {
+			if b := tx.Bucket([]byte(name)); b == nil {
+				path = name
+				if bucket.Stats(path) {
+					return nil
+				}
+			}
+			if path = bucket.Rename(name); path != "" {
+				if bucket.Stats(path) {
+					return nil
+				}
+			}
+			return nil
+		}); err != nil {
+			return "", err
+		}
+		if path != "" {
+			return path, nil
+		}
+	}
 }

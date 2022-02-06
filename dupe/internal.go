@@ -54,7 +54,7 @@ func (i *internal) OpenWrite() {
 
 // SetAllBuckets sets all the database backets for use with the dupe or search.
 func (i *internal) SetAllBuckets() {
-	names, err := database.AllBuckets(nil)
+	names, err := database.All(nil)
 	if err != nil {
 		out.ErrFatal(err)
 	}

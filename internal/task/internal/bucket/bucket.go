@@ -216,7 +216,7 @@ func rmBucket(name, retry string) {
 func bucketNoFound(name string, err error) {
 	out.ErrCont(err)
 	fmt.Printf("Bucket to remove: %s\n", color.Danger.Sprint(name))
-	buckets, err2 := database.AllBuckets(nil)
+	buckets, err2 := database.All(nil)
 	if err2 != nil {
 		out.ErrFatal(err2)
 	}
