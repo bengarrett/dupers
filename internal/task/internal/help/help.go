@@ -1,3 +1,4 @@
+// © Ben Garrett https://github.com/bengarrett/dupers
 package help
 
 import (
@@ -53,7 +54,7 @@ func Dupe(f flag.Flag, w *tabwriter.Writer) {
 	exampleDupe(w)
 }
 
-// helpSearch creates the search command help.
+// Search creates the search command help.
 func Search(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintf(w, "\n%s\n  Lookup a file or a directory name in the database.\n",
 		color.Primary.Sprint("Search:"))
@@ -70,7 +71,7 @@ func Search(f flag.Flag, w *tabwriter.Writer) {
 	exampleSearch(w)
 }
 
-// DB creates the database commands help.
+// DB creates the database command help.
 func DB(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintf(w, "\n%s\n  View information and run optional maintenance on the internal database.\n",
 		color.Primary.Sprint("Database:"))
@@ -99,7 +100,7 @@ func DB(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintf(w, "    -h, %s\tshow this list of options\n", fhlp)
 }
 
-// exampleDupe creates the dupe command examples.
+// exampleDupe creates the examples of the dupe command.
 func exampleDupe(w *tabwriter.Writer) *tabwriter.Writer {
 	fmt.Fprintln(w, "\n  Examples:")
 	fmt.Fprint(w, color.Secondary.Sprint("    # find identical copies of file.txt in the Downloads directory\n"))
@@ -122,7 +123,7 @@ func exampleDupe(w *tabwriter.Writer) *tabwriter.Writer {
 	return w
 }
 
-// exampleSearch creates the example command examples.
+// exampleSearch creates the examples of the search command.
 func exampleSearch(w *tabwriter.Writer) *tabwriter.Writer {
 	fmt.Fprintln(w, "\n  Examples:")
 	fmt.Fprint(w, color.Secondary.Sprint("    # search for the expression foo in your home directory\n"))

@@ -1,3 +1,4 @@
+// © Ben Garrett https://github.com/bengarrett/dupers
 package search
 
 import (
@@ -11,8 +12,9 @@ import (
 )
 
 var (
-	ErrNoArgs = errors.New("request is missing arguments")
-	ErrSearch = errors.New("search request needs an expression")
+	ErrNoArgs  = errors.New("request is missing arguments")
+	ErrNoFlags = errors.New("no command flags provided")
+	ErrSearch  = errors.New("search request needs an expression")
 )
 
 // CmdErr parses the arguments of the search command.
@@ -29,35 +31,38 @@ func CmdErr(l int, test bool) {
 	}
 }
 
-func Compare(f *cmd.Flags, term string, buckets []string) *database.Matches {
+func Compare(f *cmd.Flags, term string, buckets []string, test bool) (*database.Matches, error) {
 	var err error
 	var m *database.Matches
+	if f == nil {
+		return nil, ErrNoFlags
+	}
 	switch {
 	case *f.Filename && !*f.Exact:
 		if m, err = database.CompareBaseNoCase(term, buckets...); err != nil {
-			Error(err, false)
+			return nil, Error(err, test)
 		}
 	case *f.Filename && *f.Exact:
 		if m, err = database.CompareBase(term, buckets...); err != nil {
-			Error(err, false)
+			return nil, Error(err, test)
 		}
 	case !*f.Filename && !*f.Exact:
 		if m, err = database.CompareNoCase(term, buckets...); err != nil {
-			Error(err, false)
+			return nil, Error(err, test)
 		}
 	case !*f.Filename && *f.Exact:
 		if m, err = database.Compare(term, buckets...); err != nil {
-			Error(err, false)
+			return nil, Error(err, test)
 		}
 	}
-	return m
+	return m, nil
 }
 
 // Error parses the errors from search compares.
-func Error(err error, test bool) {
+func Error(err error, test bool) error {
 	if errors.Is(err, database.ErrDBEmpty) {
 		out.ErrCont(err)
-		return
+		return nil
 	}
 	if errors.As(err, &database.ErrBucketNotFound) {
 		out.ErrCont(err)
@@ -69,11 +74,14 @@ func Error(err error, test bool) {
 		}
 		s := fmt.Sprintf("dupers up %s\n", dir)
 		out.Example(s)
-		if !test {
-			out.ErrFatal(nil)
+		if test {
+			return nil
 		}
+		out.ErrFatal(nil)
 	}
-	if !test {
-		out.ErrFatal(err)
+	if test {
+		return err
 	}
+	out.ErrFatal(err)
+	return nil
 }

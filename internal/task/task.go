@@ -1,6 +1,4 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
-
-// Package dupers is the blazing-fast file duplicate checker and filename search.
 package task
 
 import (
@@ -63,7 +61,7 @@ func ChkWinDirs() error {
 	return nil
 }
 
-// Database parses the database commands.
+// Database parses the commands that interact with the database.
 func Database(c *dupe.Config, quiet bool, args ...string) error {
 	if err := database.Check(); err != nil {
 		return err
@@ -82,15 +80,15 @@ func Database(c *dupe.Config, quiet bool, args ...string) error {
 		}
 		fmt.Println(s)
 	case dex:
-		bucket.ExportBucket(quiet, buckets)
+		bucket.Export(quiet, buckets)
 	case dim:
-		bucket.ImportBucket(quiet, buckets)
+		bucket.Import(quiet, buckets)
 	case dls:
-		bucket.ListBucket(quiet, buckets)
+		bucket.List(quiet, buckets)
 	case dmv:
 		buckets := [3]string{}
 		copy(buckets[:], args)
-		bucket.MoveBucket(quiet, buckets)
+		bucket.Move(quiet, buckets)
 	case drm:
 		bucket.Remove(quiet, buckets)
 	case dup:
@@ -134,9 +132,11 @@ func Dupe(c *dupe.Config, f *cmd.Flags, args ...string) error {
 	c.SetToCheck(args[1])
 	// directories and files to scan, a bucket is the name given to database tables
 	if buckets := args[2:]; len(buckets) == 0 {
-		c.SetAllBuckets()
+		if err := c.SetBuckets(); err != nil {
+			out.ErrFatal(err)
+		}
 	} else {
-		c.SetBuckets(buckets...)
+		c.SetBucket(buckets...)
 		checkDupePaths(c)
 	}
 	if c.Debug {
@@ -187,7 +187,7 @@ func Help() string {
 	return b.String()
 }
 
-// Search runs the search command.
+// Search parses the commands that handle search.
 func Search(f *cmd.Flags, args ...string) {
 	l := len(args)
 	search.CmdErr(l, false)
@@ -196,7 +196,10 @@ func Search(f *cmd.Flags, args ...string) {
 	if l > minArgs {
 		buckets = args[minArgs:]
 	}
-	m := search.Compare(f, term, buckets)
+	m, err := search.Compare(f, term, buckets, false)
+	if err != nil {
+		out.ErrFatal(err)
+	}
 	fmt.Print(dupe.Print(*f.Quiet, *f.Exact, term, m))
 	if !*f.Quiet {
 		l := 0
@@ -242,7 +245,7 @@ func checkDupePaths(c *dupe.Config) {
 	}
 	p := message.NewPrinter(language.English)
 	verb := "Buckets"
-	if len(c.Buckets()) == 1 {
+	if len(c.All()) == 1 {
 		verb = "Bucket"
 	}
 	fmt.Printf("Directory to check:\n %s (%s)\n", c.ToCheck(), color.Info.Sprintf("%s files", p.Sprint(cc)))

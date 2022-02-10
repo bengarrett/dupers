@@ -1,6 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
 
-package dupe
+package dupe_test
 
 import (
 	"fmt"
@@ -13,6 +13,8 @@ import (
 	"testing"
 
 	"github.com/bengarrett/dupers/database"
+	"github.com/bengarrett/dupers/dupe"
+	"github.com/bengarrett/dupers/dupe/internal/parse"
 	"github.com/bengarrett/dupers/internal/mock"
 	"github.com/bengarrett/dupers/internal/out"
 	"github.com/gookit/color"
@@ -27,133 +29,18 @@ const (
 	file2   = "../test/bucket1/GwejJkMzs3yP"
 	rmSrc   = "../test/bucket1/mPzd5cu0Gv5j"
 	rmDst   = "../test/tmp/mPzd5cu0Gv5j"
-	// checksums created from sha256sum <filename>.
-	hash0 = "0000000000000000000000000000000000000000000000000000000000000000"
-	hash1 = "1a1d76a3187ccee147e6c807277273afbad5d2680f5eadf1012310743e148f22"
-	hash2 = "4acc274c2e6dc2241029c735758f672b3dc1109ab76a91fe29aeb2bac6949eb7"
 )
-
-func init() { // nolint:gochecknoinits
-	color.Enable = false
-}
-
-func ExamplePrint() {
-	matches := database.Matches{}
-	matches[database.Filepath(file1)] = database.Bucket(bucket1)
-	s := Print(true, true, "", &matches)
-	fmt.Print(s)
-	// Output: ../test/bucket1/0vlLaUEvzAWP
-}
-
-func Test_contains(t *testing.T) {
-	type args struct {
-		s    []string
-		find string
-	}
-	str := []string{"abc", "def", "ghijkl"}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		{"empty", args{nil, ""}, false},
-		{"no find", args{str, ""}, false},
-		{"find", args{str, "def"}, true},
-		{"partial", args{str, "de"}, false},
-		{"find upper", args{str, "DEF"}, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := contains(tt.args.find, tt.args.s...); got != tt.want {
-				t.Errorf("contains() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_containsBin(t *testing.T) {
-	d, err := filepath.Abs(bucket1)
-	if err != nil {
-		t.Error(err)
-	}
-	tests := []struct {
-		name string
-		root string
-		want bool
-	}{
-		{"test dir", d, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := containsBin(tt.root); got != tt.want {
-				t.Errorf("containsBin() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_read(t *testing.T) {
-	tests := []struct {
-		name     string
-		path     string
-		wantHash string
-		wantErr  bool
-	}{
-		{"empty", "", hash0, true},
-		{"file1", file1, hash1, false},
-		{"file2", file2, hash2, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotHash, err := read(tt.path)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("read() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			h := fmt.Sprintf("%x", gotHash)
-			if h != tt.wantHash {
-				t.Errorf("read() got = %v, want %v", h, tt.wantHash)
-			}
-		})
-	}
-}
-
-func Test_SetBuckets(t *testing.T) {
-	const test = "test"
-	i := internal{}
-	i.SetBuckets(test)
-	t.Run("test set", func(t *testing.T) {
-		if l := len(i.buckets); l != 1 {
-			t.Errorf("SetBuckets() got = %v, want %v", l, 1)
-		}
-	})
-	t.Run("print", func(t *testing.T) {
-		if s := i.PrintBuckets(); s != test {
-			t.Errorf("SetBuckets() got = %v, want %v", s, test)
-		}
-	})
-}
-
-func Test_SetToCheck(t *testing.T) {
-	c := Config{}
-	c.SetToCheck(bucket1)
-	t.Run("test set", func(t *testing.T) {
-		if s := c.source; s == "" {
-			t.Errorf("SetToCheck() got = %v, want the absolute path of: %v", s, bucket1)
-		}
-	})
-}
 
 func TestConfig_CheckPaths(t *testing.T) {
 	type fields struct {
-		Debug    bool
-		Quiet    bool
-		Test     bool
-		internal internal
+		Debug bool
+		Quiet bool
+		Test  bool
+		parse.Parser
 	}
 	type args struct {
 		source  string
-		buckets []Bucket
+		buckets []parse.Bucket
 	}
 	f := fields{Test: true}
 	tests := []struct {
@@ -166,18 +53,18 @@ func TestConfig_CheckPaths(t *testing.T) {
 	}{
 		{"empty", f, args{}, true, 0, 0},
 		{"source", f, args{source: bucket2}, false, 3, 0},
-		{"okay", f, args{source: bucket2, buckets: []Bucket{bucket1}}, true, 3, 1},
+		{"okay", f, args{source: bucket2, buckets: []parse.Bucket{bucket1}}, true, 3, 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Config{
-				Debug:    tt.fields.Debug,
-				Quiet:    tt.fields.Quiet,
-				Test:     tt.fields.Test,
-				internal: tt.fields.internal,
+			c := &dupe.Config{
+				Debug:  tt.fields.Debug,
+				Quiet:  tt.fields.Quiet,
+				Test:   tt.fields.Test,
+				Parser: tt.fields.Parser,
 			}
-			c.source = tt.args.source
-			c.buckets = tt.args.buckets
+			c.Source = tt.args.source
+			c.Buckets = tt.args.buckets
 			gotOk, gotCheckCnt, gotBucketCnt := c.CheckPaths()
 			if gotOk != tt.wantOk {
 				t.Errorf("Config.CheckPaths() gotOk = %v, want %v", gotOk, tt.wantOk)
@@ -195,11 +82,11 @@ func TestConfig_CheckPaths(t *testing.T) {
 func TestConfig_Print(t *testing.T) {
 	b1, _ := filepath.Abs(file1)
 	b2, _ := filepath.Abs(file2)
-	c := Config{}
-	c.sources = []string{b1, b2}
-	sum, _ := read(b1)
-	c.compare = make(checksums)
-	c.compare[sum] = file1
+	c := dupe.Config{}
+	c.Sources = []string{b1, b2}
+	sum, _ := parse.Read(b1)
+	c.Compare = make(parse.Checksums)
+	c.Compare[sum] = file1
 
 	if s := c.Print(); s == "" {
 		t.Errorf("Config.Print() should have returned a result.")
@@ -207,7 +94,8 @@ func TestConfig_Print(t *testing.T) {
 }
 
 func TestConfig_Remove(t *testing.T) {
-	c := Config{Test: true}
+	color.Enable = false
+	c := dupe.Config{Test: true}
 	if r := strings.TrimSpace(c.Remove()); r != "No duplicate files to remove." {
 		t.Errorf("Config.Remove() should have returned a nothing to remove message, not %v.", r)
 	}
@@ -223,13 +111,13 @@ func TestConfig_Remove(t *testing.T) {
 		t.Errorf("CopyFile should have written %d bytes, but wrote %d", written, i)
 	}
 	// setup mock databases
-	c.sources = append(c.sources, rmDst)
-	sum, err := read(rmDst)
+	c.Sources = append(c.Sources, rmDst)
+	sum, err := parse.Read(rmDst)
 	if err != nil {
 		t.Error(err)
 	}
-	c.compare = make(checksums)
-	c.compare[sum] = rmDst
+	c.Compare = make(parse.Checksums)
+	c.Compare[sum] = rmDst
 	want := fmt.Sprintf("removed: %s", rmDst)
 	if s := c.Remove(); strings.TrimSpace(s) != want {
 		t.Errorf("Config.Remove() returned an unexpected reply: %s, want %s", s, want)
@@ -237,7 +125,7 @@ func TestConfig_Remove(t *testing.T) {
 }
 
 func TestConfig_Clean(t *testing.T) {
-	c := Config{Test: true}
+	c := dupe.Config{Test: true}
 	if r := strings.TrimSpace(c.Clean()); r != "" {
 		t.Errorf("Config.Clean() should have returned blank, not %v.", r)
 	}
@@ -253,8 +141,8 @@ func TestConfig_Clean(t *testing.T) {
 		t.Errorf("CopyFile should have written %d bytes, but wrote %d", written, i)
 	}
 	// make empty test dir
-	c.source = filepath.Dir(rmDst)
-	dir := filepath.Join(c.source, "empty directory placeholder")
+	c.Source = filepath.Dir(rmDst)
+	dir := filepath.Join(c.Source, "empty directory placeholder")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Error(err)
 	}
@@ -265,8 +153,8 @@ func TestConfig_Clean(t *testing.T) {
 }
 
 func TestConfig_Status(t *testing.T) {
-	c := Config{Test: true}
-	c.files = 2
+	c := dupe.Config{Test: true}
+	c.Files = 2
 	const want = "Scanned 2 files"
 	if s := strings.TrimSpace(c.Status()); !strings.Contains(s, want) {
 		t.Errorf("Config.Status() should contain %s, got %s", want, s)
@@ -275,41 +163,41 @@ func TestConfig_Status(t *testing.T) {
 
 func TestConfig_WalkDirs(t *testing.T) {
 	var err error
-	c := Config{Test: true, Debug: true}
-	c.db, err = mock.Open()
+	c := dupe.Config{Test: true, Debug: true}
+	c.DB, err = mock.Open()
 	if err != nil {
 		t.Error(err)
 	}
-	defer c.db.Close()
-	c.SetBuckets(mock.Bucket1())
+	defer c.DB.Close()
+	c.SetBucket(mock.Bucket1())
 	c.WalkDirs()
 }
 
 func TestConfig_WalkDir(t *testing.T) {
 	var err error
-	c := Config{Test: true, Debug: true}
-	c.db, err = mock.Open()
+	c := dupe.Config{Test: true, Debug: true}
+	c.DB, err = mock.Open()
 	if err != nil {
 		t.Error(err)
 	}
-	defer c.db.Close()
+	defer c.DB.Close()
 	if err := c.WalkDir(""); err == nil {
 		t.Errorf("Config.WalkDir() should return an error with an empty Config.")
 	}
 	f := mock.Item1()
-	err = c.WalkDir(Bucket(f))
+	err = c.WalkDir(parse.Bucket(f))
 	if err != nil {
 		t.Errorf("Config.WalkDir(%s) should skip files.", f)
 	}
 	b := mock.Bucket1()
-	err = c.WalkDir(Bucket(b))
+	err = c.WalkDir(parse.Bucket(b))
 	if err != nil {
 		t.Errorf("Config.WalkDir(%s) returned the error: %v", b, err)
 	}
 }
 
 func TestConfig_WalkSource(t *testing.T) {
-	c := Config{}
+	c := dupe.Config{}
 	if err := c.WalkSource(); err == nil {
 		t.Errorf("Config.WalkSource() should return an error with an empty Config.")
 	}
@@ -319,46 +207,46 @@ func TestConfig_WalkSource(t *testing.T) {
 	}
 }
 
-func Test_printWalk(t *testing.T) {
-	c := Config{Test: false, Quiet: false, Debug: false}
-	s := strings.TrimSpace(printWalk(false, &c))
+func TestPrintWalk(t *testing.T) {
+	c := dupe.Config{Test: false, Quiet: false, Debug: false}
+	s := strings.TrimSpace(dupe.PrintWalk(false, &c))
 	want := ""
-	if runtime.GOOS != winOS {
+	if runtime.GOOS != dupe.WinOS {
 		want = out.EraseLine + "\r"
 	}
 	want += "Scanning 0 files"
 	if s != want {
-		t.Errorf("printWalk() returned: %s, want %s", s, want)
+		t.Errorf("PrintWalk() returned: %s, want %s", s, want)
 	}
-	c.files = 15
-	s = strings.TrimSpace(printWalk(false, &c))
+	c.Files = 15
+	s = strings.TrimSpace(dupe.PrintWalk(false, &c))
 	want = ""
-	if runtime.GOOS != winOS {
+	if runtime.GOOS != dupe.WinOS {
 		want = out.EraseLine + "\r"
 	}
 	want += "Scanning 15 files"
 	if s != want {
-		t.Errorf("printWalk() returned: %s, want %s", s, want)
+		t.Errorf("PrintWalk() returned: %s, want %s", s, want)
 	}
-	s = strings.TrimSpace(printWalk(true, &c))
+	s = strings.TrimSpace(dupe.PrintWalk(true, &c))
 	want = ""
-	if runtime.GOOS != winOS {
+	if runtime.GOOS != dupe.WinOS {
 		want = out.EraseLine + "\r"
 	}
 	want += "Looking up 15 items"
 	if s != want {
-		t.Errorf("printWalk() returned: %s, want %s", s, want)
+		t.Errorf("PrintWalk() returned: %s, want %s", s, want)
 	}
 	c.Quiet = true
-	s = strings.TrimSpace(printWalk(true, &c))
+	s = strings.TrimSpace(dupe.PrintWalk(true, &c))
 	want = ""
 	if s != want {
-		t.Errorf("printWalk() returned: %s, want a blank string", s)
+		t.Errorf("PrintWalk() returned: %s, want a blank string", s)
 	}
 }
 
 func TestRemoveAll(t *testing.T) {
-	c := Config{Test: true, Quiet: false, Debug: true}
+	c := dupe.Config{Test: true, Quiet: false, Debug: true}
 	if err := cleanDir(bucket0); err != nil {
 		t.Error(err)
 	}
@@ -373,10 +261,47 @@ func TestRemoveAll(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	c.source = abs
-	c.sources = append(c.sources, srcs)
+	c.Source = abs
+	c.Sources = append(c.Sources, srcs)
 	s := c.RemoveAll()
 	fmt.Println(s)
+}
+
+func TestChecksum(t *testing.T) {
+	c := dupe.Config{Test: true, Quiet: false, Debug: true}
+	var err error
+	c.DB, err = mock.Open()
+	if err != nil {
+		c.DB.Close()
+		t.Error(err)
+		return
+	}
+	defer c.DB.Close()
+	file, err := filepath.Abs(file1)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	type args struct {
+		name   string
+		bucket string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{"empty", args{}, true},
+		{"invalid path", args{"abcde", mock.Bucket1()}, true},
+		{"okay", args{file, mock.Bucket1()}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := c.Checksum(tt.args.name, tt.args.bucket); (err != nil) != tt.wantErr {
+				t.Errorf("Config.Checksum() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
 }
 
 func cleanDir(name string) error {
@@ -428,4 +353,35 @@ func mirrorDir(src, dst string) error {
 		}
 		return nil
 	})
+}
+
+func TestConfig_WalkArchiver(t *testing.T) {
+	c := dupe.Config{Test: true, Quiet: false, Debug: true}
+	var err error
+	c.DB, err = mock.Open()
+	if err != nil {
+		c.DB.Close()
+		t.Error(err)
+		return
+	}
+	defer c.DB.Close()
+	type args struct {
+		name string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{"empty", args{}, true},
+		{"invalid", args{"abcdef"}, true},
+		{"okay", args{mock.Bucket1()}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := c.WalkArchiver(parse.Bucket(tt.args.name)); (err != nil) != tt.wantErr {
+				t.Errorf("Config.WalkArchiver() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
 }

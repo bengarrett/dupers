@@ -1,3 +1,4 @@
+// © Ben Garrett https://github.com/bengarrett/dupers
 package duplicate
 
 import (
@@ -77,24 +78,24 @@ func CmdErr(args, buckets, minArgs int, test bool) {
 	}
 }
 
-// Lookup cleans and updates buckets for changes on the file system.
+// Lookup both cleans and then updates the buckets with file system changes.
 func Lookup(c *dupe.Config, f *cmd.Flags) {
 	if c.Debug {
 		out.PBug("dupe lookup.")
 	}
 	// normalise bucket names
-	for i, b := range c.Buckets() {
+	for i, b := range c.All() {
 		abs, err := database.Abs(string(b))
 		if err != nil {
 			out.ErrCont(err)
-			c.Buckets()[i] = ""
+			c.All()[i] = ""
 
 			continue
 		}
-		c.Buckets()[i] = dupe.Bucket(abs)
+		c.All()[i] = dupe.Bucket(abs)
 	}
-	buckets := make([]string, 0, len(c.Buckets()))
-	for _, b := range c.Buckets() {
+	buckets := make([]string, 0, len(c.All()))
+	for _, b := range c.All() {
 		buckets = append(buckets, string(b))
 	}
 	if !*f.Lookup && len(buckets) > 0 {
@@ -110,8 +111,10 @@ func Lookup(c *dupe.Config, f *cmd.Flags) {
 			out.PBug("read the hash values in the buckets.")
 		}
 		fastErr := false
-		for _, b := range c.Buckets() {
-			if i := c.SetCompares(b); i > 0 {
+		for _, b := range c.All() {
+			if i, err := c.SetCompares(b); err != nil {
+				out.ErrCont(err)
+			} else if i > 0 {
 				continue
 			}
 			fastErr = true

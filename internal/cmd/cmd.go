@@ -24,7 +24,7 @@ type Aliases struct {
 	Version  *bool
 }
 
-// Flags are options for commands.
+// Flags are the options for commands.
 type Flags struct {
 	Debug    *bool
 	Exact    *bool
@@ -39,7 +39,7 @@ type Flags struct {
 	Version  *bool
 }
 
-// ChkWinDir checks the string for invalid escaped quoted paths when using using Windows cmd.exe.
+// ChkWinDir checks the string for invalid, escaped quoted paths when using using Windows cmd.exe.
 func ChkWinDir(s string) error {
 	if s == "" {
 		return nil
@@ -105,8 +105,8 @@ func DefineShort(a *Aliases) {
 	a.Version = flag.Bool("v", false, "alias for version")
 }
 
-// Home returns the user's home directory.
-// Or if that fails, returns the current working directory.
+// Home returns the user home directory.
+// If that fails it returns the current working directory.
 func Home() string {
 	h, err := os.UserHomeDir()
 	if err != nil {
@@ -117,7 +117,7 @@ func Home() string {
 	return h
 }
 
-// Self returns the path to this dupers executable file.
+// Self returns the path to the dupers executable file.
 func Self() (string, error) {
 	exe, err := os.Executable()
 	if err != nil {

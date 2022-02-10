@@ -30,80 +30,6 @@ const (
 
 var ErrImportList = errors.New("import list is empty")
 
-// Scanner reads the content of an export csv file.
-// It returns the stored bucket and csv data as a List ready for import.
-func Scanner(file *os.File) (string, *Lists, error) {
-	if file == nil {
-		return "", nil, csv.ErrFileNoDesc
-	}
-	const firstItem = 2
-	scanner := bufio.NewScanner(file)
-	scanner.Split(bufio.ScanLines)
-	bucket, row := "", 0
-	lists := make(Lists)
-
-	for scanner.Scan() {
-		row++
-		line := scanner.Text()
-		if row == 1 {
-			if bucket = csv.BucketName(line); bucket == "" {
-				return "", nil, fmt.Errorf("%w, invalid header: %s", csv.ErrImportFile, line)
-			}
-
-			continue
-		}
-		sum, key, err := csv.Import(line, bucket)
-		if err != nil {
-			if row == firstItem {
-				return "", nil, err
-			}
-
-			continue
-		}
-		if loops != 0 && row > loops+1 {
-			break
-		}
-		lists[Filepath(key)] = sum
-	}
-	return bucket, &lists, nil
-}
-
-// read bolt option to open in read only mode with a file lock timeout.
-func read() *bolt.Options {
-	return &bolt.Options{ReadOnly: true, Timeout: Timeout}
-}
-
-// write bolt option to open in write mode with a file lock timeout.
-func write() *bolt.Options {
-	return &bolt.Options{Timeout: Timeout}
-}
-
-// OpenRead opens the Bolt database for reading.
-func OpenRead() (db *bolt.DB, err error) {
-	path, err := DB()
-	if err != nil {
-		return nil, err
-	}
-	db, err = bolt.Open(path, PrivateFile, read())
-	if err != nil {
-		return nil, err
-	}
-	return db, nil
-}
-
-// OpenRead opens the Bolt database for writing and reading.
-func OpenWrite() (db *bolt.DB, err error) {
-	path, err := DB()
-	if err != nil {
-		return nil, err
-	}
-	db, err = bolt.Open(path, PrivateFile, write())
-	if err != nil {
-		return nil, err
-	}
-	return db, nil
-}
-
 // Backup makes a copy of the database to the named location.
 func Backup() (name string, written int64, err error) {
 	src, err := DB()
@@ -205,51 +131,6 @@ func Home() (string, error) {
 	return s, err
 }
 
-// ImportCSV reads the named export csv file and imports its content to the database.
-func ImportCSV(name string, db *bolt.DB) (records int, err error) {
-	if db == nil {
-		db, err = OpenWrite()
-		if err != nil {
-			return 0, err
-		}
-		defer db.Close()
-	}
-
-	file, err := os.Open(name)
-	if err != nil {
-		return 0, err
-	}
-	defer file.Close()
-
-	if err1 := csv.Checker(file); err1 != nil {
-		return 0, err1
-	}
-	name, lists, err2 := Scanner(file)
-	if err2 != nil {
-		return 0, err2
-	}
-	if db == nil {
-		name, err = Usage(name, db)
-		if err != nil {
-			return 0, err
-		}
-	}
-	items := 0
-	for range *lists {
-		items++
-	}
-	p := message.NewPrinter(language.English)
-	s := "\n"
-	s += color.Secondary.Sprint("Found ") +
-		color.Primary.Sprintf("%s valid items", p.Sprint(number.Decimal(items))) +
-		color.Secondary.Sprint(" in the CSV file.")
-	fmt.Println(s)
-	s = color.Secondary.Sprint("These will be added to the bucket: ")
-	s += color.Debug.Sprint(name)
-	fmt.Println(s)
-	return Import(Bucket(name), lists, db)
-}
-
 // Import the list of data and save it to the database.
 // If the named bucket does not exist, it is created.
 func Import(name Bucket, ls *Lists, db *bolt.DB) (imported int, err error) {
@@ -306,6 +187,125 @@ func (batch Lists) iterate(db *bolt.DB, name Bucket, imported, total int) (int, 
 		}
 	}
 	return imported, nil
+}
+
+// ImportCSV reads the named export csv file and imports its content to the database.
+func ImportCSV(name string, db *bolt.DB) (records int, err error) {
+	if db == nil {
+		db, err = OpenWrite()
+		if err != nil {
+			return 0, err
+		}
+		defer db.Close()
+	}
+
+	file, err := os.Open(name)
+	if err != nil {
+		return 0, err
+	}
+	defer file.Close()
+
+	if err1 := csv.Checker(file); err1 != nil {
+		return 0, err1
+	}
+	name, lists, err2 := Scanner(file)
+	if err2 != nil {
+		return 0, err2
+	}
+	if db == nil {
+		name, err = Usage(name, db)
+		if err != nil {
+			return 0, err
+		}
+	}
+	items := 0
+	for range *lists {
+		items++
+	}
+	p := message.NewPrinter(language.English)
+	s := "\n"
+	s += color.Secondary.Sprint("Found ") +
+		color.Primary.Sprintf("%s valid items", p.Sprint(number.Decimal(items))) +
+		color.Secondary.Sprint(" in the CSV file.")
+	fmt.Println(s)
+	s = color.Secondary.Sprint("These will be added to the bucket: ")
+	s += color.Debug.Sprint(name)
+	fmt.Println(s)
+	return Import(Bucket(name), lists, db)
+}
+
+// OpenRead opens the Bolt database for reading.
+func OpenRead() (db *bolt.DB, err error) {
+	path, err := DB()
+	if err != nil {
+		return nil, err
+	}
+	db, err = bolt.Open(path, PrivateFile, read())
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}
+
+// read bolt option to open in read only mode with a file lock timeout.
+func read() *bolt.Options {
+	return &bolt.Options{ReadOnly: true, Timeout: Timeout}
+}
+
+// OpenRead opens the Bolt database for writing and reading.
+func OpenWrite() (db *bolt.DB, err error) {
+	path, err := DB()
+	if err != nil {
+		return nil, err
+	}
+	db, err = bolt.Open(path, PrivateFile, write())
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}
+
+// write bolt option to open in write mode with a file lock timeout.
+func write() *bolt.Options {
+	return &bolt.Options{Timeout: Timeout}
+}
+
+// Scanner reads the content of an export csv file.
+// It returns the stored bucket and csv data as a List ready for import.
+func Scanner(file *os.File) (string, *Lists, error) {
+	if file == nil {
+		return "", nil, csv.ErrFileNoDesc
+	}
+	const firstItem = 2
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanLines)
+	bucket, row := "", 0
+	lists := make(Lists)
+
+	for scanner.Scan() {
+		row++
+		line := scanner.Text()
+		if row == 1 {
+			if bucket = csv.BucketName(line); bucket == "" {
+				return "", nil, fmt.Errorf("%w, invalid header: %s", csv.ErrImportFile, line)
+			}
+
+			continue
+		}
+		sum, key, err := csv.Import(line, bucket)
+		if err != nil {
+			if row == firstItem {
+				return "", nil, err
+			}
+
+			continue
+		}
+		if loops != 0 && row > loops+1 {
+			break
+		}
+		lists[Filepath(key)] = sum
+	}
+	return bucket, &lists, nil
 }
 
 // Usage checks the validity and usage of the named bucket in the database.

@@ -1,3 +1,4 @@
+// Mock is a set of simulated database and bucket functions for unit testing.
 package mock
 
 import (

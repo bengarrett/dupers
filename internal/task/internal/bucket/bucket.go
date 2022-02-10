@@ -1,3 +1,4 @@
+// © Ben Garrett https://github.com/bengarrett/dupers
 package bucket
 
 import (
@@ -46,8 +47,8 @@ func Check(term, cmd, name string) {
 	out.ErrFatal(nil)
 }
 
-// ExportBucket saves the bucket to a csv file.
-func ExportBucket(quiet bool, args [2]string) {
+// Export the bucket as a CSV file.
+func Export(quiet bool, args [2]string) {
 	const x = "export"
 	Check(x, x, args[1])
 	name, err := database.Abs(args[1])
@@ -71,8 +72,8 @@ func ExportBucket(quiet bool, args [2]string) {
 	out.Response(s, quiet)
 }
 
-// ImportBucket saves a csv file to the database.
-func ImportBucket(quiet bool, args [2]string) {
+// Import a CSV file into the database.
+func Import(quiet bool, args [2]string) {
 	if args[1] == "" {
 		out.ErrCont(ErrImport)
 		fmt.Println("Cannot import file as no filepath was provided.")
@@ -92,8 +93,8 @@ func ImportBucket(quiet bool, args [2]string) {
 	out.Response(s, quiet)
 }
 
-// ListBucket lists the content of a bucket to the stdout.
-func ListBucket(quiet bool, args [2]string) {
+// List the content of a bucket to the stdout.
+func List(quiet bool, args [2]string) {
 	Check("list", dls, args[1])
 	name, err := database.Abs(args[1])
 	if err != nil {
@@ -120,8 +121,8 @@ func ListBucket(quiet bool, args [2]string) {
 	}
 }
 
-// MoveBucket renames a bucket by duplicating it to a new bucket location.
-func MoveBucket(quiet bool, args [3]string) {
+// Move renames a bucket by duplicating it to a new bucket location.
+func Move(quiet bool, args [3]string) {
 	b, dir := args[1], args[2]
 	Check("move and rename", dmv, b)
 	name, err := database.Abs(b)
@@ -180,7 +181,7 @@ func Remove(quiet bool, args [2]string) {
 		}
 		items, err = database.Count(name, nil)
 		if errors.Is(err, database.ErrBucketNotFound) {
-			bucketNoFound(name, err)
+			notFound(name, err)
 			return
 		}
 	}
@@ -206,14 +207,14 @@ func rmBucket(name, retry string) {
 		// retry with the original argument
 		if err1 := database.RM(retry); err1 != nil {
 			if errors.Is(err1, database.ErrBucketNotFound) {
-				bucketNoFound(name, err1)
+				notFound(name, err1)
 			}
 			out.ErrFatal(err1)
 		}
 	}
 }
 
-func bucketNoFound(name string, err error) {
+func notFound(name string, err error) {
 	out.ErrCont(err)
 	fmt.Printf("Bucket to remove: %s\n", color.Danger.Sprint(name))
 	buckets, err2 := database.All(nil)
@@ -228,7 +229,7 @@ func bucketNoFound(name string, err error) {
 	out.ErrFatal(nil)
 }
 
-// Rescan the bucket for any changes on the file system.
+// Rescan the bucket for changes with the file system.
 func Rescan(c *dupe.Config, plus bool, args [2]string) {
 	cmd := dup
 	if plus {

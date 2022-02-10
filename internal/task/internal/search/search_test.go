@@ -1,3 +1,4 @@
+// © Ben Garrett https://github.com/bengarrett/dupers
 package search_test
 
 import (
@@ -7,7 +8,7 @@ import (
 	"github.com/bengarrett/dupers/internal/task/internal/search"
 )
 
-func TestSearchCmdErr(t *testing.T) {
+func TestCmdErr(t *testing.T) {
 	tests := []struct {
 		name string
 		l    int
@@ -22,7 +23,7 @@ func TestSearchCmdErr(t *testing.T) {
 	}
 }
 
-func TestSearchErr(t *testing.T) {
+func TestErr(t *testing.T) {
 	tests := []struct {
 		name string
 		err  error
