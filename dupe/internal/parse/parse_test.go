@@ -1,3 +1,4 @@
+// © Ben Garrett https://github.com/bengarrett/dupers
 package parse_test
 
 import (
@@ -12,14 +13,9 @@ import (
 )
 
 const (
-	bucket0 = "../test/tmp"
 	bucket1 = "../test/bucket1"
-	bucket2 = "../test/bucket2"
-	bucket3 = "../test/sensen"
 	file1   = "../../../test/bucket1/0vlLaUEvzAWP"
 	file2   = "../../../test/bucket1/GwejJkMzs3yP"
-	rmSrc   = "../test/bucket1/mPzd5cu0Gv5j"
-	rmDst   = "../test/tmp/mPzd5cu0Gv5j"
 	// checksums created from sha256sum <filename>.
 	hash0 = "0000000000000000000000000000000000000000000000000000000000000000"
 	hash1 = "1a1d76a3187ccee147e6c807277273afbad5d2680f5eadf1012310743e148f22"
@@ -55,8 +51,7 @@ func TestParser_OpenWrite(t *testing.T) {
 
 func TestSetBuckets(t *testing.T) {
 	p := parse.Parser{}
-	err := p.SetBuckets()
-	if err != nil {
+	if err := p.SetBuckets(); err != nil {
 		t.Error(err)
 	}
 	const expected = 3
@@ -214,17 +209,13 @@ func TestMarker(t *testing.T) {
 	}{
 		{"empty", args{}, ""},
 		{"no term", args{file1, "", true}, file1},
-		{"good", args{file1, "awp", false}, "../../../test/bucket1/0vlLaUEvz\x1b[0;32mAWP\x1b[0m"},
+		{"good", args{file1, "awp", false}, "../../../test/bucket1/0vlLaUEvzAWP"},
 		{"invalid case", args{file1, "awp", true}, file1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// turn off color to force a different output
 			color.Enable = false
-			if tt.name == "good" || tt.name == "invalid case" {
-				// test marking using ansi colors
-				color.Enable = true
-			}
 			if got := parse.Marker(database.Filepath(tt.args.file), tt.args.term, tt.args.exact); got != tt.want {
 				t.Errorf("Marker() = %q, want %q", got, tt.want)
 			}

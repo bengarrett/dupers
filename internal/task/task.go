@@ -27,7 +27,9 @@ import (
 
 var (
 	ErrArgs = errors.New("no buckets were given as arguments")
+	ErrCfg  = errors.New("config cannot be a nil value")
 	ErrCmd  = errors.New("command is unknown")
+	ErrFlag = errors.New("flags cannot be a nil value")
 	ErrNil  = errors.New("argument cannot be a nil value")
 )
 
@@ -66,6 +68,9 @@ func Database(c *dupe.Config, quiet bool, args ...string) error {
 	if err := database.Check(); err != nil {
 		return err
 	}
+	if len(args) == 0 {
+		return ErrCmd
+	}
 	buckets := [2]string{}
 	copy(buckets[:], args)
 	switch args[0] {
@@ -102,9 +107,12 @@ func Database(c *dupe.Config, quiet bool, args ...string) error {
 }
 
 // Dupe parses the dupe command.
-func Dupe(c *dupe.Config, f *cmd.Flags, args ...string) error {
-	if c == nil || f == nil {
-		return ErrNil
+func Dupe(c *dupe.Config, f *cmd.Flags, args ...string) error { // nolint:cyclop,funlen
+	if c == nil {
+		return ErrCfg
+	}
+	if f == nil {
+		return ErrFlag
 	}
 	if c.Debug {
 		s := fmt.Sprintf("dupeCmd: %s", strings.Join(args, " "))
@@ -188,9 +196,14 @@ func Help() string {
 }
 
 // Search parses the commands that handle search.
-func Search(f *cmd.Flags, args ...string) {
+func Search(f *cmd.Flags, test bool, args ...string) error {
+	if f == nil {
+		return ErrFlag
+	}
 	l := len(args)
-	search.CmdErr(l, false)
+	if err := search.CmdErr(l, test); err != nil {
+		return err
+	}
 	term, buckets := args[1], []string{}
 	const minArgs = 2
 	if l > minArgs {
@@ -198,7 +211,7 @@ func Search(f *cmd.Flags, args ...string) {
 	}
 	m, err := search.Compare(f, term, buckets, false)
 	if err != nil {
-		out.ErrFatal(err)
+		return err
 	}
 	fmt.Print(dupe.Print(*f.Quiet, *f.Exact, term, m))
 	if !*f.Quiet {
@@ -208,6 +221,7 @@ func Search(f *cmd.Flags, args ...string) {
 		}
 		fmt.Println(cmd.SearchSummary(l, term, *f.Exact, *f.Filename))
 	}
+	return nil
 }
 
 // backupDB saves the database to a binary file.
@@ -239,6 +253,9 @@ func cleanupDB(quiet, debug bool) error {
 
 // checkDupePaths checks the path arguments supplied to the dupe command.
 func checkDupePaths(c *dupe.Config) {
+	if c == nil {
+		return
+	}
 	ok, cc, bc := c.CheckPaths()
 	if ok {
 		return

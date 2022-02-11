@@ -18,17 +18,19 @@ var (
 )
 
 // CmdErr parses the arguments of the search command.
-func CmdErr(l int, test bool) {
+func CmdErr(l int, test bool) error {
 	if l > 1 {
-		return
+		return nil
 	}
 	out.ErrCont(ErrSearch)
 	fmt.Println("A search expression can be a partial or complete filename,")
 	fmt.Println("or a partial or complete directory.")
 	out.Example("\ndupers search <search expression> [optional, directories to search]")
-	if !test {
-		out.ErrFatal(nil)
+	if test {
+		return ErrSearch
 	}
+	out.ErrFatal(nil)
+	return nil
 }
 
 func Compare(f *cmd.Flags, term string, buckets []string, test bool) (*database.Matches, error) {

@@ -245,7 +245,7 @@ func TestPrintWalk(t *testing.T) {
 	}
 }
 
-func TestRemoveAll(t *testing.T) {
+func TestRemoves(t *testing.T) {
 	c := dupe.Config{Test: true, Quiet: false, Debug: true}
 	if err := cleanDir(bucket0); err != nil {
 		t.Error(err)
@@ -263,7 +263,7 @@ func TestRemoveAll(t *testing.T) {
 	}
 	c.Source = abs
 	c.Sources = append(c.Sources, srcs)
-	s := c.RemoveAll()
+	s := c.Removes()
 	fmt.Println(s)
 }
 

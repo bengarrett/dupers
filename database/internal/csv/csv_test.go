@@ -1,3 +1,4 @@
+// © Ben Garrett https://github.com/bengarrett/dupers
 package csv_test
 
 import (
@@ -22,7 +23,7 @@ func mockDir() string {
 	return filepath.Join(sep, dir)
 }
 
-func TestBucketName(t *testing.T) {
+func TestBucket(t *testing.T) {
 	tests := []struct {
 		name string
 		s    string
@@ -35,8 +36,8 @@ func TestBucketName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := csv.BucketName(tt.s); got != tt.want {
-				t.Errorf("BucketName() = %v, want %v", got, tt.want)
+			if got := csv.Bucket(tt.s); got != tt.want {
+				t.Errorf("Bucket() = %v, want %v", got, tt.want)
 			}
 		})
 	}

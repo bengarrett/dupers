@@ -1,6 +1,4 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
-
-// Package database interacts with Dupers bbolt database and buckets.
 package database
 
 import (
@@ -24,9 +22,7 @@ import (
 	"golang.org/x/text/number"
 )
 
-const (
-	loops = 0
-)
+const loops = 0
 
 var ErrImportList = errors.New("import list is empty")
 
@@ -48,7 +44,7 @@ func Backup() (name string, written int64, err error) {
 	return name, written, nil
 }
 
-// backupName generates a time sensitive filename for the backup.
+// backup generates a time sensitive name for the backup file.
 func backup() string {
 	now, ext := time.Now().Format(backupTime), filepath.Ext(boltName)
 	return fmt.Sprintf("%s-backup-%s%s", strings.TrimSuffix(boltName, ext), now, ext)
@@ -72,9 +68,9 @@ func CopyFile(name, dest string) (int64, error) {
 	return io.Copy(bf, f)
 }
 
-// ExportCSV saves the bucket data to an export csv file.
+// CSVExport saves the bucket data to an export csv file.
 // The generated file is RFC 4180 compatible using comma-separated values.
-func ExportCSV(bucket string, db *bolt.DB) (string, error) {
+func CSVExport(bucket string, db *bolt.DB) (string, error) {
 	if db == nil {
 		db, err := OpenRead()
 		if err != nil {
@@ -113,10 +109,55 @@ func ExportCSV(bucket string, db *bolt.DB) (string, error) {
 	return name, nil
 }
 
-// exportName generates a time sensitive filename for the export.
+// export generates a time sensitive name for the export file.
 func export() string {
 	now, ext := time.Now().Format(backupTime), filepath.Ext(csvName)
 	return fmt.Sprintf("%s-%s%s", strings.TrimSuffix(csvName, ext), now, ext)
+}
+
+// CSVImport reads the named csv export file and imports its content to the database.
+func CSVImport(name string, db *bolt.DB) (records int, err error) {
+	if db == nil {
+		db, err = OpenWrite()
+		if err != nil {
+			return 0, err
+		}
+		defer db.Close()
+	}
+
+	file, err := os.Open(name)
+	if err != nil {
+		return 0, err
+	}
+	defer file.Close()
+
+	if err1 := csv.Checker(file); err1 != nil {
+		return 0, err1
+	}
+	name, lists, err2 := Scanner(file)
+	if err2 != nil {
+		return 0, err2
+	}
+	if db == nil {
+		name, err = Usage(name, db)
+		if err != nil {
+			return 0, err
+		}
+	}
+	items := 0
+	for range *lists {
+		items++
+	}
+	p := message.NewPrinter(language.English)
+	s := "\n"
+	s += color.Secondary.Sprint("Found ") +
+		color.Primary.Sprintf("%s valid items", p.Sprint(number.Decimal(items))) +
+		color.Secondary.Sprint(" in the CSV file.")
+	fmt.Println(s)
+	s = color.Secondary.Sprint("These will be added to the bucket: ")
+	s += color.Debug.Sprint(name)
+	fmt.Println(s)
+	return Import(Bucket(name), lists, db)
 }
 
 // Home returns the user's home directory.
@@ -189,51 +230,6 @@ func (batch Lists) iterate(db *bolt.DB, name Bucket, imported, total int) (int, 
 	return imported, nil
 }
 
-// ImportCSV reads the named export csv file and imports its content to the database.
-func ImportCSV(name string, db *bolt.DB) (records int, err error) {
-	if db == nil {
-		db, err = OpenWrite()
-		if err != nil {
-			return 0, err
-		}
-		defer db.Close()
-	}
-
-	file, err := os.Open(name)
-	if err != nil {
-		return 0, err
-	}
-	defer file.Close()
-
-	if err1 := csv.Checker(file); err1 != nil {
-		return 0, err1
-	}
-	name, lists, err2 := Scanner(file)
-	if err2 != nil {
-		return 0, err2
-	}
-	if db == nil {
-		name, err = Usage(name, db)
-		if err != nil {
-			return 0, err
-		}
-	}
-	items := 0
-	for range *lists {
-		items++
-	}
-	p := message.NewPrinter(language.English)
-	s := "\n"
-	s += color.Secondary.Sprint("Found ") +
-		color.Primary.Sprintf("%s valid items", p.Sprint(number.Decimal(items))) +
-		color.Secondary.Sprint(" in the CSV file.")
-	fmt.Println(s)
-	s = color.Secondary.Sprint("These will be added to the bucket: ")
-	s += color.Debug.Sprint(name)
-	fmt.Println(s)
-	return Import(Bucket(name), lists, db)
-}
-
 // OpenRead opens the Bolt database for reading.
 func OpenRead() (db *bolt.DB, err error) {
 	path, err := DB()
@@ -286,7 +282,7 @@ func Scanner(file *os.File) (string, *Lists, error) {
 		row++
 		line := scanner.Text()
 		if row == 1 {
-			if bucket = csv.BucketName(line); bucket == "" {
+			if bucket = csv.Bucket(line); bucket == "" {
 				return "", nil, fmt.Errorf("%w, invalid header: %s", csv.ErrImportFile, line)
 			}
 

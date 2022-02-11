@@ -1,3 +1,4 @@
+// © Ben Garrett https://github.com/bengarrett/dupers
 package bucket
 
 import (
@@ -21,22 +22,21 @@ var (
 	ErrBucketSkip   = errors.New("bucket directory does not exist")
 )
 
-const (
-	query = "What bucket name do you wish to use"
-)
+const query = "What bucket name do you wish to use"
 
 type Cleaner struct {
-	DB    *bolt.DB
-	Abs   string
-	Debug bool
-	Quiet bool
-	Cnt   int
-	Total int
-	Finds int
-	Errs  int
+	DB    *bolt.DB // Bold database.
+	Abs   string   // Absolute path of the bucket.
+	Debug bool     // Debug spams technobabble to stdout.
+	Quiet bool     // Quiet the feedback sent to stdout.
+	Cnt   int      // Cnt is the sum of the items.
+	Total int      // Total items handled.
+	Finds int      // Finds is the sum of the cleaned items.
+	Errs  int      // Errs is the sum of the items that could not be cleaned.
 }
 
-func (c *Cleaner) Clean() (count int, finds int, errors int) {
+// Clean the stale items from database buckets.
+func (c *Cleaner) Clean() (items int, finds int, errors int) {
 	if c.DB == nil {
 		return 0, 0, 0
 	}
@@ -83,11 +83,11 @@ func (c *Cleaner) Clean() (count int, finds int, errors int) {
 }
 
 type Parser struct {
-	Name  string
-	DB    *bolt.DB
-	Cnt   int
-	Errs  int
-	Debug bool
+	Name  string   // Name of the bucket to parse.
+	DB    *bolt.DB // Bold database.
+	Cnt   int      // Cnt is the sum of the items.
+	Errs  int      // Errs is the sum of the items that could not be parse.
+	Debug bool     // Debug spams technobabble to stdout.
 }
 
 func (p *Parser) Parse() (int, int, string, bool) {
@@ -248,6 +248,7 @@ func Stat(name string, test bool) string {
 	return abs
 }
 
+// Total returns the sum total of the items in the named buckets.
 func Total(buckets []string, db *bolt.DB) (int, error) {
 	if db == nil {
 		return 0, bolt.ErrBucketNotFound

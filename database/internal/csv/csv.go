@@ -1,3 +1,4 @@
+// © Ben Garrett https://github.com/bengarrett/dupers
 package csv
 
 import (
@@ -35,10 +36,10 @@ type (
 	Filepath string
 )
 
-// BucketName validates an export csv file header and returns the bucket name.
-func BucketName(s string) string {
+// Bucket validates the header of a csv file and returns the embedded bucket name.
+func Bucket(header string) string {
 	const expected = 2
-	ss := strings.Split(s, "#")
+	ss := strings.Split(header, "#")
 	if len(ss) != expected {
 		return ""
 	}
@@ -115,28 +116,28 @@ func Import(line, bucket string) (sum [32]byte, path string, err error) {
 
 // PathWindows returns a Windows or UNC usable path from the source path.
 func PathWindows(src string) string {
-	const drive = "C:"
+	const path = "C:"
 
 	switch src {
 	case "":
 		return ""
 	case "/":
-		return drive
+		return path
 	}
 	// source path is windows or unc
-	if isDrive(src) {
+	if drive(src) {
 		return src[0:2]
 	}
-	if isDrive(src[0:2]) {
+	if drive(src[0:2]) {
 		return src
 	}
-	if isUNC(src) {
+	if unc(src) {
 		return src
 	}
 	// source path is posix
 	src = strings.ReplaceAll(src, FwdSlash, BackSlash)
-	if !isDrive(src[0:2]) {
-		return drive + src
+	if !drive(src[0:2]) {
+		return path + src
 	}
 	return src
 }
@@ -162,12 +163,12 @@ func PathPosix(src string) string {
 	return src
 }
 
-func isDrive(path string) bool {
+func drive(path string) bool {
 	valid := regexp.MustCompile(`^[a-z|A-Z]:\\?$`)
 	return valid.MatchString(path)
 }
 
-func isUNC(path string) bool {
+func unc(path string) bool {
 	const uncLen = 2
 	if len(path) < uncLen {
 		return false

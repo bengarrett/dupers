@@ -72,7 +72,9 @@ func main() {
 			out.ErrFatal(err)
 		}
 	case "search":
-		task.Search(&f, flag.Args()...)
+		if err := task.Search(&f, false, flag.Args()...); err != nil {
+			out.ErrFatal(err)
+		}
 	case dbf, dbs, dbk, dcn, dex, dim, dls, dmv, drm, dup, dupp:
 		if err := task.Database(&c, *f.Quiet, flag.Args()...); err != nil {
 			if errors.Is(err, database.ErrDBNotFound) {

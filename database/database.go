@@ -26,7 +26,7 @@ import (
 )
 
 type (
-	// Bucket is the absolute path to a directory that's used as the bucket name.
+	// Bucket is the absolute path to the directory that is used as the bucket name.
 	Bucket string
 	// Filepath is the absolute path to a file used as a map key.
 	Filepath string
@@ -68,12 +68,13 @@ func Abs(name string) (string, error) {
 	return bucket.Abs(name)
 }
 
+// AbsB returns an absolute representation of the named bucket.
 func AbsB(name string) ([]byte, error) {
 	s, err := bucket.Abs(name)
 	return []byte(s), err
 }
 
-// All lists every stored bucket name in the database.
+// All returns every stored bucket within the database.
 func All(db *bolt.DB) (names []string, err error) {
 	if db == nil {
 		db, err = OpenRead()
@@ -98,7 +99,7 @@ func All(db *bolt.DB) (names []string, err error) {
 	return names, nil
 }
 
-// Check checks the database file.
+// Check the size and existence of the database file.
 func Check() error {
 	path, err := DB()
 	if err != nil {
@@ -121,7 +122,7 @@ func Check() error {
 	return nil
 }
 
-// Exist returns an nil value if the bucket exists in the database.
+// Exist returns an error if the bucket does not exists in the database.
 func Exist(bucket string, db *bolt.DB) error {
 	var err error
 	if db == nil {
@@ -196,9 +197,9 @@ func Clean(quiet, debug bool, buckets ...string) error {
 	}
 	if finds > 0 {
 		fmt.Printf("\rThe database removed %d stale items\n", finds)
-	} else {
-		fmt.Println("")
+		return nil
 	}
+	fmt.Println("")
 	return nil
 }
 
@@ -235,7 +236,7 @@ func cleaner(buckets []string, debug bool, db *bolt.DB) ([]string, error) {
 	return buckets, nil
 }
 
-// Compact the database by reclaiming space.
+// Compact the database by reclaiming internal space.
 func Compact(debug bool) error {
 	if debug {
 		out.PBug("running database compact")
@@ -392,7 +393,7 @@ func Count(name string, db *bolt.DB) (items int, err error) {
 	return bucket.Count(name, db)
 }
 
-// DB returns the absolute path of the Bolt database.
+// DB returns the absolute path of the database.
 func DB() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
@@ -435,7 +436,7 @@ func DB() (string, error) {
 	return path, nil
 }
 
-// Create creates a new Bolt database at the given path.
+// Create a new database at the given path.
 func Create(path string) error {
 	db, err := bolt.Open(path, PrivateFile, write())
 	if err != nil {
@@ -559,7 +560,7 @@ func IsEmpty() (bool, error) {
 	return false, nil
 }
 
-// List returns the file paths and SHA256 checksums stored in the bucket.
+// List returns the filepaths and SHA256 checksums stored in the bucket.
 func List(bucket string, db *bolt.DB) (ls Lists, err error) {
 	if db == nil {
 		db, err = OpenRead()

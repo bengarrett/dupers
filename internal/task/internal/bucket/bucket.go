@@ -63,7 +63,7 @@ func Export(quiet bool, args [2]string) {
 	} else if errEx != nil {
 		out.ErrFatal(errEx)
 	}
-	exp, errEx := database.ExportCSV(name, nil)
+	exp, errEx := database.CSVExport(name, nil)
 	if errEx != nil {
 		out.ErrFatal(errEx)
 	}
@@ -84,7 +84,7 @@ func Import(quiet bool, args [2]string) {
 	if err != nil {
 		out.ErrFatal(err)
 	}
-	r, errIm := database.ImportCSV(name, nil)
+	r, errIm := database.CSVImport(name, nil)
 	if errIm != nil {
 		out.ErrFatal(errIm)
 	}

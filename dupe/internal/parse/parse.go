@@ -1,3 +1,4 @@
+// © Ben Garrett https://github.com/bengarrett/dupers
 package parse
 
 import (
@@ -31,12 +32,12 @@ const (
 )
 
 type Parser struct {
-	DB      *bolt.DB  // Bolt database
-	Buckets []Bucket  // buckets to lookup
-	Compare Checksums // hashes fetched from the database or file system
-	Files   int       // nolint: structcheck
-	Sources []string  // nolint: structcheck
-	Source  string    // directory or file to compare
+	DB      *bolt.DB  // Bolt database.
+	Buckets []Bucket  // Buckets to lookup.
+	Compare Checksums // Compare hashes fetched from the database or file system.
+	Files   int       // Files count.
+	Sources []string  // Sources are directories or files to compare.
+	Source  string    // Source directory or file to compare.
 	timer   time.Time
 }
 
@@ -45,7 +46,7 @@ func (p *Parser) All() []Bucket {
 	return p.Buckets
 }
 
-// Compares returns the number of items contained in c.compare.
+// Compares the number of items contained in c.compare.
 func (p *Parser) Compares() int {
 	return len(p.Compare)
 }
@@ -74,7 +75,7 @@ func (p *Parser) OpenWrite() {
 	p.DB = db
 }
 
-// SetBuckets sets all the database backets for use with the dupe or search.
+// SetBuckets sets all the database buckets for use with the dupe or search commands.
 func (p *Parser) SetBuckets() error {
 	names, err := database.All(nil)
 	if err != nil {
@@ -132,13 +133,13 @@ func (p *Parser) PrintBuckets() string {
 }
 
 // ToCheck returns the directory or file to check.
-func (i *Parser) ToCheck() string {
-	return i.Source
+func (p *Parser) ToCheck() string {
+	return p.Source
 }
 
 // Timer returns the time taken since the process timer was instigated.
-func (i *Parser) Timer() time.Duration {
-	return time.Since(i.timer)
+func (p *Parser) Timer() time.Duration {
+	return time.Since(p.timer)
 }
 
 // Contains returns true if find exists in s.
@@ -196,7 +197,7 @@ func Print(quiet, exact bool, term string, m *database.Matches) string {
 	return w.String()
 }
 
-// Read opens the named file and returns a SHA256 checksum of the data.
+// Read the named file to return a SHA256 checksum of it's data.
 func Read(name string) (Checksum, error) {
 	f, err := os.Open(name)
 	if err != nil {

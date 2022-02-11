@@ -1,6 +1,4 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
-
-// Package database interacts with Dupers bbolt database and buckets.
 package database_test
 
 import (
@@ -91,7 +89,7 @@ func TestCopyFile(t *testing.T) {
 	os.Remove(testDst)
 }
 
-func TestExportCSV(t *testing.T) {
+func TestCSVExport(t *testing.T) {
 	color.Enable = false
 
 	if err := mock.TestOpen(); err != nil {
@@ -99,7 +97,7 @@ func TestExportCSV(t *testing.T) {
 	}
 
 	t.Run("csv export", func(t *testing.T) {
-		gotName, err := database.ExportCSV(mock.Bucket1(), nil)
+		gotName, err := database.CSVExport(mock.Bucket1(), nil)
 		if err != nil {
 			t.Errorf("Backup() error = %v, want nil", err)
 			return
@@ -186,7 +184,7 @@ func TestScanner(t *testing.T) {
 	}
 }
 
-func TestImportCSV(t *testing.T) {
+func TestCSVImport(t *testing.T) {
 	mdb, err := mock.Open()
 	if err != nil {
 		t.Error(err)
@@ -209,13 +207,13 @@ func TestImportCSV(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotRecords, err := database.ImportCSV(tt.args.name, tt.args.db)
+			gotRecords, err := database.CSVImport(tt.args.name, tt.args.db)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ImportCSV() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("CSVImport() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if gotRecords != tt.wantRecords {
-				t.Errorf("ImportCSV() = %v, want %v", gotRecords, tt.wantRecords)
+				t.Errorf("CSVImport() = %v, want %v", gotRecords, tt.wantRecords)
 			}
 		})
 	}

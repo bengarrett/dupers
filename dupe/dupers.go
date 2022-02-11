@@ -1,6 +1,4 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
-
-// Package dupers is the blazing-fast file duplicate checker and filename search.
 package dupe
 
 import (
@@ -46,7 +44,7 @@ var (
 	ErrPathNoFound = errors.New("path does not exist")
 )
 
-// Config options for duper.
+// Config options.
 type Config struct {
 	Debug bool // Debug spams technobabble to stdout.
 	Quiet bool // Quiet the feedback sent to stdout.
@@ -307,8 +305,8 @@ func (c *Config) Remove() string {
 	return w.String()
 }
 
-// RemoveAll remove directories from the source directory that do not contain unique MS-DOS or Windows programs.
-func (c *Config) RemoveAll() string {
+// Removes the directories from the source that do not contain unique MS-DOS or Windows programs.
+func (c *Config) Removes() string {
 	root := c.ToCheck()
 	if _, err := os.Stat(root); errors.Is(err, os.ErrNotExist) {
 		e := fmt.Errorf("%w: %s", ErrPathNoFound, root)
@@ -332,7 +330,7 @@ func (c *Config) RemoveAll() string {
 		}
 		fmt.Println()
 	}
-	return removeAll(root, files)
+	return removes(root, files)
 }
 
 // Status summarizes the file totals and process duration.
@@ -565,7 +563,7 @@ func (c *Config) init() {
 	}
 	if !c.Test && c.Compare == nil {
 		for i, b := range c.All() {
-			c.SetCompares(b)
+			_, _ = c.SetCompares(b)
 			if c.Debug {
 				s := fmt.Sprintf("init %d: %s", i, b)
 				out.PBug(s)
@@ -589,7 +587,7 @@ func (c *Config) lookupOne(sum parse.Checksum) string {
 	return ""
 }
 
-// skipFiles returns c.sources as strings.
+// skipFiles returns the value of c.sources as strings.
 func (c *Config) skipFiles() (files []string) {
 	files = append(files, c.Sources...)
 	return files
@@ -640,8 +638,8 @@ func PrintWalk(lookup bool, c *Config) string {
 	return out.Status(c.Files, -1, out.Scan)
 }
 
-// removeAll removes directories that do not contain MS-DOS or Windows programs.
-func removeAll(root string, files []fs.DirEntry) string {
+// removes directories that do not contain MS-DOS or Windows programs.
+func removes(root string, files []fs.DirEntry) string {
 	w := new(bytes.Buffer)
 
 	for _, item := range files {
@@ -841,7 +839,7 @@ func (c *Config) walkThread(bucket, path string, wg *sync.WaitGroup) error {
 		case archive.Ext7z:
 			c.Read7Zip(bucket, path)
 		default:
-			c.readArchiver(bucket, path, ext)
+			c.Read(bucket, path, ext)
 		}
 		wg.Done()
 	}()
@@ -888,7 +886,7 @@ func (c *Config) listItems(bucket string) error {
 	return nil
 }
 
-// Read7Zip opens the named 7-Zip archive, hashes its content and saves those to the bucket.
+// Read7Zip opens the named 7-Zip archive, hashes and saves the content to the bucket.
 func (c *Config) Read7Zip(bucket, name string) {
 	if c.Debug {
 		out.PBug("read 7zip: " + name)
@@ -923,7 +921,7 @@ func (c *Config) Read7Zip(bucket, name string) {
 		var sum parse.Checksum
 
 		copy(sum[:], h.Sum(nil))
-		if err := c.updateArchiver(fp, bucket, sum); err != nil {
+		if err := c.update(fp, bucket, sum); err != nil {
 			out.ErrAppend(err)
 			continue
 		}
@@ -934,13 +932,13 @@ func (c *Config) Read7Zip(bucket, name string) {
 	}
 }
 
-// readArchiver opens the named file archive, hashes its content and saves those to the bucket.
-func (c *Config) readArchiver(bucket, name, ext string) {
+// Read opens the named archive, hashes and saves the content to the bucket.
+func (c *Config) Read(bucket, name, ext string) {
 	if c.Debug {
 		out.PBug("read archiver: " + name)
 	}
 	// catch any archiver panics such as as opening unsupported ZIP compression formats
-	defer c.readArcRecover(name)
+	defer c.readRecover(name)
 	cnt, filename := 0, name
 	// get the format by filename extension
 	if ext != "" {
@@ -958,7 +956,7 @@ func (c *Config) readArchiver(bucket, name, ext string) {
 			out.ErrCont(fmt.Errorf("%w: %T: %s", archive.ErrType, w, filename))
 			return
 		}
-		cnt, err = c.readArcWalk(name, bucket, cnt, w)
+		cnt, err = c.readWalk(name, bucket, cnt, w)
 		if err != nil {
 			out.ErrAppend(err)
 		}
@@ -972,7 +970,7 @@ func (c *Config) readArchiver(bucket, name, ext string) {
 	}
 }
 
-func (c *Config) readArcWalk(archive, bucket string, cnt int, w archiver.Walker) (int, error) {
+func (c *Config) readWalk(archive, bucket string, cnt int, w archiver.Walker) (int, error) {
 	return cnt, w.Walk(archive, func(f archiver.File) error {
 		if f.IsDir() {
 			return nil
@@ -994,7 +992,7 @@ func (c *Config) readArcWalk(archive, bucket string, cnt int, w archiver.Walker)
 		}
 		var sum parse.Checksum
 		copy(sum[:], h.Sum(nil))
-		if err := c.updateArchiver(fp, bucket, sum); err != nil {
+		if err := c.update(fp, bucket, sum); err != nil {
 			out.ErrAppend(err)
 		}
 		cnt++
@@ -1002,7 +1000,7 @@ func (c *Config) readArcWalk(archive, bucket string, cnt int, w archiver.Walker)
 	})
 }
 
-func (c *Config) readArcRecover(archive string) {
+func (c *Config) readRecover(archive string) {
 	if err := recover(); err != nil {
 		if !c.Quiet {
 			if !c.Debug {
@@ -1016,8 +1014,8 @@ func (c *Config) readArcRecover(archive string) {
 	}
 }
 
-// updateArchiver saves the checksum and path values to the bucket.
-func (c *Config) updateArchiver(path, bucket string, sum parse.Checksum) error {
+// update saves the checksum and path values to the bucket.
+func (c *Config) update(path, bucket string, sum parse.Checksum) error {
 	if c.Debug {
 		out.PBug("update archiver: " + path)
 	}

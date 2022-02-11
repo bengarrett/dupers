@@ -15,6 +15,7 @@ import (
 )
 
 var (
+	ErrFast   = errors.New("fast flag cannot be used in this situation")
 	ErrNoArgs = errors.New("request is missing arguments")
 	ErrSearch = errors.New("search request needs an expression")
 )
@@ -30,7 +31,7 @@ func Cleanup(c *dupe.Config, f *cmd.Flags) {
 			out.PBug("remove all non unique Windows and MS-DOS files.")
 		}
 		fmt.Print(c.Remove())
-		fmt.Print(c.RemoveAll())
+		fmt.Print(c.Removes())
 		fmt.Print(c.Clean())
 		return
 	}
@@ -107,20 +108,7 @@ func Lookup(c *dupe.Config, f *cmd.Flags) {
 		}
 	}
 	if *f.Lookup {
-		if c.Debug {
-			out.PBug("read the hash values in the buckets.")
-		}
-		fastErr := false
-		for _, b := range c.All() {
-			if i, err := c.SetCompares(b); err != nil {
-				out.ErrCont(err)
-			} else if i > 0 {
-				continue
-			}
-			fastErr = true
-			fmt.Println("The -fast flag cannot be used for this dupe query")
-		}
-		if !fastErr {
+		if err := lookup(c); err != nil {
 			return
 		}
 	}
@@ -128,4 +116,24 @@ func Lookup(c *dupe.Config, f *cmd.Flags) {
 		out.PBug("walk the buckets.")
 	}
 	c.WalkDirs()
+}
+
+func lookup(c *dupe.Config) error {
+	if c.Debug {
+		out.PBug("read the hash values in the buckets.")
+	}
+	fastErr := false
+	for _, b := range c.All() {
+		if i, err := c.SetCompares(b); err != nil {
+			out.ErrCont(err)
+		} else if i > 0 {
+			continue
+		}
+		fastErr = true
+		fmt.Println("The -fast flag cannot be used for this dupe query")
+	}
+	if !fastErr {
+		return ErrFast
+	}
+	return nil
 }

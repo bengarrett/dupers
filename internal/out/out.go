@@ -1,3 +1,4 @@
+// © Ben Garrett https://github.com/bengarrett/dupers
 package out
 
 import (
@@ -38,7 +39,7 @@ const (
 	// Read returns Reading items.
 	Read
 
-	// ANSI control code to erase the active terminal line.
+	// ANSI control code to erase the current line in stdout.
 	EraseLine = "\u001b[2K"
 	cr        = "\r"
 	winOS     = "windows"
@@ -61,7 +62,7 @@ func EnterKey() byte {
 	return lf
 }
 
-// ErrAppend prints the error to an active line.
+// ErrAppend appends the error to the current line in stdout.
 func ErrAppend(err error) {
 	if err == nil {
 		return
@@ -121,6 +122,7 @@ func Response(s string, quiet bool) {
 	fmt.Printf("%s\n", s)
 }
 
+// RMLine uses ANSI to erase the current line in stdout.
 func RMLine() string {
 	if runtime.GOOS == winOS {
 		return ""
