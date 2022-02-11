@@ -390,6 +390,13 @@ func compareKey(key []byte, noCase bool) []byte {
 
 // Count the number of records in the bucket.
 func Count(name string, db *bolt.DB) (items int, err error) {
+	if db == nil {
+		db, err = OpenRead()
+		if err != nil {
+			return 0, err
+		}
+		defer db.Close()
+	}
 	return bucket.Count(name, db)
 }
 

@@ -171,7 +171,6 @@ func Remove(quiet bool, args [2]string) {
 	if err != nil {
 		out.ErrFatal(err)
 	}
-
 	items, err := database.Count(name, nil)
 	if errors.Is(err, database.ErrBucketNotFound) {
 		// fallback Abs check
@@ -184,6 +183,8 @@ func Remove(quiet bool, args [2]string) {
 			notFound(name, err)
 			return
 		}
+	} else if err != nil {
+		out.ErrCont(err)
 	}
 	if !quiet {
 		fmt.Printf("%s\t%s\n", color.Secondary.Sprint("Bucket:"), color.Debug.Sprint(name))

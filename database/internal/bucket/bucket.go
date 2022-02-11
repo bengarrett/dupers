@@ -20,6 +20,7 @@ var (
 	ErrBucketNotDir = errors.New("bucket path is not a directory")
 	ErrBucketPath   = errors.New("directory used by the bucket does not exist on your system")
 	ErrBucketSkip   = errors.New("bucket directory does not exist")
+	ErrDB           = errors.New("db database cannot be nil")
 )
 
 const query = "What bucket name do you wish to use"
@@ -153,7 +154,7 @@ func printStat(debug, quiet bool, cnt, total int, k []byte) {
 // Count the number of records in the bucket.
 func Count(name string, db *bolt.DB) (items int, err error) {
 	if db == nil {
-		return 0, bolt.ErrBucketNotFound
+		return 0, ErrDB
 	}
 	if errV := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(name))
@@ -161,6 +162,9 @@ func Count(name string, db *bolt.DB) (items int, err error) {
 			return bolt.ErrBucketNotFound
 		}
 		items, err = count(b, db)
+		if err != nil {
+			return err
+		}
 		return nil
 	}); errV != nil {
 		return 0, errV
@@ -251,7 +255,7 @@ func Stat(name string, test bool) string {
 // Total returns the sum total of the items in the named buckets.
 func Total(buckets []string, db *bolt.DB) (int, error) {
 	if db == nil {
-		return 0, bolt.ErrBucketNotFound
+		return 0, ErrDB
 	}
 
 	count := 0
