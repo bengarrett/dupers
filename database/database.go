@@ -522,6 +522,10 @@ func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, int, error) {
 		return nil, 0, err
 	}
 	fmt.Fprintf(w, "Buckets:        %s\n\n", color.Primary.Sprint(cnt))
+	if cnt == 0 {
+		// exit when no buckets exist
+		return w, sizes, nil
+	}
 	tab := tabwriter.NewWriter(w, 0, 0, tabPadding, ' ', tabwriter.AlignRight)
 	fmt.Fprintf(tab, "Items\tSize\t\tBucket %s\n", color.Secondary.Sprint("(absolute path)"))
 	p := message.NewPrinter(language.English)
