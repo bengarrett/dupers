@@ -152,10 +152,10 @@ func PathPosix(src string) string {
 		return fmt.Sprintf("%s%s", FwdSlash,
 			strings.ReplaceAll(src[driveLen:], BackSlash, FwdSlash))
 	}
-	ps := strings.SplitN(src, ":", subStr)
-	drive, valid := ps[0], regexp.MustCompile(`^[a-z|A-Z]$`)
+	drive, after, _ := strings.Cut(src, ":")
+	valid := regexp.MustCompile(`^[a-z|A-Z]$`)
 	if valid.MatchString(drive) {
-		src = strings.ReplaceAll(ps[1], BackSlash, FwdSlash)
+		src = strings.ReplaceAll(after, BackSlash, FwdSlash)
 		if src == "" {
 			src = FwdSlash
 		}
