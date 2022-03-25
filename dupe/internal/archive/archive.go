@@ -119,7 +119,7 @@ func ReadMIME(name string) (mime string, err error) {
 }
 
 // Supported returns true when the archiver format structure is valid.
-func Supported(f interface{}) bool {
+func Supported(f any) bool {
 	switch f.(type) {
 	case
 		*archiver.Brotli,
