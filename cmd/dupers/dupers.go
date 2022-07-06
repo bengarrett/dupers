@@ -13,8 +13,8 @@ import (
 	"runtime"
 	"strings"
 
+	dupe "github.com/bengarrett/dupers"
 	"github.com/bengarrett/dupers/database"
-	"github.com/bengarrett/dupers/dupe"
 	"github.com/bengarrett/dupers/internal/cmd"
 	"github.com/bengarrett/dupers/internal/out"
 	"github.com/bengarrett/dupers/internal/task"

@@ -8,8 +8,8 @@ import (
 	"sort"
 	"strings"
 
+	dupe "github.com/bengarrett/dupers"
 	"github.com/bengarrett/dupers/database"
-	"github.com/bengarrett/dupers/dupe"
 	"github.com/bengarrett/dupers/internal/out"
 	"github.com/gookit/color"
 	"golang.org/x/text/language"

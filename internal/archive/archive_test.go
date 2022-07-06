@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bengarrett/dupers/dupe"
-	"github.com/bengarrett/dupers/dupe/internal/archive"
-	"github.com/bengarrett/dupers/dupe/internal/parse"
+	dupe "github.com/bengarrett/dupers"
+	"github.com/bengarrett/dupers/internal/archive"
 	"github.com/bengarrett/dupers/internal/mock"
+	"github.com/bengarrett/dupers/internal/parse"
 )
 
 func TestExtension(t *testing.T) {

@@ -12,11 +12,11 @@ import (
 	"strings"
 	"testing"
 
+	dupe "github.com/bengarrett/dupers"
 	"github.com/bengarrett/dupers/database"
-	"github.com/bengarrett/dupers/dupe"
-	"github.com/bengarrett/dupers/dupe/internal/parse"
 	"github.com/bengarrett/dupers/internal/mock"
 	"github.com/bengarrett/dupers/internal/out"
+	"github.com/bengarrett/dupers/internal/parse"
 	"github.com/gookit/color"
 )
 

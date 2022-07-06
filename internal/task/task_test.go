@@ -4,7 +4,7 @@ package task_test
 import (
 	"testing"
 
-	"github.com/bengarrett/dupers/dupe"
+	dupe "github.com/bengarrett/dupers"
 	"github.com/bengarrett/dupers/internal/cmd"
 	"github.com/bengarrett/dupers/internal/task"
 )
