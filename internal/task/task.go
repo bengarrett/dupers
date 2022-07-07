@@ -65,7 +65,7 @@ func ChkWinDirs() error {
 
 // Database parses the commands that interact with the database.
 func Database(c *dupe.Config, quiet bool, args ...string) error {
-	if err := database.Check(); err != nil {
+	if err := database.Check(""); err != nil {
 		return err
 	}
 	if len(args) == 0 {
@@ -79,7 +79,7 @@ func Database(c *dupe.Config, quiet bool, args ...string) error {
 	case dcn:
 		return cleanupDB(quiet, c.Debug)
 	case dbs, dbf:
-		s, err := database.Info()
+		s, err := database.Info("")
 		if err != nil {
 			out.ErrCont(err)
 		}

@@ -115,6 +115,41 @@ func TestCSVExport(t *testing.T) {
 	})
 }
 
+func TestCSVImport(t *testing.T) {
+	mdb, err := mock.Open()
+	if err != nil {
+		t.Error(err)
+	}
+	defer mdb.Close()
+	type args struct {
+		name string
+		db   *bolt.DB
+	}
+	tests := []struct {
+		name        string
+		args        args
+		wantRecords int
+		wantErr     bool
+	}{
+		{"invalid", args{}, 0, true},
+		{"no path", args{"", mdb}, 0, true},
+		{"only file", args{os.TempDir(), mdb}, 0, true},
+		{"okay", args{"../test/export-bucket1.csv", mdb}, 26, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotRecords, err := database.CSVImport(tt.args.name, tt.args.db)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CSVImport() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotRecords != tt.wantRecords {
+				t.Errorf("CSVImport() = %v, want %v", gotRecords, tt.wantRecords)
+			}
+		})
+	}
+}
+
 func TestImport(t *testing.T) {
 	db, err := mock.Open()
 	if err != nil {
@@ -198,37 +233,25 @@ func TestScanner(t *testing.T) {
 	}
 }
 
-func TestCSVImport(t *testing.T) {
-	mdb, err := mock.Open()
+func TestUsage(t *testing.T) {
+	db, err := mock.Open()
 	if err != nil {
 		t.Error(err)
 	}
-	defer mdb.Close()
-	type args struct {
-		name string
-		db   *bolt.DB
+	defer db.Close()
+	s, err := database.Usage("", db)
+	if s != "" {
+		t.Errorf("Usage(empty) records != 0")
 	}
-	tests := []struct {
-		name        string
-		args        args
-		wantRecords int
-		wantErr     bool
-	}{
-		{"invalid", args{}, 0, true},
-		{"no path", args{"", mdb}, 0, true},
-		{"only file", args{os.TempDir(), mdb}, 0, true},
-		{"okay", args{"../test/export-bucket1.csv", mdb}, 26, false},
+	if err == nil {
+		t.Errorf("Usage(empty) expect error, not nil")
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotRecords, err := database.CSVImport(tt.args.name, tt.args.db)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("CSVImport() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if gotRecords != tt.wantRecords {
-				t.Errorf("CSVImport() = %v, want %v", gotRecords, tt.wantRecords)
-			}
-		})
+	b2, err := mock.Bucket2()
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = database.Usage(b2, db)
+	if err != nil {
+		t.Errorf("Usage(bucket2) expect error, not nil")
 	}
 }

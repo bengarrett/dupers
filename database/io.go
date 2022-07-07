@@ -24,7 +24,10 @@ import (
 
 const loops = 0
 
-var ErrImportList = errors.New("import list is empty")
+var (
+	ErrImportList = errors.New("import list is empty")
+	ErrName       = errors.New("no bucket name provided")
+)
 
 // Backup makes a copy of the database to the named location.
 func Backup() (name string, written int64, err error) {
@@ -313,7 +316,9 @@ func Usage(name string, db *bolt.DB) (string, error) {
 		}
 		defer db.Close()
 	}
-
+	if name == "" {
+		return "", ErrName
+	}
 	for {
 		path := ""
 		if err := db.View(func(tx *bolt.Tx) error {

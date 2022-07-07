@@ -100,10 +100,14 @@ func All(db *bolt.DB) (names []string, err error) {
 }
 
 // Check the size and existence of the database file.
-func Check() error {
-	path, err := DB()
-	if err != nil {
-		return err
+func Check(db string) error {
+	var err error
+	path := db
+	if path == "" {
+		path, err = DB()
+		if err != nil {
+			return err
+		}
 	}
 	i, err1 := os.Stat(path)
 	if os.IsNotExist(err1) {
@@ -454,10 +458,13 @@ func Create(path string) error {
 }
 
 // Info returns a printout of the buckets and their statistics.
-func Info() (string, error) {
-	path, err := DB()
-	if err != nil {
-		return "", err
+func Info(path string) (string, error) {
+	var err error
+	if path == "" {
+		path, err = DB()
+		if err != nil {
+			return "", err
+		}
 	}
 	var b bytes.Buffer
 	w := new(tabwriter.Writer)
