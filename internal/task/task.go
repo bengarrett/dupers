@@ -141,7 +141,7 @@ func Dupe(c *dupe.Config, f *cmd.Flags, args ...string) error { // nolint:cyclop
 	// directories and files to scan, a bucket is the name given to database tables
 	if buckets := args[2:]; len(buckets) == 0 {
 		if err := c.SetBuckets(); err != nil {
-			out.ErrFatal(err)
+			return err
 		}
 	} else {
 		c.SetBucket(buckets...)

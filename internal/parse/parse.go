@@ -87,7 +87,7 @@ func (p *Parser) SetBuckets() error {
 	return nil
 }
 
-// SetBuckets adds the bucket name to a list of buckets.
+// SetBucket adds the bucket name to a list of buckets.
 func (p *Parser) SetBucket(names ...string) {
 	for _, name := range names {
 		p.Buckets = append(p.Buckets, Bucket(name))

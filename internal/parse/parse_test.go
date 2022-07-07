@@ -31,6 +31,39 @@ func ExamplePrint() {
 	// Output: ../../test/bucket1/0vlLaUEvzAWP
 }
 
+func initBuckets() (parse.Parser, error) {
+	p := parse.Parser{}
+	db, err := mock.Open()
+	if err != nil {
+		return p, err
+	}
+	b1, err := mock.Bucket1()
+	if err != nil {
+		return p, err
+	}
+	b2, err := mock.Bucket2()
+	if err != nil {
+		return p, err
+	}
+	return parse.Parser{
+		DB:      db,
+		Buckets: []parse.Bucket{parse.Bucket(b1), parse.Bucket(b2)},
+	}, nil
+}
+
+func TestParser_All(t *testing.T) {
+	p, err := initBuckets()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	defer p.DB.Close()
+	const expected = 2
+	if l := len(p.All()); l != expected {
+		t.Errorf("Expected %d, got %d", expected, l)
+	}
+}
+
 func TestParser_OpenRead(t *testing.T) {
 	p := parse.Parser{}
 	p.OpenRead()
@@ -50,12 +83,12 @@ func TestParser_OpenWrite(t *testing.T) {
 }
 
 func TestSetBuckets(t *testing.T) {
-	err := mock.TestOpen()
+	p, err := initBuckets()
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	p := parse.Parser{}
+	defer p.DB.Close()
 	if err := p.SetBuckets(); err != nil {
 		t.Error(err)
 		return
@@ -75,6 +108,21 @@ func TestTimer(t *testing.T) {
 }
 
 func TestParser_SetCompares(t *testing.T) {
+	b1, err := mock.Bucket1()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	b2, err := mock.Bucket2()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	item1, err := mock.Item1()
+	if err != nil {
+		t.Error(err)
+		return
+	}
 	type args struct {
 		name string
 	}
@@ -85,12 +133,23 @@ func TestParser_SetCompares(t *testing.T) {
 		wantErr bool
 	}{
 		{"empty", args{}, 0, true},
-		// {"mock1", args{mock.Bucket1()}, 26, false},
-		// {"mock2", args{mock.Bucket2()}, 4, false},
+		{"mock1", args{b1}, 1, false},
+		{"mock2", args{b2}, 1, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := parse.Parser{}
+			p, err := initBuckets()
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			defer p.DB.Close()
+			if tt.name == "mock2" {
+				if err := mock.CreateItem(b2, item1, p.DB); err != nil {
+					t.Error(err)
+					return
+				}
+			}
 			got, err := p.SetCompares(parse.Bucket(tt.args.name))
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Parser.SetCompares() error = %v, wantErr %v", err, tt.wantErr)
