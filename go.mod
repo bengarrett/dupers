@@ -21,7 +21,10 @@ require (
 	golang.org/x/text v0.3.7
 )
 
-require github.com/mholt/archiver/v3 v3.5.1
+require (
+	github.com/mholt/archiver/v3 v3.5.1
+	github.com/zenizh/go-capturer v0.0.0-20211219060012-52ea6c8fed04
+)
 
 require (
 	github.com/andybalholm/brotli v1.0.4 // indirect

@@ -127,14 +127,14 @@ func TestParser_SetCompares(t *testing.T) {
 		name string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    int
-		wantErr bool
+		name     string
+		args     args
+		wantZero bool
+		wantErr  bool
 	}{
-		{"empty", args{}, 0, true},
-		{"mock1", args{b1}, 1, false},
-		{"mock2", args{b2}, 1, false},
+		{"empty", args{}, true, true},
+		{"mock1", args{b1}, false, false},
+		{"mock2", args{b2}, false, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -155,8 +155,8 @@ func TestParser_SetCompares(t *testing.T) {
 				t.Errorf("Parser.SetCompares() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != tt.want {
-				t.Errorf("Parser.SetCompares() = %v, want %v", got, tt.want)
+			if (got == 0) != tt.wantZero {
+				t.Errorf("Parser.SetCompares() = %v, want %v", got, tt.wantZero)
 			}
 		})
 	}

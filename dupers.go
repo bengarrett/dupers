@@ -633,9 +633,11 @@ func PrintWalk(lookup bool, c *Config) string {
 		return ""
 	}
 	if lookup {
-		return out.Status(c.Files, -1, out.Look)
+		s, _ := out.Status(c.Files, -1, out.Look)
+		return s
 	}
-	return out.Status(c.Files, -1, out.Scan)
+	s, _ := out.Status(c.Files, -1, out.Scan)
+	return s
 }
 
 // removes directories that do not contain MS-DOS or Windows programs.

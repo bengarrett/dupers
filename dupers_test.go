@@ -407,3 +407,40 @@ func TestConfig_WalkArchiver(t *testing.T) {
 		})
 	}
 }
+
+func TestConfig_Read7Zip(t *testing.T) {
+	var err error
+	p := parse.Parser{}
+	p.DB, err = mock.Open()
+	if err != nil {
+		p.DB.Close()
+		t.Error(err)
+		return
+	}
+	defer p.DB.Close()
+	b1, err := mock.Bucket1()
+	if err != nil {
+		t.Error(err)
+	}
+	zip, err := filepath.Abs(mock.SevenZip)
+	if err != nil {
+		t.Error(err)
+	}
+	c := dupe.Config{Test: true, Quiet: false, Debug: true}
+	type args struct {
+		bucket string
+		name   string
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{"empty", args{}},
+		{"ok", args{bucket: b1, name: zip}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c.Read7Zip(tt.args.bucket, tt.args.name)
+		})
+	}
+}

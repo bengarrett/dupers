@@ -144,7 +144,8 @@ func Abs(name string) (string, error) {
 
 func printStat(debug, quiet bool, cnt, total int, k []byte) {
 	if !debug && !quiet {
-		fmt.Printf("%s", out.Status(cnt, total, out.Check))
+		s, _ := out.Status(cnt, total, out.Check)
+		fmt.Printf("%s", s)
 	}
 	if debug {
 		out.PBug("clean: " + string(k))

@@ -3,6 +3,7 @@ package out
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"runtime"
@@ -47,6 +48,8 @@ const (
 	MatchPrefix = "\n  ⤷\t"
 )
 
+var ErrMode = errors.New("invalid mode argument")
+
 // PBug prints the string to a newline.
 func PBug(debug string) {
 	fmt.Fprintf(os.Stderr, "∙%s\n", debug)
@@ -58,7 +61,6 @@ func EnterKey() byte {
 	if runtime.GOOS == winOS {
 		return cr
 	}
-
 	return lf
 }
 
@@ -132,7 +134,7 @@ func RMLine() string {
 }
 
 // Status prints out the current file or item processing count.
-func Status(count, total int, m Mode) string {
+func Status(count, total int, m Mode) (string, error) {
 	// to significantly improved terminal performance
 	// only update the status every 1000th count
 	const mod, ten = 1000, 10
@@ -140,11 +142,11 @@ func Status(count, total int, m Mode) string {
 		if count < mod*2 {
 			// between 1000-2000, update every 100th count
 			if count%(mod/ten) != 0 {
-				return ""
+				return "", nil
 			}
 		} else if count%mod != 0 {
 			// 2000+, update every 1000th count
-			return ""
+			return "", nil
 		}
 	}
 
@@ -174,16 +176,16 @@ func Status(count, total int, m Mode) string {
 
 	switch m {
 	case Check:
-		return p.Sprintf(check, pre, number.Decimal(count), number.Decimal(total))
+		return p.Sprintf(check, pre, number.Decimal(count), number.Decimal(total)), nil
 	case Look:
-		return p.Sprintf(look, pre, number.Decimal(count))
+		return p.Sprintf(look, pre, number.Decimal(count)), nil
 	case Scan:
-		return p.Sprintf(scan, pre, number.Decimal(count))
+		return p.Sprintf(scan, pre, number.Decimal(count)), nil
 	case Read:
-		return p.Sprintf(read, pre, number.Decimal(count), number.Decimal(total))
+		return p.Sprintf(read, pre, number.Decimal(count), number.Decimal(total)), nil
+	default:
+		return "", ErrMode
 	}
-
-	return ""
 }
 
 // YN prints the question to stdout and prompts for a yes or no reply.
