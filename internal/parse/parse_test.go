@@ -14,8 +14,8 @@ import (
 
 const (
 	bucket1 = "../test/bucket1"
-	file1   = "../../../test/bucket1/0vlLaUEvzAWP"
-	file2   = "../../../test/bucket1/GwejJkMzs3yP"
+	file1   = "../../test/bucket1/0vlLaUEvzAWP"
+	file2   = "../../test/bucket1/GwejJkMzs3yP"
 	// checksums created from sha256sum <filename>.
 	hash0 = "0000000000000000000000000000000000000000000000000000000000000000"
 	hash1 = "1a1d76a3187ccee147e6c807277273afbad5d2680f5eadf1012310743e148f22"
@@ -28,7 +28,7 @@ func ExamplePrint() {
 	matches[database.Filepath(file1)] = database.Bucket(bucket1)
 	s := parse.Print(true, true, "", &matches)
 	fmt.Print(s)
-	// Output: ../../../test/bucket1/0vlLaUEvzAWP
+	// Output: ../../test/bucket1/0vlLaUEvzAWP
 }
 
 func TestParser_OpenRead(t *testing.T) {
@@ -58,6 +58,7 @@ func TestSetBuckets(t *testing.T) {
 	p := parse.Parser{}
 	if err := p.SetBuckets(); err != nil {
 		t.Error(err)
+		return
 	}
 	const expected = 2
 	if l := len(p.All()); l != expected {
@@ -214,7 +215,7 @@ func TestMarker(t *testing.T) {
 	}{
 		{"empty", args{}, ""},
 		{"no term", args{file1, "", true}, file1},
-		{"good", args{file1, "awp", false}, "../../../test/bucket1/0vlLaUEvzAWP"},
+		{"good", args{file1, "awp", false}, "../../test/bucket1/0vlLaUEvzAWP"},
 		{"invalid case", args{file1, "awp", true}, file1},
 	}
 	for _, tt := range tests {

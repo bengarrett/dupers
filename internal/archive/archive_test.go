@@ -13,6 +13,8 @@ import (
 	"github.com/bengarrett/dupers/internal/parse"
 )
 
+const testPath = "../../test"
+
 func TestExtension(t *testing.T) {
 	const xz = ".xz"
 	tests := []struct {
@@ -42,7 +44,7 @@ func TestExtension(t *testing.T) {
 }
 
 func TestReadMIME(t *testing.T) {
-	dir, err := filepath.Abs("../../../test")
+	dir, err := filepath.Abs(testPath)
 	if err != nil {
 		t.Error(err)
 		return
@@ -97,13 +99,17 @@ func TestConfig_WalkArchiver(t *testing.T) {
 	type args struct {
 		name parse.Bucket
 	}
+	b1, err := mock.Bucket1()
+	if err != nil {
+		t.Error(err)
+	}
 	tests := []struct {
 		name    string
 		args    args
 		wantErr bool
 	}{
 		{"empty", args{""}, true},
-		{"bucket1", args{parse.Bucket(mock.Bucket1())}, false},
+		{"bucket1", args{parse.Bucket(b1)}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -129,12 +135,16 @@ func TestConfigRead7Zip(t *testing.T) {
 		bucket string
 		name   string
 	}
+	b1, err := mock.Bucket1()
+	if err != nil {
+		t.Error(err)
+	}
 	tests := []struct {
 		name string
 		args args
 	}{
 		{"empty", args{}},
-		{"7z", args{mock.Bucket1(), mock.SevenZip}},
+		{"7z", args{b1, mock.SevenZip}},
 	}
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)

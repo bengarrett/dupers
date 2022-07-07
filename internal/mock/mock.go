@@ -48,33 +48,33 @@ func RootDir() string {
 }
 
 // Bucket1 returns the absolute path of bucket test 1.
-func Bucket1() string {
+func Bucket1() (string, error) {
 	path := filepath.Join(RootDir(), test1)
 	b, err := filepath.Abs(path)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
 	if runtime.GOOS == win {
 		b = strings.ToLower(b)
 	}
 
-	return b
+	return b, nil
 }
 
 // Bucket2 returns the absolute path of bucket test 2.
-func Bucket2() string {
+func Bucket2() (string, error) {
 	path := filepath.Join(RootDir(), test2)
 	b, err := filepath.Abs(path)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
 	if runtime.GOOS == win {
 		b = strings.ToLower(b)
 	}
 
-	return b
+	return b, nil
 }
 
 // CreateItem adds the bucket and the named file to the database.
@@ -97,25 +97,29 @@ func CreateItem(bucket, file string, db *bolt.DB) error {
 }
 
 // Export1 returns the absolute path of export csv file 1.
-func Export1() string {
+func Export1() (string, error) {
 	path := filepath.Join(RootDir(), csv1)
 	f, err := filepath.Abs(path)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
-	return f
+	return f, nil
 }
 
 // Item1 returns the absolute path of test source file 1.
-func Item1() string {
-	path := filepath.Join(Bucket1(), source1)
-	b, err := filepath.Abs(path)
+func Item1() (string, error) {
+	b1, err := Bucket1()
 	if err != nil {
-		log.Fatal(err)
+		return "", err
+	}
+	path := filepath.Join(b1, source1)
+	s, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
 	}
 
-	return b
+	return s, nil
 }
 
 // Open and return the mock database.
@@ -199,15 +203,23 @@ func TestOpen() error {
 			return err
 		}
 		// create the new mock bucket
-		b, err := tx.CreateBucket([]byte(Bucket1()))
+		b1, err := Bucket1()
 		if err != nil {
 			return err
 		}
-		sum256, err := Read(Item1())
+		b, err := tx.CreateBucket([]byte(b1))
 		if err != nil {
 			return err
 		}
-		return b.Put([]byte(Item1()), sum256[:])
+		i1, err := Item1()
+		if err != nil {
+			return err
+		}
+		sum256, err := Read(i1)
+		if err != nil {
+			return err
+		}
+		return b.Put([]byte(i1), sum256[:])
 	}); err != nil {
 		return err
 	}

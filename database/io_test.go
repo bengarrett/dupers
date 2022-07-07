@@ -91,13 +91,15 @@ func TestCopyFile(t *testing.T) {
 
 func TestCSVExport(t *testing.T) {
 	color.Enable = false
-
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
-
+	b1, err := mock.Bucket1()
+	if err != nil {
+		t.Error(err)
+	}
 	t.Run("csv export", func(t *testing.T) {
-		gotName, err := database.CSVExport(mock.Bucket1(), nil)
+		gotName, err := database.CSVExport(b1, nil)
 		if err != nil {
 			t.Errorf("Backup() error = %v, want nil", err)
 			return
@@ -126,7 +128,11 @@ func TestImport(t *testing.T) {
 	if err == nil {
 		t.Errorf("Import(empty) expect error, not nil")
 	}
-	openCSV, err := os.Open(mock.Export1())
+	e1, err := mock.Export1()
+	if err != nil {
+		t.Error(err)
+	}
+	openCSV, err := os.Open(e1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -144,12 +150,20 @@ func TestImport(t *testing.T) {
 }
 
 func TestScanner(t *testing.T) {
-	openBin, err := os.Open(mock.Item1())
+	i1, err := mock.Item1()
+	if err != nil {
+		t.Error(err)
+	}
+	e1, err := mock.Export1()
+	if err != nil {
+		t.Error(err)
+	}
+	openBin, err := os.Open(i1)
 	if err != nil {
 		t.Error(err)
 	}
 	defer openBin.Close()
-	openCSV, err := os.Open(mock.Export1())
+	openCSV, err := os.Open(e1)
 	if err != nil {
 		t.Error(err)
 	}

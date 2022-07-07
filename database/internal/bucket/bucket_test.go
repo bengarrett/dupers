@@ -24,6 +24,10 @@ func TestCleaner_Clean(t *testing.T) {
 		t.Error(err)
 	}
 	defer mdb.Close()
+	b1, err := mock.Bucket1()
+	if err != nil {
+		t.Error(err)
+	}
 	type fields struct {
 		DB    *bolt.DB
 		Abs   string
@@ -43,9 +47,9 @@ func TestCleaner_Clean(t *testing.T) {
 	}{
 		{"empty", fields{}, false, 0, 0},
 		{"defaults", fields{DB: mdb}, false, 0, 1},
-		{"okay", fields{DB: mdb, Abs: mock.Bucket1()}, true, 0, 0},
-		{"debug", fields{DB: mdb, Abs: mock.Bucket1(), Debug: true}, true, 0, 0},
-		{"quiet", fields{DB: mdb, Abs: mock.Bucket1(), Quiet: true}, true, 0, 0},
+		{"okay", fields{DB: mdb, Abs: b1}, true, 0, 0},
+		{"debug", fields{DB: mdb, Abs: b1, Debug: true}, true, 0, 0},
+		{"quiet", fields{DB: mdb, Abs: b1, Quiet: true}, true, 0, 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -107,6 +111,14 @@ func TestCount(t *testing.T) {
 		name string
 		db   *bolt.DB
 	}
+	b1, err := mock.Bucket1()
+	if err != nil {
+		t.Error(err)
+	}
+	b2, err := mock.Bucket2()
+	if err != nil {
+		t.Error(err)
+	}
 	tests := []struct {
 		name      string
 		args      args
@@ -116,8 +128,8 @@ func TestCount(t *testing.T) {
 		{"empty", args{}, false, true},
 		{"no bucket", args{db: mdb}, false, true},
 		{"bad bucket", args{"abc", mdb}, false, true},
-		{"404", args{mock.Bucket2(), mdb}, false, true},
-		{"okay", args{mock.Bucket1(), mdb}, true, false},
+		{"404", args{b2, mdb}, false, true},
+		{"okay", args{b1, mdb}, true, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

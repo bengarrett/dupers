@@ -44,12 +44,20 @@ func TestBucket(t *testing.T) {
 }
 
 func TestChecker(t *testing.T) {
-	openBin, err := os.Open(mock.Item1())
+	i1, err := mock.Item1()
+	if err != nil {
+		t.Error(err)
+	}
+	e1, err := mock.Export1()
+	if err != nil {
+		t.Error(err)
+	}
+	openBin, err := os.Open(i1)
 	if err != nil {
 		t.Error(err)
 	}
 	defer openBin.Close()
-	openCSV, err := os.Open(mock.Export1())
+	openCSV, err := os.Open(e1)
 	if err != nil {
 		t.Error(err)
 	}
