@@ -83,8 +83,8 @@ func ErrCont(err error) {
 	s := err.Error()
 	switch {
 	case strings.HasPrefix(s, nf):
-		color.Info.Printf("%s\n",
-			strings.Replace(s, nf, "New database bucket:", 1))
+		fmt.Fprintln(os.Stdout, color.Info.Sprintf("%s\n",
+			strings.Replace(s, nf, "New database bucket:", 1)))
 		return
 
 	case strings.HasPrefix(s, "bucket not found"):
@@ -95,11 +95,20 @@ func ErrCont(err error) {
 }
 
 // ErrFatal prints the error and exits the program.
+// If err is nil then the program exits without an error.
 func ErrFatal(err error) {
 	if err != nil {
-		color.Error.Tips(" " + err.Error())
+		fmt.Fprintln(os.Stderr, ErrTip(err))
 	}
 	defer os.Exit(1)
+}
+
+// ErrTip stylises and returns the error.
+func ErrTip(err error) string {
+	if err == nil {
+		return ""
+	}
+	return fmt.Sprintln(color.Error.Sprint("ERROR:"), err.Error())
 }
 
 // ExampleLn is intended for help screens that prints the example command.
@@ -107,7 +116,7 @@ func ExampleLn(cmd string) {
 	if cmd == "" {
 		return
 	}
-	color.Debug.Println(cmd)
+	fmt.Fprint(os.Stdout, Example(cmd))
 }
 
 // Example is intended for help screens that returns the example command.
@@ -123,7 +132,7 @@ func Response(s string, quiet bool) {
 	if quiet {
 		return
 	}
-	fmt.Printf("%s\n", s)
+	fmt.Fprintln(os.Stdout, s)
 }
 
 // RMLine returns the ANSI command to erase the current line in stdout.

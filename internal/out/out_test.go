@@ -13,7 +13,7 @@ import (
 	cap "github.com/zenizh/go-capturer"
 )
 
-func TestPBug(t *testing.T) {
+func TestDebugLn(t *testing.T) {
 	const hi = "Hello world!"
 	t.Run("enter", func(t *testing.T) {
 		s := cap.CaptureStderr(func() {
@@ -54,12 +54,30 @@ func TestErrAppend(t *testing.T) {
 
 func TestErrCont(t *testing.T) {
 	ErrTest := errors.New("hello world")
+	ErrNew := errors.New("bucket not found: abc")
+	ErrNF := errors.New("bucket not found")
 	color.Enable = false
 	t.Run("enter", func(t *testing.T) {
 		out := cap.CaptureStderr(func() {
 			out.ErrCont(ErrTest)
 		})
 		if out != fmt.Sprintf("\rThe %s\n", strings.ToLower(ErrTest.Error())) {
+			t.Errorf("ErrCont() did not return the expected stderr, got %q", out)
+		}
+	})
+	t.Run("new", func(t *testing.T) {
+		out := cap.CaptureStdout(func() {
+			out.ErrCont(ErrNew)
+		})
+		if out != "New database bucket: abc\n\n" {
+			t.Errorf("ErrCont() did not return the expected stdout, got %q", out)
+		}
+	})
+	t.Run("not found", func(t *testing.T) {
+		out := cap.CaptureStderr(func() {
+			out.ErrCont(ErrNF)
+		})
+		if out != "\rThe bucket does not exist\n" {
 			t.Errorf("ErrCont() did not return the expected stderr, got %q", out)
 		}
 	})
@@ -97,4 +115,52 @@ func TestStatus(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestErrTip(t *testing.T) {
+	ErrTest := errors.New("hello world")
+	t.Run("blank", func(t *testing.T) {
+		if s := out.ErrTip(nil); s != "" {
+			t.Errorf("ErrTip() did not return the expected blank string, got %q", s)
+		}
+	})
+	t.Run("no ansi", func(t *testing.T) {
+		color.Enable = false
+		s := out.ErrTip(ErrTest)
+		if s != "ERROR: hello world\n" {
+			t.Errorf("ErrTip() did not return the expected string, got %q", s)
+		}
+	})
+}
+
+func TestExampleLn(t *testing.T) {
+	cmd := "hello world"
+	color.Enable = false
+	t.Run("enter", func(t *testing.T) {
+		out := cap.CaptureStdout(func() {
+			out.ExampleLn(cmd)
+		})
+		if out != fmt.Sprintf("%s\n", cmd) {
+			t.Errorf("ErrAppend() did not return the expected stdout, got %q", out)
+		}
+	})
+}
+
+func TestResponse(t *testing.T) {
+	cmd := "hello world"
+	color.Enable = false
+	t.Run("enter", func(t *testing.T) {
+		s := cap.CaptureStdout(func() {
+			out.Response(cmd, false)
+		})
+		if s != fmt.Sprintf("%s\n", cmd) {
+			t.Errorf("Response() did not return the expected stdout, got %q", s)
+		}
+		s = cap.CaptureStdout(func() {
+			out.Response(cmd, true)
+		})
+		if s != "" {
+			t.Errorf("Response() did not return the expected blank string, got %q", s)
+		}
+	})
 }
