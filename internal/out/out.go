@@ -50,12 +50,12 @@ const (
 
 var ErrMode = errors.New("invalid mode argument")
 
-// PBug prints the string to a newline.
-func PBug(debug string) {
-	fmt.Fprintf(os.Stderr, "∙%s\n", debug)
+// DebugLn prints the string with a newline to stderr.
+func DebugLn(s string) {
+	fmt.Fprintf(os.Stderr, "∙%s\n", s)
 }
 
-// EnterKey returns the Enter keyboard code.
+// EnterKey returns the Enter ↵ keyboard code.
 func EnterKey() byte {
 	const lf, cr = '\u000A', '\u000D'
 	if runtime.GOOS == winOS {
@@ -64,26 +64,23 @@ func EnterKey() byte {
 	return lf
 }
 
-// ErrAppend appends the error to the current line in stdout.
+// ErrAppend appends the error with a newline to the stderr.
 func ErrAppend(err error) {
 	if err == nil {
 		return
 	}
-
 	s := strings.ToLower(err.Error())
 	fmt.Fprint(os.Stderr, color.Warn.Sprintf("%s.\n", strings.TrimSpace(s)))
 }
 
-// ErrCont prints the error.
+// ErrCont prints the error with a carriage return to the stderr.
 func ErrCont(err error) {
 	if err == nil {
 		return
 	}
-
 	const nf = "bucket not found:"
 
 	s := err.Error()
-
 	switch {
 	case strings.HasPrefix(s, nf):
 		color.Info.Printf("%s\n",
@@ -102,38 +99,43 @@ func ErrFatal(err error) {
 	if err != nil {
 		color.Error.Tips(" " + err.Error())
 	}
-
-	os.Exit(1)
+	defer os.Exit(1)
 }
 
-// Example is intended for help screens and prints the example command.
-func Example(cmd string) {
+// ExampleLn is intended for help screens that prints the example command.
+func ExampleLn(cmd string) {
 	if cmd == "" {
 		return
 	}
-
 	color.Debug.Println(cmd)
 }
 
-// Response prints the string when quiet is false.
+// Example is intended for help screens that returns the example command.
+func Example(cmd string) string {
+	if cmd == "" {
+		return ""
+	}
+	return color.Debug.Sprintf("%s\n")
+}
+
+// Response prints the string with a newline when quiet is false.
 func Response(s string, quiet bool) {
 	if quiet {
 		return
 	}
-
 	fmt.Printf("%s\n", s)
 }
 
-// RMLine uses ANSI to erase the current line in stdout.
+// RMLine returns the ANSI command to erase the current line in stdout.
+// Under Windows it returns an empty string.
 func RMLine() string {
 	if runtime.GOOS == winOS {
 		return ""
 	}
-
 	return fmt.Sprintf("%s%s", EraseLine, cr)
 }
 
-// Status prints out the current file or item processing count.
+// Status returns the current file or item processing count.
 func Status(count, total int, m Mode) (string, error) {
 	// to significantly improved terminal performance
 	// only update the status every 1000th count
@@ -156,9 +158,7 @@ func Status(count, total int, m Mode) (string, error) {
 		scan  = "%sScanning %d files       "
 		read  = "%sReading %d of %d items  "
 	)
-
 	skipping, updating := (count >= mod), (count != total)
-
 	if skipping && updating {
 		check = "%sChecking %d+ of %d items "
 		look = "%sLooking up %d+ items     "
@@ -167,7 +167,6 @@ func Status(count, total int, m Mode) (string, error) {
 	}
 
 	pre, p := cr, message.NewPrinter(language.English)
-
 	if runtime.GOOS != winOS {
 		// erasing the line makes for a less flickering counter.
 		// not all Windows terminals support ANSI controls.
@@ -228,7 +227,6 @@ func YN(question string, recommend YND) bool {
 
 func ynDefine(recommend YND) (p string, def string) {
 	p, def = "", " "
-
 	switch recommend {
 	case Nil:
 		p = "Y/N"
@@ -239,7 +237,6 @@ func ynDefine(recommend YND) (p string, def string) {
 		p = "N/y"
 		def = " (default: no) "
 	}
-
 	return p, def
 }
 
@@ -247,15 +244,12 @@ func ynDefine(recommend YND) (p string, def string) {
 // The prompt will loop until Enter key or Ctrl-C are pressed.
 func Prompt(question string) string {
 	r := bufio.NewReader(os.Stdin)
-
 	fmt.Printf("\r%s?: ", question)
-
 	for {
 		s, err := r.ReadString(EnterKey())
 		if err != nil {
 			ErrFatal(err)
 		}
-
 		if s != "" {
 			// remove the Enter key newline from the string
 			// as this character will break directory and filepaths
