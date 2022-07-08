@@ -2,6 +2,7 @@
 package duplicate
 
 import (
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
@@ -28,7 +29,7 @@ const (
 func Cleanup(c *dupe.Config, f *cmd.Flags) {
 	if *f.Sensen {
 		if c.Debug {
-			out.PBug("remove all non unique Windows and MS-DOS files.")
+			out.DebugLn("remove all non unique Windows and MS-DOS files.")
 		}
 		fmt.Print(c.Remove())
 		fmt.Print(c.Removes())
@@ -37,12 +38,12 @@ func Cleanup(c *dupe.Config, f *cmd.Flags) {
 	}
 	if *f.Rm || *f.RmPlus {
 		if c.Debug {
-			out.PBug("remove duplicate files.")
+			out.DebugLn("remove duplicate files.")
 		}
 		fmt.Print(c.Remove())
 		if *f.RmPlus {
 			if c.Debug {
-				out.PBug("remove empty directories.")
+				out.DebugLn("remove empty directories.")
 			}
 			fmt.Print(c.Clean())
 		}
@@ -50,39 +51,38 @@ func Cleanup(c *dupe.Config, f *cmd.Flags) {
 }
 
 // CmdErr parses the arguments of the dupe command.
-func CmdErr(args, buckets, minArgs int, test bool) {
+func CmdErr(args, buckets, minArgs int) string {
+	var b bytes.Buffer
 	if args < minArgs {
 		out.ErrCont(ErrNoArgs)
-		fmt.Println("\nThe dupe command requires a directory or file to check.")
+		fmt.Fprintln(&b, "\nThe dupe command requires a directory or file to check.")
 		if runtime.GOOS == winOS {
-			fmt.Println("The optional bucket can be one or more directories or drive letters.")
+			fmt.Fprintln(&b, "The optional bucket can be one or more directories or drive letters.")
 		} else {
-			fmt.Println("The optional bucket can be one or more directory paths.")
+			fmt.Fprintln(&b, "The optional bucket can be one or more directory paths.")
 		}
-		out.Example("\ndupers dupe <directory or file to check> [buckets to lookup]")
+		fmt.Fprintln(&b, out.Example("\ndupers dupe <directory or file to check> [buckets to lookup]"))
 	}
 	if buckets == 0 && args == minArgs {
-		color.Warn.Println("The database is empty.\n")
+		fmt.Fprintln(&b, color.Warn.Sprint("The database is empty.\n"))
 		if runtime.GOOS == winOS {
-			fmt.Println("This dupe request requires at least one directory or drive letter to lookup.")
+			fmt.Fprintln(&b, "This dupe request requires at least one directory or drive letter to lookup.")
 		} else {
-			fmt.Println("This dupe request requires at least one directory to lookup.")
+			fmt.Fprintln(&b, "This dupe request requires at least one directory to lookup.")
 		}
-		fmt.Println("These lookup directories will be stored to the database as buckets.")
+		fmt.Fprintln(&b, "These lookup directories will be stored to the database as buckets.")
 		if len(flag.Args()) > 0 {
-			s := fmt.Sprintf("\ndupers dupe %s <one or more directories>\n", flag.Args()[1])
-			out.Example(s)
+			s := fmt.Sprintf("\ndupers dupe %s <one or more directories>\n\n", flag.Args()[1])
+			fmt.Fprint(&b, s)
 		}
 	}
-	if !test {
-		out.ErrFatal(nil)
-	}
+	return b.String()
 }
 
 // Lookup both cleans and then updates the buckets with file system changes.
 func Lookup(c *dupe.Config, f *cmd.Flags) {
 	if c.Debug {
-		out.PBug("dupe lookup.")
+		out.DebugLn("dupe lookup.")
 	}
 	// normalise bucket names
 	for i, b := range c.All() {
@@ -101,7 +101,7 @@ func Lookup(c *dupe.Config, f *cmd.Flags) {
 	}
 	if !*f.Lookup && len(buckets) > 0 {
 		if c.Debug {
-			out.PBug("non-fast mode, database cleanup.")
+			out.DebugLn("non-fast mode, database cleanup.")
 		}
 		if err := database.Clean(c.Quiet, c.Debug, buckets...); err != nil {
 			out.ErrCont(err)
@@ -113,14 +113,14 @@ func Lookup(c *dupe.Config, f *cmd.Flags) {
 		}
 	}
 	if c.Debug {
-		out.PBug("walk the buckets.")
+		out.DebugLn("walk the buckets.")
 	}
 	c.WalkDirs()
 }
 
 func lookup(c *dupe.Config) error {
 	if c.Debug {
-		out.PBug("read the hash values in the buckets.")
+		out.DebugLn("read the hash values in the buckets.")
 	}
 	fastErr := false
 	for _, b := range c.All() {

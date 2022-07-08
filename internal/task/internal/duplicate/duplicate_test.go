@@ -16,13 +16,16 @@ func TestCmdErr(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
+		want string
 	}{
-		{"zero", args{args: 0, buckets: 0, minArgs: 0}},
-		{"one", args{args: 0, buckets: 0, minArgs: 1}},
+		{"zero", args{args: 0, buckets: 0, minArgs: 0}, ""},
+		{"one", args{args: 0, buckets: 0, minArgs: 1}, ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			duplicate.CmdErr(tt.args.args, tt.args.buckets, tt.args.minArgs, true)
+			if got := duplicate.CmdErr(tt.args.args, tt.args.buckets, tt.args.minArgs); got != tt.want {
+				t.Errorf("CmdErr() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }
