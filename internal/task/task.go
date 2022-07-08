@@ -26,11 +26,12 @@ import (
 )
 
 var (
-	ErrArgs = errors.New("no buckets were given as arguments")
-	ErrCfg  = errors.New("config cannot be a nil value")
-	ErrCmd  = errors.New("command is unknown")
-	ErrFlag = errors.New("flags cannot be a nil value")
-	ErrNil  = errors.New("argument cannot be a nil value")
+	ErrArgs   = errors.New("no buckets were given as arguments")
+	ErrCfg    = errors.New("config cannot be a nil value")
+	ErrCmd    = errors.New("command is unknown")
+	ErrFlag   = errors.New("flags cannot be a nil value")
+	ErrNil    = errors.New("argument cannot be a nil value")
+	ErrSyntax = errors.New("command line arguments syntax")
 )
 
 const (
@@ -116,12 +117,13 @@ func Dupe(c *dupe.Config, f *cmd.Flags, args ...string) error { // nolint:cyclop
 	}
 	if c.Debug {
 		s := fmt.Sprintf("dupeCmd: %s", strings.Join(args, " "))
-		out.PBug(s)
+		out.DebugLn(s)
 	}
 	l := len(args)
 	if l == 1 {
 		const minArgs = 2
-		duplicate.CmdErr(l, 0, minArgs, false)
+		fmt.Print(duplicate.CmdErr(l, 0, minArgs))
+		return ErrSyntax
 	}
 	// fetch bucket info
 	b, err := database.All(nil)
@@ -130,7 +132,8 @@ func Dupe(c *dupe.Config, f *cmd.Flags, args ...string) error { // nolint:cyclop
 	}
 	const minArgs = 3
 	if l < minArgs && len(b) == 0 {
-		duplicate.CmdErr(l, len(b), minArgs, false)
+		fmt.Print(duplicate.CmdErr(l, len(b), minArgs))
+		return ErrSyntax
 	}
 	// directory or a file to match
 	const minReq = 2
@@ -149,14 +152,14 @@ func Dupe(c *dupe.Config, f *cmd.Flags, args ...string) error { // nolint:cyclop
 	}
 	if c.Debug {
 		s := fmt.Sprintf("buckets: %s", c.PrintBuckets())
-		out.PBug(s)
+		out.DebugLn(s)
 	}
 	// files or directories to compare (these are not saved to database)
 	if err := c.WalkSource(); err != nil {
 		return err
 	}
 	if c.Debug {
-		out.PBug("walksource complete.")
+		out.DebugLn("walksource complete.")
 	}
 	// walk, scan and save file paths and hashes to the database
 	duplicate.Lookup(c, f)
