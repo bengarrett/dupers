@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bengarrett/dupers/internal/task/internal/duplicate"
+	"github.com/bengarrett/dupers/task/internal/duplicate"
 )
 
 func TestCmdErr(t *testing.T) {

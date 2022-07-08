@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/bengarrett/dupers/database"
-	"github.com/bengarrett/dupers/internal/task/internal/search"
+	"github.com/bengarrett/dupers/task/internal/search"
 )
 
 func TestCmdErr(t *testing.T) {

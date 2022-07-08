@@ -6,7 +6,7 @@ import (
 
 	dupe "github.com/bengarrett/dupers"
 	"github.com/bengarrett/dupers/internal/cmd"
-	"github.com/bengarrett/dupers/internal/task"
+	"github.com/bengarrett/dupers/task"
 )
 
 func TestHelp(t *testing.T) {
