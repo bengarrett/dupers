@@ -17,10 +17,10 @@ func TestPBug(t *testing.T) {
 	const hi = "Hello world!"
 	t.Run("enter", func(t *testing.T) {
 		s := cap.CaptureStderr(func() {
-			out.PBug(hi)
+			out.DebugLn(hi)
 		})
 		if s != fmt.Sprintf("∙%s\n", hi) {
-			t.Errorf("PBug() did not return the expected stderr, got %v", s)
+			t.Errorf("DebugLn() did not return the expected stderr, got %v", s)
 		}
 	})
 }

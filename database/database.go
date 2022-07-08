@@ -155,7 +155,7 @@ func Clean(quiet, debug bool, buckets ...string) error {
 		return err
 	}
 	if debug {
-		out.PBug("database path: " + path)
+		out.DebugLn("database path: " + path)
 	}
 	db, err := bolt.Open(path, PrivateFile, write())
 	if err != nil {
@@ -209,11 +209,11 @@ func Clean(quiet, debug bool, buckets ...string) error {
 
 func cleanDebug(debug bool, buckets []string) {
 	if debug {
-		out.PBug("running database clean")
+		out.DebugLn("running database clean")
 
 		s := fmt.Sprintf("list of buckets:\n%s",
 			strings.Join(buckets, "\n"))
-		out.PBug(s)
+		out.DebugLn(s)
 	}
 }
 
@@ -223,7 +223,7 @@ func cleaner(buckets []string, debug bool, db *bolt.DB) ([]string, error) {
 	}
 
 	if debug {
-		out.PBug("fetching all buckets")
+		out.DebugLn("fetching all buckets")
 	}
 
 	var err1 error
@@ -243,7 +243,7 @@ func cleaner(buckets []string, debug bool, db *bolt.DB) ([]string, error) {
 // Compact the database by reclaiming internal space.
 func Compact(debug bool) error {
 	if debug {
-		out.PBug("running database compact")
+		out.DebugLn("running database compact")
 	}
 	// active database
 	src, err := DB()
@@ -257,19 +257,19 @@ func Compact(debug bool) error {
 	if err != nil {
 		return err
 	} else if debug {
-		out.PBug("opened original database: " + src)
+		out.DebugLn("opened original database: " + src)
 	}
 	defer srcDB.Close()
 	tmpDB, err := bolt.Open(tmp, PrivateFile, write())
 	if err != nil {
 		return err
 	} else if debug {
-		out.PBug("opened replacement database: " + tmp)
+		out.DebugLn("opened replacement database: " + tmp)
 	}
 	defer tmpDB.Close()
 	// compress and copy the results to the temporary database
 	if debug {
-		out.PBug("compress and copy databases")
+		out.DebugLn("compress and copy databases")
 	}
 	if errComp := bolt.Compact(tmpDB, srcDB, 0); errComp != nil {
 		return errComp
@@ -284,9 +284,9 @@ func Compact(debug bool) error {
 			return errT
 		}
 		s1 := fmt.Sprintf("original database: %d bytes, %s", sr.Size(), sr.Name())
-		out.PBug(s1)
+		out.DebugLn(s1)
 		s2 := fmt.Sprintf("new database:      %d bytes, %s", tm.Size(), tm.Name())
-		out.PBug(s2)
+		out.DebugLn(s2)
 	}
 	if err = srcDB.Close(); err != nil {
 		out.ErrFatal(err)
@@ -295,7 +295,7 @@ func Compact(debug bool) error {
 		return err
 	} else if debug {
 		s := fmt.Sprintf("copied %d bytes to: %s", cp, src)
-		out.PBug(s)
+		out.DebugLn(s)
 	}
 	return nil
 }

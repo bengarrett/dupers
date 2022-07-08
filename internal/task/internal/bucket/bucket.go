@@ -40,10 +40,10 @@ func Check(term, cmd, name string) {
 	out.ErrCont(ErrDatabaseName)
 	fmt.Printf("Cannot %s the bucket as no bucket name was provided.\n", term)
 	if cmd == dmv {
-		out.Example(fmt.Sprintf("\ndupers %s <bucket name> <new directory>", cmd))
+		out.ExampleLn(fmt.Sprintf("\ndupers %s <bucket name> <new directory>", cmd))
 		out.ErrFatal(nil)
 	}
-	out.Example(fmt.Sprintf("\ndupers %s <bucket name>", cmd))
+	out.ExampleLn(fmt.Sprintf("\ndupers %s <bucket name>", cmd))
 	out.ErrFatal(nil)
 }
 
@@ -58,7 +58,7 @@ func Export(quiet bool, args [2]string) {
 	if errEx := database.Exist(name, nil); errors.Is(errEx, database.ErrBucketNotFound) {
 		out.ErrCont(errEx)
 		fmt.Printf("Bucket name: %s\n", name)
-		out.Example("\ndupers export <bucket name>")
+		out.ExampleLn("\ndupers export <bucket name>")
 		out.ErrFatal(nil)
 	} else if errEx != nil {
 		out.ErrFatal(errEx)
@@ -77,7 +77,7 @@ func Import(quiet bool, args [2]string) {
 	if args[1] == "" {
 		out.ErrCont(ErrImport)
 		fmt.Println("Cannot import file as no filepath was provided.")
-		out.Example(fmt.Sprintf("\ndupers %s <filepath>", dim))
+		out.ExampleLn(fmt.Sprintf("\ndupers %s <filepath>", dim))
 		out.ErrFatal(nil)
 	}
 	name, err := database.Abs(args[1])
@@ -132,7 +132,7 @@ func Move(quiet bool, args [3]string) {
 	if errEx := database.Exist(name, nil); errors.Is(errEx, database.ErrBucketNotFound) {
 		out.ErrCont(errEx)
 		fmt.Printf("Bucket name: %s\n", name)
-		out.Example("\ndupers mv <bucket name> <new directory>")
+		out.ExampleLn("\ndupers mv <bucket name> <new directory>")
 		out.ErrFatal(nil)
 	} else if errEx != nil {
 		out.ErrFatal(errEx)
@@ -140,7 +140,7 @@ func Move(quiet bool, args [3]string) {
 	if dir == "" {
 		out.ErrCont(ErrNewName)
 		fmt.Println("Cannot move bucket within the database as no new directory was provided.")
-		out.Example(fmt.Sprintf("\ndupers mv %s <new directory>", b))
+		out.ExampleLn(fmt.Sprintf("\ndupers mv %s <new directory>", b))
 		out.ErrFatal(nil)
 	}
 	newName, err := database.Abs(dir)

@@ -35,6 +35,7 @@ func TestDupe(t *testing.T) {
 		{"nil", args{}, true},
 		{"empty", args{&c, &f, []string{}}, true},
 		{"test", args{&c, &f, []string{"test", "test"}}, true},
+		{"test args", args{&c, &f, []string{"dupers", "arg", "x"}}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -63,7 +63,7 @@ func main() {
 	}
 	selection := strings.ToLower(flag.Args()[0])
 	if c.Debug {
-		out.PBug("command selection: " + selection)
+		out.DebugLn("command selection: " + selection)
 	}
 
 	switch selection {
@@ -120,7 +120,7 @@ func parse(a *cmd.Aliases, c *dupe.Config, f *cmd.Flags) {
 func defaultCmd(selection string) {
 	out.ErrCont(ErrCmd)
 	fmt.Printf("Command: '%s'\n\nSee the help for the available commands and options:\n", selection)
-	out.Example("dupers " + fhlp)
+	out.ExampleLn("dupers " + fhlp)
 	out.ErrFatal(nil)
 }
 

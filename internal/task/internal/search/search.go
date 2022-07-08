@@ -25,7 +25,7 @@ func CmdErr(l int, test bool) error {
 	out.ErrCont(ErrSearch)
 	fmt.Println("A search expression can be a partial or complete filename,")
 	fmt.Println("or a partial or complete directory.")
-	out.Example("\ndupers search <search expression> [optional, directories to search]")
+	out.ExampleLn("\ndupers search <search expression> [optional, directories to search]")
 	if test {
 		return ErrSearch
 	}
@@ -75,7 +75,7 @@ func Error(err error, test bool) error {
 			dir = strings.ReplaceAll(err.Error(), s, "")
 		}
 		s := fmt.Sprintf("dupers up %s\n", dir)
-		out.Example(s)
+		out.ExampleLn(s)
 		if test {
 			return nil
 		}

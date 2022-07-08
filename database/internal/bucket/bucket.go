@@ -57,7 +57,7 @@ func (c *Cleaner) Clean() (items int, finds int, errors int) {
 					}
 				}
 				if c.Debug {
-					out.PBug(fmt.Sprintf("%s: %s", k, errS))
+					out.DebugLn(fmt.Sprintf("%s: %s", k, errS))
 				}
 				if errUp := c.DB.Update(func(tx *bolt.Tx) error {
 					return tx.Bucket([]byte(c.Abs)).Delete(k)
@@ -97,7 +97,7 @@ func (p *Parser) Parse() (int, int, string, bool) {
 		out.ErrCont(err)
 		return p.Cnt, p.Errs, "", true
 	} else if p.Debug {
-		out.PBug("bucket: " + abs)
+		out.DebugLn("bucket: " + abs)
 	}
 	// check the bucket directory exists on the file system
 	fi, errS := os.Stat(abs)
@@ -148,7 +148,7 @@ func printStat(debug, quiet bool, cnt, total int, k []byte) {
 		fmt.Printf("%s", s)
 	}
 	if debug {
-		out.PBug("clean: " + string(k))
+		out.DebugLn("clean: " + string(k))
 	}
 }
 
