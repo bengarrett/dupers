@@ -17,7 +17,7 @@ import (
 	"github.com/bengarrett/dupers/database"
 	"github.com/bengarrett/dupers/internal/cmd"
 	"github.com/bengarrett/dupers/internal/out"
-	"github.com/bengarrett/dupers/internal/task"
+	"github.com/bengarrett/dupers/task"
 	"github.com/gookit/color"
 )
 
