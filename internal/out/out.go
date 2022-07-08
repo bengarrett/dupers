@@ -115,7 +115,7 @@ func Example(cmd string) string {
 	if cmd == "" {
 		return ""
 	}
-	return color.Debug.Sprintf("%s\n")
+	return color.Debug.Sprintf("%s\n", cmd)
 }
 
 // Response prints the string with a newline when quiet is false.
