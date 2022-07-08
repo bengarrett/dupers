@@ -1,4 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
+
+// Dupers is a blazing-fast file duplicate checker and filename search tool.
 package dupe
 
 import (
@@ -44,7 +46,30 @@ var (
 	ErrPathNoFound = errors.New("path does not exist")
 )
 
-// Config options.
+// Bucket returns string as the Bucket type.
+func Bucket(s string) parse.Bucket {
+	return parse.Bucket(s)
+}
+
+// Print the results of the database comparisons.
+func Print(quiet, exact bool, term string, m *database.Matches) string {
+	return parse.Print(quiet, exact, term, m)
+}
+
+// PrintWalk prints "Scanning/Looking up".
+func PrintWalk(lookup bool, c *Config) string {
+	if c.Test || c.Quiet || c.Debug {
+		return ""
+	}
+	if lookup {
+		s, _ := out.Status(c.Files, -1, out.Look)
+		return s
+	}
+	s, _ := out.Status(c.Files, -1, out.Scan)
+	return s
+}
+
+// Config values for stdout options.
 type Config struct {
 	Debug bool // Debug spams technobabble to stdout.
 	Quiet bool // Quiet the feedback sent to stdout.
@@ -270,6 +295,134 @@ func (c *Config) Print() string {
 	return w.String()
 }
 
+// Read opens the named archive, hashes and saves the content to the bucket.
+func (c *Config) Read(bucket, name, ext string) {
+	if c.Debug {
+		out.DebugLn("read archiver: " + name)
+	}
+	// catch any archiver panics such as as opening unsupported ZIP compression formats
+	defer c.readRecover(name)
+	cnt, filename := 0, name
+	// get the format by filename extension
+	if ext != "" {
+		filename = ext
+	}
+	f, err := archiver.ByExtension(strings.ToLower(filename))
+	if err != nil {
+		out.ErrCont(err)
+		return
+	}
+	switch archive.Supported(f) {
+	case true:
+		w, ok := f.(archiver.Walker)
+		if !ok {
+			out.ErrCont(fmt.Errorf("%w: %T: %s", archive.ErrType, w, filename))
+			return
+		}
+		cnt, err = c.readWalk(name, bucket, cnt, w)
+		if err != nil {
+			out.ErrAppend(err)
+		}
+	default:
+		color.Warn.Printf("Unsupported archive: '%s'\n", name)
+		return
+	}
+	if c.Debug && cnt > 0 {
+		s := fmt.Sprintf("read %d items within the archive", cnt)
+		out.DebugLn(s)
+	}
+}
+
+func (c *Config) readWalk(archive, bucket string, cnt int, w archiver.Walker) (int, error) {
+	return cnt, w.Walk(archive, func(f archiver.File) error {
+		if f.IsDir() {
+			return nil
+		}
+		if !f.FileInfo.Mode().IsRegular() {
+			return nil
+		}
+		if skipFile(f.Name()) {
+			return nil
+		}
+		fp := filepath.Join(archive, f.Name())
+		if c.findItem(fp) {
+			return nil
+		}
+		buf, h := make([]byte, oneMb), sha256.New()
+		if _, err := io.CopyBuffer(h, f, buf); err != nil {
+			out.ErrAppend(err)
+			return nil
+		}
+		var sum parse.Checksum
+		copy(sum[:], h.Sum(nil))
+		if err := c.update(fp, bucket, sum); err != nil {
+			out.ErrAppend(err)
+		}
+		cnt++
+		return nil
+	})
+}
+
+func (c *Config) readRecover(archive string) {
+	if err := recover(); err != nil {
+		if !c.Quiet {
+			if !c.Debug {
+				fmt.Println()
+			}
+			color.Warn.Printf("Unsupported archive: '%s'\n", archive)
+		}
+		if c.Debug {
+			out.DebugLn(fmt.Sprint(err))
+		}
+	}
+}
+
+// Read7Zip opens the named 7-Zip archive, hashes and saves the content to the bucket.
+func (c *Config) Read7Zip(bucket, name string) {
+	if c.Debug {
+		out.DebugLn("read 7zip: " + name)
+	}
+	r, err := sevenzip.OpenReader(name)
+	if err != nil {
+		out.ErrAppend(err)
+		return
+	}
+	defer r.Close()
+	cnt := 0
+	for _, f := range r.File {
+		if f.FileInfo().IsDir() {
+			continue
+		}
+		fp := filepath.Join(name, f.Name)
+		if c.findItem(fp) {
+			continue
+		}
+		rc, err := f.Open()
+		if err != nil {
+			out.ErrAppend(err)
+			continue
+		}
+		defer rc.Close()
+		cnt++
+		buf, h := make([]byte, oneMb), sha256.New()
+		if _, err := io.CopyBuffer(h, rc, buf); err != nil {
+			out.ErrAppend(err)
+			continue
+		}
+		var sum parse.Checksum
+
+		copy(sum[:], h.Sum(nil))
+		if err := c.update(fp, bucket, sum); err != nil {
+			out.ErrAppend(err)
+			continue
+		}
+	}
+	if c.Debug && cnt > 0 {
+		s := fmt.Sprintf("read %d items within the 7-Zip archive", cnt)
+		out.DebugLn(s)
+	}
+}
+
 // Remove duplicate files from the source directory.
 func (c *Config) Remove() string {
 	w := new(bytes.Buffer)
@@ -355,37 +508,6 @@ func (c *Config) Status() string {
 	return s
 }
 
-// WalkDirs walks the named bucket directories for any new files to add their checksums to the database.
-func (c *Config) WalkDirs() {
-	c.init()
-	if !c.Test && c.DB == nil {
-		c.OpenWrite()
-		defer c.DB.Close()
-	}
-	// walk through the directories provided
-	for _, bucket := range c.All() {
-		s := string(bucket)
-		if c.Debug {
-			out.DebugLn("walkdir bucket: " + s)
-		}
-		if err := c.WalkDir(bucket); err != nil {
-			if errors.Is(errors.Unwrap(err), ErrPathNoFound) &&
-				errors.Is(database.Exist(s, c.DB), database.ErrBucketNotFound) {
-				out.ErrCont(err)
-				continue
-			}
-			out.ErrCont(err)
-		}
-	}
-	// handle any items that exist in the database but not in the file system
-	// this would include items added using the `up+` archive scan command
-	for _, b := range c.All() {
-		if _, err := c.SetCompares(b); err != nil {
-			out.ErrCont(err)
-		}
-	}
-}
-
 // WalkDir walks the named bucket directory for any new files to add their checksums to the database.
 func (c *Config) WalkDir(name parse.Bucket) error {
 	if name == "" {
@@ -464,6 +586,37 @@ func (c *Config) walkDirSkip(s string, err error) error {
 		out.DebugLn(s)
 	}
 	return err
+}
+
+// WalkDirs walks the named bucket directories for any new files to add their checksums to the database.
+func (c *Config) WalkDirs() {
+	c.init()
+	if !c.Test && c.DB == nil {
+		c.OpenWrite()
+		defer c.DB.Close()
+	}
+	// walk through the directories provided
+	for _, bucket := range c.All() {
+		s := string(bucket)
+		if c.Debug {
+			out.DebugLn("walkdir bucket: " + s)
+		}
+		if err := c.WalkDir(bucket); err != nil {
+			if errors.Is(errors.Unwrap(err), ErrPathNoFound) &&
+				errors.Is(database.Exist(s, c.DB), database.ErrBucketNotFound) {
+				out.ErrCont(err)
+				continue
+			}
+			out.ErrCont(err)
+		}
+	}
+	// handle any items that exist in the database but not in the file system
+	// this would include items added using the `up+` archive scan command
+	for _, b := range c.All() {
+		if _, err := c.SetCompares(b); err != nil {
+			out.ErrCont(err)
+		}
+	}
 }
 
 // WalkSource walks the source directory or a file to collect the hashed content for a future comparison.
@@ -627,19 +780,6 @@ func printRM(path string, err error) string {
 	return fmt.Sprintf("%s: %s", color.Secondary.Sprint("removed"), path)
 }
 
-// PrintWalk prints "Scanning/Looking up".
-func PrintWalk(lookup bool, c *Config) string {
-	if c.Test || c.Quiet || c.Debug {
-		return ""
-	}
-	if lookup {
-		s, _ := out.Status(c.Files, -1, out.Look)
-		return s
-	}
-	s, _ := out.Status(c.Files, -1, out.Scan)
-	return s
-}
-
 // removes directories that do not contain MS-DOS or Windows programs.
 func removes(root string, files []fs.DirEntry) string {
 	w := new(bytes.Buffer)
@@ -732,16 +872,6 @@ func walkCompare(root, path string, c *Config) error {
 		}
 		return nil
 	})
-}
-
-// Print the results of the database comparisons.
-func Print(quiet, exact bool, term string, m *database.Matches) string {
-	return parse.Print(quiet, exact, term, m)
-}
-
-// Bucket returns s as the Bucket type.
-func Bucket(s string) parse.Bucket {
-	return parse.Bucket(s)
 }
 
 // WalkArchiver walks the bucket directory saving the checksums of new files to the database.
@@ -886,134 +1016,6 @@ func (c *Config) listItems(bucket string) error {
 		return err
 	}
 	return nil
-}
-
-// Read7Zip opens the named 7-Zip archive, hashes and saves the content to the bucket.
-func (c *Config) Read7Zip(bucket, name string) {
-	if c.Debug {
-		out.DebugLn("read 7zip: " + name)
-	}
-	r, err := sevenzip.OpenReader(name)
-	if err != nil {
-		out.ErrAppend(err)
-		return
-	}
-	defer r.Close()
-	cnt := 0
-	for _, f := range r.File {
-		if f.FileInfo().IsDir() {
-			continue
-		}
-		fp := filepath.Join(name, f.Name)
-		if c.findItem(fp) {
-			continue
-		}
-		rc, err := f.Open()
-		if err != nil {
-			out.ErrAppend(err)
-			continue
-		}
-		defer rc.Close()
-		cnt++
-		buf, h := make([]byte, oneMb), sha256.New()
-		if _, err := io.CopyBuffer(h, rc, buf); err != nil {
-			out.ErrAppend(err)
-			continue
-		}
-		var sum parse.Checksum
-
-		copy(sum[:], h.Sum(nil))
-		if err := c.update(fp, bucket, sum); err != nil {
-			out.ErrAppend(err)
-			continue
-		}
-	}
-	if c.Debug && cnt > 0 {
-		s := fmt.Sprintf("read %d items within the 7-Zip archive", cnt)
-		out.DebugLn(s)
-	}
-}
-
-// Read opens the named archive, hashes and saves the content to the bucket.
-func (c *Config) Read(bucket, name, ext string) {
-	if c.Debug {
-		out.DebugLn("read archiver: " + name)
-	}
-	// catch any archiver panics such as as opening unsupported ZIP compression formats
-	defer c.readRecover(name)
-	cnt, filename := 0, name
-	// get the format by filename extension
-	if ext != "" {
-		filename = ext
-	}
-	f, err := archiver.ByExtension(strings.ToLower(filename))
-	if err != nil {
-		out.ErrCont(err)
-		return
-	}
-	switch archive.Supported(f) {
-	case true:
-		w, ok := f.(archiver.Walker)
-		if !ok {
-			out.ErrCont(fmt.Errorf("%w: %T: %s", archive.ErrType, w, filename))
-			return
-		}
-		cnt, err = c.readWalk(name, bucket, cnt, w)
-		if err != nil {
-			out.ErrAppend(err)
-		}
-	default:
-		color.Warn.Printf("Unsupported archive: '%s'\n", name)
-		return
-	}
-	if c.Debug && cnt > 0 {
-		s := fmt.Sprintf("read %d items within the archive", cnt)
-		out.DebugLn(s)
-	}
-}
-
-func (c *Config) readWalk(archive, bucket string, cnt int, w archiver.Walker) (int, error) {
-	return cnt, w.Walk(archive, func(f archiver.File) error {
-		if f.IsDir() {
-			return nil
-		}
-		if !f.FileInfo.Mode().IsRegular() {
-			return nil
-		}
-		if skipFile(f.Name()) {
-			return nil
-		}
-		fp := filepath.Join(archive, f.Name())
-		if c.findItem(fp) {
-			return nil
-		}
-		buf, h := make([]byte, oneMb), sha256.New()
-		if _, err := io.CopyBuffer(h, f, buf); err != nil {
-			out.ErrAppend(err)
-			return nil
-		}
-		var sum parse.Checksum
-		copy(sum[:], h.Sum(nil))
-		if err := c.update(fp, bucket, sum); err != nil {
-			out.ErrAppend(err)
-		}
-		cnt++
-		return nil
-	})
-}
-
-func (c *Config) readRecover(archive string) {
-	if err := recover(); err != nil {
-		if !c.Quiet {
-			if !c.Debug {
-				fmt.Println()
-			}
-			color.Warn.Printf("Unsupported archive: '%s'\n", archive)
-		}
-		if c.Debug {
-			out.DebugLn(fmt.Sprint(err))
-		}
-	}
 }
 
 // update saves the checksum and path values to the bucket.
