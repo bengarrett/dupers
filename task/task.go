@@ -1,4 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
+
+// Package task prepares and run commands issued by the Dupers command line app.
 package task
 
 import (
