@@ -13,7 +13,7 @@ import (
 	"github.com/bengarrett/dupers/internal/parse"
 )
 
-const testPath = "../../test"
+const testPath = "../test"
 
 func TestExtension(t *testing.T) {
 	const xz = ".xz"
