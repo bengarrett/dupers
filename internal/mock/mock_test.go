@@ -15,7 +15,9 @@ func TestRootDir(t *testing.T) {
 	_, err := os.Stat(got)
 	if os.IsNotExist(err) {
 		t.Errorf("RootDir() does not exist, %v", got)
-	} else if err != nil {
+		return
+	}
+	if err != nil {
 		t.Errorf("RootDir() stat error = %v, want nil", err)
 	}
 }

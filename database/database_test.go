@@ -92,7 +92,7 @@ func TestCheck(t *testing.T) {
 		t.Errorf("Check() error = %v", err)
 	}
 	const invalid = "invalidpathdoesnotexist"
-	if err := database.Check(invalid); err != database.ErrDBNotFound {
+	if err := database.Check(invalid); errors.Is(err, database.ErrDBNotFound) {
 		t.Errorf("Check() error = %v, want %v", err, database.ErrDBNotFound)
 	}
 	b0, err := filepath.Abs(test0b)
@@ -100,7 +100,7 @@ func TestCheck(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	if err := database.Check(b0); err != database.ErrDBZeroByte {
+	if err := database.Check(b0); errors.Is(err, database.ErrDBZeroByte) {
 		t.Errorf("Check() error = %v, want %v", err, database.ErrDBZeroByte)
 	}
 }
@@ -506,7 +506,7 @@ func TestInfo(t *testing.T) {
 		t.Errorf("Info() should display the mock database path, %v\ngot:\n%v", want, info)
 	}
 	_, err = database.Info(test0b + "placeholderfiller")
-	if err != database.ErrDBNotFound {
+	if errors.Is(err, database.ErrDBNotFound) {
 		t.Errorf("Info() not found test should return, %v, got %v", database.ErrDBNotFound, err)
 	}
 }

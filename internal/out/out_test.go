@@ -10,13 +10,19 @@ import (
 
 	"github.com/bengarrett/dupers/internal/out"
 	"github.com/gookit/color"
-	cap "github.com/zenizh/go-capturer"
+	"github.com/zenizh/go-capturer"
+)
+
+var (
+	ErrTest = errors.New("hello world")
+	ErrNew  = errors.New("bucket not found: abc")
+	ErrNF   = errors.New("bucket not found")
 )
 
 func TestDebugLn(t *testing.T) {
 	const hi = "Hello world!"
 	t.Run("enter", func(t *testing.T) {
-		s := cap.CaptureStderr(func() {
+		s := capturer.CaptureStderr(func() {
 			out.DebugLn(hi)
 		})
 		if s != fmt.Sprintf("∙%s\n", hi) {
@@ -40,10 +46,9 @@ func TestEnterKey(t *testing.T) {
 }
 
 func TestErrAppend(t *testing.T) {
-	ErrTest := errors.New("hello world")
 	color.Enable = false
 	t.Run("enter", func(t *testing.T) {
-		out := cap.CaptureStderr(func() {
+		out := capturer.CaptureStderr(func() {
 			out.ErrAppend(ErrTest)
 		})
 		if out != fmt.Sprintf("%s.\n", ErrTest.Error()) {
@@ -53,12 +58,9 @@ func TestErrAppend(t *testing.T) {
 }
 
 func TestErrCont(t *testing.T) {
-	ErrTest := errors.New("hello world")
-	ErrNew := errors.New("bucket not found: abc")
-	ErrNF := errors.New("bucket not found")
 	color.Enable = false
 	t.Run("enter", func(t *testing.T) {
-		out := cap.CaptureStderr(func() {
+		out := capturer.CaptureStderr(func() {
 			out.ErrCont(ErrTest)
 		})
 		if out != fmt.Sprintf("\rThe %s\n", strings.ToLower(ErrTest.Error())) {
@@ -66,7 +68,7 @@ func TestErrCont(t *testing.T) {
 		}
 	})
 	t.Run("new", func(t *testing.T) {
-		out := cap.CaptureStdout(func() {
+		out := capturer.CaptureStdout(func() {
 			out.ErrCont(ErrNew)
 		})
 		if out != "New database bucket: abc\n\n" {
@@ -74,7 +76,7 @@ func TestErrCont(t *testing.T) {
 		}
 	})
 	t.Run("not found", func(t *testing.T) {
-		out := cap.CaptureStderr(func() {
+		out := capturer.CaptureStderr(func() {
 			out.ErrCont(ErrNF)
 		})
 		if out != "\rThe bucket does not exist\n" {
@@ -118,7 +120,6 @@ func TestStatus(t *testing.T) {
 }
 
 func TestErrTip(t *testing.T) {
-	ErrTest := errors.New("hello world")
 	t.Run("blank", func(t *testing.T) {
 		if s := out.ErrTip(nil); s != "" {
 			t.Errorf("ErrTip() did not return the expected blank string, got %q", s)
@@ -137,7 +138,7 @@ func TestExampleLn(t *testing.T) {
 	cmd := "hello world"
 	color.Enable = false
 	t.Run("enter", func(t *testing.T) {
-		out := cap.CaptureStdout(func() {
+		out := capturer.CaptureStdout(func() {
 			out.ExampleLn(cmd)
 		})
 		if out != fmt.Sprintf("%s\n", cmd) {
@@ -150,13 +151,13 @@ func TestResponse(t *testing.T) {
 	cmd := "hello world"
 	color.Enable = false
 	t.Run("enter", func(t *testing.T) {
-		s := cap.CaptureStdout(func() {
+		s := capturer.CaptureStdout(func() {
 			out.Response(cmd, false)
 		})
 		if s != fmt.Sprintf("%s\n", cmd) {
 			t.Errorf("Response() did not return the expected stdout, got %q", s)
 		}
-		s = cap.CaptureStdout(func() {
+		s = capturer.CaptureStdout(func() {
 			out.Response(cmd, true)
 		})
 		if s != "" {

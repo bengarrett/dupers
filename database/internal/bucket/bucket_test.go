@@ -21,7 +21,7 @@ func init() { //nolint:gochecknoinits
 
 // TestCleaner_Clean is the cause of some sporadic test failures,
 // especially when running multiple test counts.
-func TestCleaner_Clean(t *testing.T) {
+func TestCleaner_Clean(t *testing.T) { //nolint:funlen
 	if err := mock.TestRemove(); err != nil {
 		t.Error(err)
 	}

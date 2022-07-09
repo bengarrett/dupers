@@ -144,7 +144,7 @@ func PathWindows(src string) string {
 
 // PathPosix returns POSIX path from the source path.
 func PathPosix(src string) string {
-	const driveLen, subStr = 2, 2
+	const driveLen = 2
 	if len(src) < driveLen {
 		return src
 	}

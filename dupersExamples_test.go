@@ -44,7 +44,6 @@ func Example_dupe() {
 }
 
 func Example_search() {
-
 	const (
 		term = ".zip" // partial or full name of a file or directory
 		fn   = true   // match only filenames
