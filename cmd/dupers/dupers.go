@@ -1,6 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
 
-// Dupers is a blazing-fast file duplicate checker and filename search tool.
+// Dupers a command-line tool for blazing-fast, duplicate file checks and filename searches.
 package main
 
 import (
@@ -72,7 +72,7 @@ func main() {
 			out.ErrFatal(err)
 		}
 	case "search":
-		if err := task.Search(&f, false, flag.Args()...); err != nil {
+		if err := task.Searchr(&f, false, flag.Args()...); err != nil {
 			out.ErrFatal(err)
 		}
 	case dbf, dbs, dbk, dcn, dex, dim, dls, dmv, drm, dup, dupp:

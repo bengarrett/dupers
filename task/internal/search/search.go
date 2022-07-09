@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/bengarrett/dupers/database"
-	"github.com/bengarrett/dupers/internal/cmd"
 	"github.com/bengarrett/dupers/internal/out"
 )
 
@@ -31,33 +30,6 @@ func CmdErr(l int, test bool) error {
 	}
 	out.ErrFatal(nil)
 	return nil
-}
-
-func Compare(f *cmd.Flags, term string, buckets []string, test bool) (*database.Matches, error) {
-	var err error
-	var m *database.Matches
-	if f == nil {
-		return nil, ErrNoFlags
-	}
-	switch {
-	case *f.Filename && !*f.Exact:
-		if m, err = database.CompareBaseNoCase(term, buckets...); err != nil {
-			return nil, Error(err, test)
-		}
-	case *f.Filename && *f.Exact:
-		if m, err = database.CompareBase(term, buckets...); err != nil {
-			return nil, Error(err, test)
-		}
-	case !*f.Filename && !*f.Exact:
-		if m, err = database.CompareNoCase(term, buckets...); err != nil {
-			return nil, Error(err, test)
-		}
-	case !*f.Filename && *f.Exact:
-		if m, err = database.Compare(term, buckets...); err != nil {
-			return nil, Error(err, test)
-		}
-	}
-	return m, nil
 }
 
 // Error parses the errors from search compares.

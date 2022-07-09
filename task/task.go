@@ -31,6 +31,7 @@ var (
 	ErrArgs   = errors.New("no buckets were given as arguments")
 	ErrCfg    = errors.New("config cannot be a nil value")
 	ErrCmd    = errors.New("command is unknown")
+	ErrFast   = errors.New("the fast method cannot be used in this situation")
 	ErrFlag   = errors.New("flags cannot be a nil value")
 	ErrNil    = errors.New("argument cannot be a nil value")
 	ErrSyntax = errors.New("command line arguments syntax")
@@ -164,7 +165,7 @@ func Dupe(c *dupe.Config, f *cmd.Flags, args ...string) error { // nolint:cyclop
 		out.DebugLn("walksource complete.")
 	}
 	// walk, scan and save file paths and hashes to the database
-	duplicate.Lookup(c, f)
+	Lookup(c, *f.Lookup)
 	if !c.Quiet {
 		fmt.Print(out.RMLine())
 	}
@@ -200,8 +201,67 @@ func Help() string {
 	return b.String()
 }
 
-// Search parses the commands that handle search.
-func Search(f *cmd.Flags, test bool, args ...string) error {
+// Lookup both cleans and then updates the buckets with file system changes.
+// The fast bool queries the database instead of the file system for a quicker match.
+func Lookup(c *dupe.Config, fast bool) {
+	if c.Debug {
+		out.DebugLn("dupe lookup.")
+	}
+	// normalise bucket names
+	for i, b := range c.All() {
+		abs, err := database.Abs(string(b))
+		if err != nil {
+			out.ErrCont(err)
+			c.All()[i] = ""
+			continue
+		}
+		c.All()[i] = dupe.Bucket(abs)
+	}
+	buckets := make([]string, 0, len(c.All()))
+	for _, b := range c.All() {
+		buckets = append(buckets, string(b))
+	}
+	if !fast && len(buckets) > 0 {
+		if c.Debug {
+			out.DebugLn("non-fast mode, database cleanup.")
+		}
+		if err := database.Clean(c.Quiet, c.Debug, buckets...); err != nil {
+			out.ErrCont(err)
+		}
+	}
+	if fast {
+		if err := lookup(c); err != nil {
+			return
+		}
+	}
+	if c.Debug {
+		out.DebugLn("walk the buckets.")
+	}
+	c.WalkDirs()
+}
+
+func lookup(c *dupe.Config) error {
+	if c.Debug {
+		out.DebugLn("read the hash values in the buckets.")
+	}
+	fastErr := false
+	for _, b := range c.All() {
+		if i, err := c.SetCompares(b); err != nil {
+			out.ErrCont(err)
+		} else if i > 0 {
+			continue
+		}
+		fastErr = true
+		fmt.Println("The -fast flag cannot be used for this dupe query")
+	}
+	if !fastErr {
+		return ErrFast
+	}
+	return nil
+}
+
+// Searchr parses the commands that handle search.
+func Searchr(f *cmd.Flags, test bool, args ...string) error {
 	if f == nil {
 		return ErrFlag
 	}
@@ -209,22 +269,30 @@ func Search(f *cmd.Flags, test bool, args ...string) error {
 	if err := search.CmdErr(l, test); err != nil {
 		return err
 	}
-	term, buckets := args[1], []string{}
+
+	s := Search{
+		Term:     args[1],
+		Filename: *f.Filename,
+		Exact:    *f.Exact,
+		Test:     test,
+		Buckets:  nil,
+	}
 	const minArgs = 2
 	if l > minArgs {
-		buckets = args[minArgs:]
+		s.Buckets = args[minArgs:]
 	}
-	m, err := search.Compare(f, term, buckets, false)
+	m, err := s.Compare()
 	if err != nil {
 		return err
 	}
-	fmt.Print(dupe.Print(*f.Quiet, *f.Exact, term, m))
+
+	fmt.Print(dupe.Print(*f.Quiet, *f.Exact, s.Term, m))
 	if !*f.Quiet {
 		l := 0
 		if m != nil {
 			l = len(*m)
 		}
-		fmt.Println(cmd.SearchSummary(l, term, *f.Exact, *f.Filename))
+		fmt.Println(cmd.SearchSummary(l, s.Term, *f.Exact, *f.Filename))
 	}
 	return nil
 }
@@ -277,4 +345,38 @@ func checkDupePaths(c *dupe.Config) {
 	if !out.YN("Is this what you want", out.No) {
 		os.Exit(0)
 	}
+}
+
+// Search request to find a file or directory name within the buckets.
+type Search struct {
+	Term     string   // Term to match, either a partial or complete file or directory name.
+	Filename bool     // Filename base name matches only, ignoring any directory paths.
+	Exact    bool     // Exact case sensitive matching.
+	Test     bool     // Test mode for unit tests.
+	Buckets  []string // Buckets to search.
+}
+
+// Compare finds matches of the term within the buckets.
+func (s Search) Compare() (*database.Matches, error) {
+	var err error
+	var m *database.Matches
+	switch {
+	case s.Filename && !s.Exact:
+		if m, err = database.CompareBaseNoCase(s.Term, s.Buckets...); err != nil {
+			return nil, search.Error(err, s.Test)
+		}
+	case s.Filename && s.Exact:
+		if m, err = database.CompareBase(s.Term, s.Buckets...); err != nil {
+			return nil, search.Error(err, s.Test)
+		}
+	case !s.Filename && !s.Exact:
+		if m, err = database.CompareNoCase(s.Term, s.Buckets...); err != nil {
+			return nil, search.Error(err, s.Test)
+		}
+	case !s.Filename && s.Exact:
+		if m, err = database.Compare(s.Term, s.Buckets...); err != nil {
+			return nil, search.Error(err, s.Test)
+		}
+	}
+	return m, nil
 }
