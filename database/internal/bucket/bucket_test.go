@@ -2,22 +2,31 @@
 package bucket_test
 
 import (
+	"log"
 	"os"
 	"testing"
 
 	"github.com/bengarrett/dupers/database/internal/bucket"
 	"github.com/bengarrett/dupers/internal/mock"
+	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"
 )
 
+func init() { //nolint:gochecknoinits
+	color.Enable = false
+	if err := mock.TestRemove(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+// TestCleaner_Clean is the cause of some sporadic test failures,
+// especially when running multiple test counts.
 func TestCleaner_Clean(t *testing.T) {
 	if err := mock.TestRemove(); err != nil {
 		t.Error(err)
-		return
 	}
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
-		return
 	}
 	mdb, err := mock.Open()
 	if err != nil {
@@ -93,10 +102,6 @@ func TestAbs(t *testing.T) {
 }
 
 func TestCount(t *testing.T) {
-	if err := mock.TestRemove(); err != nil {
-		t.Error(err)
-		return
-	}
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 		return

@@ -20,6 +20,15 @@ func TestRootDir(t *testing.T) {
 	}
 }
 
+func TestBucket1(t *testing.T) {
+	s, err := mock.Bucket1()
+	if err != nil {
+		t.Errorf("Bucket1() error = %v, want nil", err)
+	} else if s == "" {
+		t.Errorf("Bucket1() s is empty")
+	}
+}
+
 func TestBucket2(t *testing.T) {
 	s, err := mock.Bucket2()
 	if err != nil {

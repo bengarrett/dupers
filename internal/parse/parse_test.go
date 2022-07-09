@@ -2,7 +2,9 @@
 package parse_test
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -13,7 +15,7 @@ import (
 )
 
 const (
-	bucket1 = "../test/bucket1"
+	bucket1 = "../../test/bucket1"
 	file1   = "../../test/bucket1/0vlLaUEvzAWP"
 	file2   = "../../test/bucket1/GwejJkMzs3yP"
 	// checksums created from sha256sum <filename>.
@@ -37,9 +39,13 @@ func initBuckets() (parse.Parser, error) {
 	if err != nil {
 		return p, err
 	}
+	fmt.Println("database:", db.Path())
 	b1, err := mock.Bucket1()
 	if err != nil {
 		return p, err
+	}
+	if _, err := os.Stat(b1); errors.Is(err, os.ErrNotExist) {
+		return p, fmt.Errorf("%w: %s", err, b1)
 	}
 	b2, err := mock.Bucket2()
 	if err != nil {
@@ -95,6 +101,9 @@ func TestSetBuckets(t *testing.T) {
 	}
 	const expected = 2
 	if l := len(p.All()); l != expected {
+		for i, b := range p.All() {
+			t.Errorf("%d, %v\n", i, b)
+		}
 		t.Errorf("Expected %d, got %d", expected, l)
 	}
 }
@@ -108,17 +117,15 @@ func TestTimer(t *testing.T) {
 }
 
 func TestParser_SetCompares(t *testing.T) {
+	p := parse.Parser{}
+	p.OpenRead()
+	defer p.DB.Close()
 	b1, err := mock.Bucket1()
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	b2, err := mock.Bucket2()
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	item1, err := mock.Item1()
 	if err != nil {
 		t.Error(err)
 		return
@@ -138,18 +145,6 @@ func TestParser_SetCompares(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p, err := initBuckets()
-			if err != nil {
-				t.Error(err)
-				return
-			}
-			defer p.DB.Close()
-			if tt.name == "mock2" {
-				if err := mock.CreateItem(b2, item1, p.DB); err != nil {
-					t.Error(err)
-					return
-				}
-			}
 			got, err := p.SetCompares(parse.Bucket(tt.args.name))
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Parser.SetCompares() error = %v, wantErr %v", err, tt.wantErr)

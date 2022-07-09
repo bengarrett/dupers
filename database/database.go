@@ -53,7 +53,7 @@ const (
 )
 
 var (
-	ErrBucketNotFound = bolt.ErrBucketNotFound
+	ErrBucketNotFound = fmt.Errorf("%w in the database", bolt.ErrBucketNotFound)
 	ErrDBClean        = errors.New("database has nothing to clean")
 	ErrDBCompact      = errors.New("database compression has not reduced the size")
 	ErrDBEmpty        = errors.New("database is empty and contains no items")

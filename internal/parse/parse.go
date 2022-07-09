@@ -84,9 +84,20 @@ func (p *Parser) SetBuckets() error {
 		return err
 	}
 	for _, name := range names {
-		p.Buckets = append(p.Buckets, Bucket(name))
+		if !p.findBucket(name) {
+			p.Buckets = append(p.Buckets, Bucket(name))
+		}
 	}
 	return nil
+}
+
+func (p Parser) findBucket(name string) bool {
+	for _, b := range p.Buckets {
+		if Bucket(name) == b {
+			return true
+		}
+	}
+	return false
 }
 
 // SetBucket adds the bucket name to a list of buckets.
@@ -100,7 +111,7 @@ func (p *Parser) SetBucket(names ...string) {
 func (p *Parser) SetCompares(name Bucket) (int, error) {
 	ls, err := database.List(string(name), p.DB)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("%w: %s", err, name)
 	}
 	if p.Compare == nil {
 		p.Compare = make(Checksums)

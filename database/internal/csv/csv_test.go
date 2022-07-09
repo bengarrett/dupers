@@ -3,6 +3,7 @@ package csv_test
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -12,7 +13,15 @@ import (
 
 	"github.com/bengarrett/dupers/database/internal/csv"
 	"github.com/bengarrett/dupers/internal/mock"
+	"github.com/gookit/color"
 )
+
+func init() { //nolint:gochecknoinits
+	color.Enable = false
+	if err := mock.TestRemove(); err != nil {
+		log.Fatal(err)
+	}
+}
 
 func mockDir() string {
 	sep := string(os.PathSeparator)

@@ -194,7 +194,6 @@ func TestOpen() error {
 		return err
 	}
 	defer db.Close()
-
 	if err := db.Update(func(tx *bolt.Tx) error {
 		// delete any existing buckets from the mock database
 		if err := tx.ForEach(func(name []byte, b *bolt.Bucket) error {
@@ -223,7 +222,6 @@ func TestOpen() error {
 	}); err != nil {
 		return err
 	}
-
 	return db.Close()
 }
 
