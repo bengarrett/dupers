@@ -1,4 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
+
+// Package parse contains functions that interact with the internal Parser struct.
 package parse
 
 import (

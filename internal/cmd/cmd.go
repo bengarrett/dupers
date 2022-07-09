@@ -1,4 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
+
+// Package cmd interprets the command line arguments used by cmd/dupers.
 package cmd
 
 import (

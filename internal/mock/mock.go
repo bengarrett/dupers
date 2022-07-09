@@ -1,6 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
 
-// Mock is a set of simulated database and bucket functions for unit testing.
+// Package mock contains simulated database and bucket functions for unit testing.
 package mock
 
 import (

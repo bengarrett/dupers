@@ -1,4 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
+
+// Package out handles the formatting of strings for stdout and stderr.
 package out
 
 import (
