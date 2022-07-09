@@ -1,6 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
 
-// Dupers is a blazing-fast file duplicate checker and filename search tool.
+// Dupers is a blazing-fast duplicate file checker and filename matcher.
 package dupers
 
 import (
