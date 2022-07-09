@@ -92,7 +92,7 @@ func TestCheck(t *testing.T) {
 		t.Errorf("Check() error = %v", err)
 	}
 	const invalid = "invalidpathdoesnotexist"
-	if err := database.Check(invalid); errors.Is(err, database.ErrDBNotFound) {
+	if err := database.Check(invalid); !errors.Is(err, database.ErrDBNotFound) {
 		t.Errorf("Check() error = %v, want %v", err, database.ErrDBNotFound)
 	}
 	b0, err := filepath.Abs(test0b)
@@ -100,7 +100,7 @@ func TestCheck(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	if err := database.Check(b0); errors.Is(err, database.ErrDBZeroByte) {
+	if err := database.Check(b0); !errors.Is(err, database.ErrDBZeroByte) {
 		t.Errorf("Check() error = %v, want %v", err, database.ErrDBZeroByte)
 	}
 }
@@ -131,19 +131,13 @@ func TestExist(t *testing.T) {
 }
 
 func TestClean(t *testing.T) {
-	type args struct {
-		quiet bool
-		debug bool
-	}
 	tests := []struct {
 		name    string
-		args    args
+		quiet   bool
 		wantErr bool
 	}{
-		{"1", args{quiet: false, debug: false}, false},
-		{"2", args{quiet: true, debug: false}, false},
-		{"3", args{quiet: false, debug: true}, true},
-		{"4", args{quiet: true, debug: true}, false},
+		{"1", true, false},
+		{"2", true, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -151,21 +145,22 @@ func TestClean(t *testing.T) {
 				t.Error(err)
 				return
 			}
-			err := database.Clean(tt.args.quiet, tt.args.debug)
-			if tt.args.quiet == true {
-				if (err != nil) != tt.wantErr {
-					t.Errorf("Clean() error = %v, wantErr %v", err, tt.wantErr)
+			// must run the test in this defer func otherwise,
+			// unpredictable results are returned when running
+			// multiple test counts.
+			defer func() {
+				err := database.Clean(tt.quiet, false)
+				if tt.quiet == true {
+					if (err != nil) != tt.wantErr {
+						t.Errorf("Clean() error = %v, wantErr %v", err, tt.wantErr)
+						return
+					}
 					return
 				}
-				return
-			}
-			if tt.args.debug == true && !errors.Is(database.ErrDBClean, err) {
-				t.Errorf("Clean() expected %v error, got %v", database.ErrDBClean, err)
-				return
-			}
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Clean() error = %v, wantErr %v", err, tt.wantErr)
-			}
+				if (err != nil) != tt.wantErr {
+					t.Errorf("Clean() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			}()
 		})
 	}
 }
@@ -177,18 +172,20 @@ func TestCompact(t *testing.T) {
 	}{
 		{"temp", false},
 	}
-	if err := mock.TestOpen(); err != nil {
-		t.Error(err)
-	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			const debugOutput = true
-			if err := database.Compact(debugOutput); (err != nil) != tt.wantErr {
-				if !errors.Is(err, database.ErrDBCompact) {
-					t.Errorf("Compact() error = %v, wantErr %t", err, tt.wantErr)
-					return
-				}
+			if err := mock.TestOpen(); err != nil {
+				t.Error(err)
 			}
+			defer func() {
+				const debugOutput = true
+				if err := database.Compact(debugOutput); (err != nil) != tt.wantErr {
+					if !errors.Is(err, database.ErrDBCompact) {
+						t.Errorf("Compact() error = %v, wantErr %t", err, tt.wantErr)
+						return
+					}
+				}
+			}()
 		})
 	}
 }
@@ -506,7 +503,7 @@ func TestInfo(t *testing.T) {
 		t.Errorf("Info() should display the mock database path, %v\ngot:\n%v", want, info)
 	}
 	_, err = database.Info(test0b + "placeholderfiller")
-	if errors.Is(err, database.ErrDBNotFound) {
+	if !errors.Is(err, database.ErrDBNotFound) {
 		t.Errorf("Info() not found test should return, %v, got %v", database.ErrDBNotFound, err)
 	}
 }

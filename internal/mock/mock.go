@@ -184,6 +184,9 @@ func Read(name string) (sum [32]byte, err error) {
 // Note: If this test fails under Windows, try running `go test ./...` after closing VS Code.
 // https://github.com/electron-userland/electron-builder/issues/3666
 func TestOpen() error {
+	if err := TestRemove(); err != nil {
+		return fmt.Errorf("failed to remove mock db in testopen: %w", err)
+	}
 	path, err := Name()
 	if err != nil {
 		return err
@@ -222,7 +225,7 @@ func TestOpen() error {
 	}); err != nil {
 		return err
 	}
-	return db.Close()
+	return nil
 }
 
 // TestRemove deletes the mock database.
