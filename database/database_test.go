@@ -184,13 +184,13 @@ func TestCompact(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := database.Compact(false); (err != nil) != tt.wantErr {
-				if !errors.As(err, &database.ErrDBCompact) {
+				if !errors.Is(err, database.ErrDBCompact) {
 					t.Errorf("Compact() error = %v, wantErr %t", err, tt.wantErr)
 					return
 				}
 			}
 			if err := database.Compact(true); (err != nil) != tt.wantErr {
-				if !errors.As(err, &database.ErrDBCompact) {
+				if !errors.Is(err, database.ErrDBCompact) {
 					t.Errorf("Compact() error = %v, wantErr %t", err, tt.wantErr)
 					return
 				}

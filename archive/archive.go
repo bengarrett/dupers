@@ -1,4 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
+
+// Package archive handles the metadata of known file archive types.
 package archive
 
 import (
@@ -36,11 +38,31 @@ var (
 	ErrType     = errors.New("archiver type is unsupported")
 )
 
-// Extension finds either a compressed file extension or mime type and returns its match.
-func Extension(find string) string {
-	// mime types refer to data types and do not contain encoding information
-	// * mime not detected by h2non/filetype
-	ext := map[string]string{
+// Extension returns the metadata type for a file archive based on the string value.
+// If the string includes a file name or extension, a MIME datatype is returned.
+// If string value matches a known MIME datatype, then the correlating file extension is returned.
+func Extension(s string) string {
+	f := strings.ToLower(s)
+	for ext, mime := range exts() {
+		if f == ext {
+			return mime
+		}
+		if f == mime {
+			return ext
+		}
+		if !strings.HasPrefix(s, ".") {
+			if ext == fmt.Sprintf(".%s", f) {
+				return ext
+			}
+		}
+	}
+	return ""
+}
+
+// exts returns known archive mime types, these refer to data types and do not contain encoding information.
+// Known mime types are those detected by the h2non/filetype library.
+func exts() map[string]string {
+	return map[string]string{
 		Ext7z:      Mime7z,
 		".bz2":     MimeBZ2,
 		".gz":      MimeGZ,   // gzip
@@ -65,24 +87,9 @@ func Extension(find string) string {
 		".zip":     MimeZip,
 		".zst":     MimeZ, // Zstandard (zstd)*
 	}
-	f := strings.ToLower(find)
-	for k, v := range ext {
-		if k == f {
-			return v
-		}
-		if v == f {
-			return k
-		}
-		if !strings.HasPrefix(find, ".") {
-			if k == fmt.Sprintf(".%s", f) {
-				return k
-			}
-		}
-	}
-	return ""
 }
 
-// MIME returns the application MIME type of a filename based on its extension.
+// MIME returns the application MIME type of the named file based on its extension.
 func MIME(name string) string {
 	ext := filepath.Ext(name)
 	if ext == "" {
@@ -94,9 +101,9 @@ func MIME(name string) string {
 	return ""
 }
 
-// ReadMIME opens and reads the named file and returns its compressed application MIME type.
+// ReadMIME reads the named file and returns its compressed application MIME type.
 // If the compression format is unsupported or unknown an error is returned.
-func ReadMIME(name string) (mime string, err error) {
+func ReadMIME(name string) (string, error) {
 	f, err := os.Open(name)
 	if err != nil {
 		return "", err
