@@ -59,8 +59,6 @@ var (
 	ErrDBEmpty        = errors.New("database is empty and contains no items")
 	ErrDBNotFound     = errors.New("database file does not exist")
 	ErrDBZeroByte     = errors.New("database is a zero byte file")
-
-	TestMode = false // nolint: gochecknoglobals
 )
 
 // Abs returns an absolute representation of the named bucket.
@@ -101,14 +99,15 @@ func All(db *bolt.DB) (names []string, err error) {
 
 // Check the size and existence of the database file.
 func Check() error {
-	path, err := DB()
+	path, err := DB(false)
 	if err != nil {
 		return err
 	}
+	w := os.Stdout
 	i, err1 := os.Stat(path)
 	if os.IsNotExist(err1) {
 		out.ErrCont(ErrDBNotFound)
-		fmt.Printf("\n%s\nThe database will be located at: %s\n", NotFound, path)
+		fmt.Fprintf(w, "\n%s\nThe database will be located at: %s\n", NotFound, path)
 		return ErrDBNotFound // 0
 	} else if err1 != nil {
 		return err
@@ -116,7 +115,7 @@ func Check() error {
 	if i.Size() == 0 {
 		out.ErrCont(ErrDBZeroByte)
 		s := "This error occures when dupers cannot save any data to the file system."
-		fmt.Printf("\n%s\nThe database is located at: %s\n", s, path)
+		fmt.Fprintf(w, "\n%s\nThe database is located at: %s\n", s, path)
 		return ErrDBZeroByte // 1
 	}
 	return nil
@@ -146,7 +145,7 @@ func Exist(bucket string, db *bolt.DB) error {
 // Stale items are file pointers that no longer exist on the host file system.
 func Clean(quiet, debug bool, buckets ...string) error {
 	cleanDebug(debug, buckets)
-	path, err := DB()
+	path, err := DB(false)
 	if err != nil {
 		return err
 	}
@@ -191,15 +190,16 @@ func Clean(quiet, debug bool, buckets ...string) error {
 	if len(buckets) == errs {
 		return nil
 	}
+	w := os.Stdout
 	if debug && finds == 0 {
-		fmt.Println("")
+		fmt.Fprintln(w, "")
 		return ErrDBClean
 	}
 	if finds > 0 {
-		fmt.Printf("\rThe database removed %d stale items\n", finds)
+		fmt.Fprintf(w, "\rThe database removed %d stale items\n", finds)
 		return nil
 	}
-	fmt.Println("")
+	fmt.Fprintln(w, "")
 	return nil
 }
 
@@ -242,7 +242,7 @@ func Compact(debug bool) error {
 		out.PBug("running database compact")
 	}
 	// active database
-	src, err := DB()
+	src, err := DB(false)
 	if err != nil {
 		return err
 	}
@@ -401,7 +401,7 @@ func Count(name string, db *bolt.DB) (items int, err error) {
 }
 
 // DB returns the absolute path of the database.
-func DB() (string, error) {
+func DB(testing bool) (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		dir, err = os.UserHomeDir()
@@ -410,7 +410,7 @@ func DB() (string, error) {
 		}
 	}
 	dir = filepath.Join(dir, subdir)
-	if TestMode {
+	if testing {
 		dir = filepath.Join(dir, "test")
 	}
 	// create database directory if it doesn't exist
@@ -455,7 +455,7 @@ func Create(path string) error {
 
 // Info returns a printout of the buckets and their statistics.
 func Info() (string, error) {
-	path, err := DB()
+	path, err := DB(false)
 	if err != nil {
 		return "", err
 	}
@@ -547,7 +547,7 @@ func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, int, error) {
 
 // IsEmpty returns true when the database has no buckets.
 func IsEmpty() (bool, error) {
-	path, err := DB()
+	path, err := DB(false)
 	if err != nil {
 		return true, err
 	}

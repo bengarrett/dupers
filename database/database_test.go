@@ -23,11 +23,6 @@ const (
 	testDst = "../test/tmp/ppFlTD6QQYlS"
 )
 
-func init() { //nolint:gochecknoinits
-	color.Enable = false
-	database.TestMode = true
-}
-
 func TestAll(t *testing.T) {
 	color.Enable = false
 	tests := []struct {
@@ -56,6 +51,7 @@ func TestAll(t *testing.T) {
 }
 
 func TestClean(t *testing.T) {
+	color.Enable = false
 	type args struct {
 		quiet bool
 		debug bool
@@ -96,6 +92,7 @@ func TestClean(t *testing.T) {
 }
 
 func TestCompact(t *testing.T) {
+	color.Enable = false
 	tests := []struct {
 		name    string
 		wantErr bool
@@ -119,6 +116,7 @@ func TestCompact(t *testing.T) {
 }
 
 func TestCompare(t *testing.T) {
+	color.Enable = false
 	type args struct {
 		s       string
 		buckets []string
@@ -160,11 +158,12 @@ func TestCompare(t *testing.T) {
 	}
 }
 
-func TestCompareBase(t *testing.T) { // nolint:funlen
+func TestCompareBase(t *testing.T) { //nolint:funlen
 	if err := mock.TestRemove(); err != nil {
 		t.Error(err)
 		return
 	}
+	color.Enable = false
 	type args struct {
 		s       string
 		buckets []string
@@ -231,6 +230,7 @@ func TestCompareNoCase(t *testing.T) {
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
+	color.Enable = false
 	type args struct {
 		s       string
 		buckets []string
@@ -268,6 +268,7 @@ func TestExist(t *testing.T) {
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
+	color.Enable = false
 	t.Run("exist", func(t *testing.T) {
 		if err := database.Exist(mock.Bucket1(), nil); err != nil {
 			t.Errorf("Exist() bucket1 error = %v, want nil", err)
@@ -285,6 +286,7 @@ func TestExist(t *testing.T) {
 }
 
 func TestIsEmpty(t *testing.T) {
+	color.Enable = false
 	t.Run("is empty", func(t *testing.T) {
 		if err := mock.TestRemove(); err != nil {
 			t.Error(err)
@@ -328,6 +330,7 @@ func TestList(t *testing.T) {
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
+	color.Enable = false
 	tests := []struct {
 		name    string
 		bucket  string
@@ -357,6 +360,7 @@ func TestList(t *testing.T) {
 }
 
 func TestInfo(t *testing.T) {
+	color.Enable = false
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
@@ -376,6 +380,7 @@ func TestRename(t *testing.T) {
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
+	color.Enable = false
 	t.Run("rename", func(t *testing.T) {
 		if err := database.Rename(mock.Bucket2(), mock.Bucket1()); err == nil {
 			t.Error("Rename() bucket2 to bucket1 error = nil, want error")
@@ -396,6 +401,7 @@ func TestRename(t *testing.T) {
 }
 
 func TestCreate(t *testing.T) {
+	color.Enable = false
 	tmp, err := ioutil.TempFile(os.TempDir(), "dupers_create_test.db")
 	if err != nil {
 		t.Error(err)
@@ -426,8 +432,9 @@ func TestDB(t *testing.T) {
 		path string
 		err  error
 	)
+	color.Enable = false
 	t.Run("sequence 1", func(t *testing.T) {
-		path, err = database.DB()
+		path, err = database.DB(true)
 		if err != nil {
 			t.Errorf("DB() #1 error = %v", err)
 			return
@@ -441,7 +448,7 @@ func TestDB(t *testing.T) {
 		}
 	})
 	t.Run("sequence 2", func(t *testing.T) {
-		path, err = database.DB()
+		path, err = database.DB(true)
 		if err != nil {
 			t.Errorf("DB() #2 error = %v", err)
 			return
@@ -465,7 +472,7 @@ func TestDB(t *testing.T) {
 		if s.Size() != 0 {
 			t.Errorf("DB Stat error, expected a zero-byte file: %s", path)
 		}
-		path, err = database.DB()
+		path, err = database.DB(true)
 		if err != nil {
 			t.Errorf("DB() #3 error = %v", err)
 			return

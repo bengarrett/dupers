@@ -48,7 +48,7 @@ const (
 	winOS = "windows"
 )
 
-// ChkWinDirs checks the arguments for invalid escaped quoted paths when using using Windows cmd.exe.
+// ChkWinDirs checks the arguments for invalid escaped quoted paths when using Windows cmd.exe.
 func ChkWinDirs() error {
 	if runtime.GOOS != winOS {
 		return nil
@@ -107,7 +107,7 @@ func Database(c *dupe.Config, quiet bool, args ...string) error {
 }
 
 // Dupe parses the dupe command.
-func Dupe(c *dupe.Config, f *cmd.Flags, args ...string) error { // nolint:cyclop,funlen
+func Dupe(c *dupe.Config, f *cmd.Flags, args ...string) error {
 	if c == nil {
 		return ErrCfg
 	}
@@ -151,6 +151,10 @@ func Dupe(c *dupe.Config, f *cmd.Flags, args ...string) error { // nolint:cyclop
 		s := fmt.Sprintf("buckets: %s", c.PrintBuckets())
 		out.PBug(s)
 	}
+	return walkScan(c, f, args...)
+}
+
+func walkScan(c *dupe.Config, f *cmd.Flags, args ...string) error {
 	// files or directories to compare (these are not saved to database)
 	if err := c.WalkSource(); err != nil {
 		return err

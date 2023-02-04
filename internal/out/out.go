@@ -119,7 +119,8 @@ func Response(s string, quiet bool) {
 		return
 	}
 
-	fmt.Printf("%s\n", s)
+	w := os.Stdout
+	fmt.Fprintf(w, "%s\n", s)
 }
 
 // RMLine uses ANSI to erase the current line in stdout.
@@ -191,9 +192,10 @@ func Status(count, total int, m Mode) string {
 func YN(question string, recommend YND) bool {
 	const no, yes, cursorUp = "n", "y", "\x1b[1A"
 
+	w := os.Stdout
 	p, def := ynDefine(recommend)
 	prompt := fmt.Sprintf("\r%s?%s[%s]: ", question, def, p)
-	fmt.Printf("%s", prompt)
+	fmt.Fprintf(w, "%s", prompt)
 
 	for {
 		r := bufio.NewReader(os.Stdin)
@@ -212,10 +214,10 @@ func YN(question string, recommend YND) bool {
 		if b == EnterKey() {
 			switch recommend {
 			case Yes:
-				fmt.Printf("%s%s%s\n", cursorUp, prompt, "y")
+				fmt.Fprintf(w, "%s%s%s\n", cursorUp, prompt, "y")
 				return true
 			case No:
-				fmt.Printf("%s%s%s\n", cursorUp, prompt, "n")
+				fmt.Fprintf(w, "%s%s%s\n", cursorUp, prompt, "n")
 				return false
 			case Nil:
 				continue
@@ -246,7 +248,7 @@ func ynDefine(recommend YND) (p string, def string) {
 func Prompt(question string) string {
 	r := bufio.NewReader(os.Stdin)
 
-	fmt.Printf("\r%s?: ", question)
+	fmt.Fprintf(os.Stdout, "\r%s?: ", question)
 
 	for {
 		s, err := r.ReadString(EnterKey())

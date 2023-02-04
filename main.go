@@ -24,13 +24,14 @@ import (
 var ErrCmd = errors.New("command is unknown")
 
 // logo.txt by sensenstahl
+//
 //go:embed logo.txt
 var brand string
 
 var (
 	version = "0.0.0"
-	commit  = "unset" // nolint: gochecknoglobals
-	date    = "unset" // nolint: gochecknoglobals
+	commit  = "unset"
+	date    = "unset"
 )
 
 const (

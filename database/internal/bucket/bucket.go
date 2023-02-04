@@ -144,7 +144,7 @@ func Abs(name string) (string, error) {
 
 func printStat(debug, quiet bool, cnt, total int, k []byte) {
 	if !debug && !quiet {
-		fmt.Printf("%s", out.Status(cnt, total, out.Check))
+		fmt.Fprintf(os.Stdout, "%s", out.Status(cnt, total, out.Check))
 	}
 	if debug {
 		out.PBug("clean: " + string(k))
@@ -192,19 +192,20 @@ func count(b *bolt.Bucket, db *bolt.DB) (int, error) {
 // Rename prompts for confirmation for the use of the named bucket.
 func Rename(name string) string {
 	out.ErrCont(ErrBucketExists)
-	fmt.Printf("\nImport bucket name: %s\n\n", color.Debug.Sprint(name))
-	fmt.Println("The existing data in this bucket will overridden and any new data will be appended.")
+	w := os.Stdout
+	fmt.Fprintf(w, "\nImport bucket name: %s\n\n", color.Debug.Sprint(name))
+	fmt.Fprintln(w, "The existing data in this bucket will overridden and any new data will be appended.")
 	if out.YN("Do you want to continue using this bucket", out.Yes) {
 		return name
 	}
-	fmt.Println("\nPlease choose a new bucket, which must be an absolute directory path.")
+	fmt.Fprintln(w, "\nPlease choose a new bucket, which must be an absolute directory path.")
 	return out.Prompt(query)
 }
 
 // Stats checks the validity of the named bucket and prompts for user confirmation on errors.
 func Stats(name string) bool {
 	for {
-		fmt.Println()
+		fmt.Fprintln(os.Stdout)
 		if name = Stat(name, false); name != "" {
 			return true
 		}
@@ -212,8 +213,9 @@ func Stats(name string) bool {
 }
 
 func Stat(name string, test bool) string {
+	w := os.Stdout
 	printName := func() {
-		fmt.Printf("\nImport bucket directory: %s\n\n", color.Debug.Sprint(name))
+		fmt.Fprintf(w, "\nImport bucket directory: %s\n\n", color.Debug.Sprint(name))
 	}
 	if name == "" {
 		return ""
@@ -228,8 +230,8 @@ func Stat(name string, test bool) string {
 	if errors.Is(err, os.ErrNotExist) {
 		out.ErrCont(ErrBucketPath)
 		printName()
-		fmt.Println("You may still run dupe checks and searches without the actual files on your system.")
-		fmt.Println("Choosing no will prompt for a new bucket.")
+		fmt.Fprintln(w, "You may still run dupe checks and searches without the actual files on your system.")
+		fmt.Fprintln(w, "Choosing no will prompt for a new bucket.")
 		if !test {
 			if out.YN("Do you want to continue using this bucket", out.Yes) {
 				return abs
@@ -243,7 +245,7 @@ func Stat(name string, test bool) string {
 	if err != nil {
 		out.ErrCont(ErrBucketNotDir)
 		printName()
-		fmt.Println("You cannot use this path as a bucket, please choose an absolute directory path.")
+		fmt.Fprintln(w, "You cannot use this path as a bucket, please choose an absolute directory path.")
 		if !test {
 			return out.Prompt(query)
 		}

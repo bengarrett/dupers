@@ -322,13 +322,14 @@ func (c *Config) Removes() string {
 		out.ErrCont(err)
 	}
 	if !c.Test {
-		fmt.Printf("%s %s\n", color.Secondary.Sprint("Target directory:"), color.Debug.Sprint(root))
-		fmt.Println("Delete everything in the target directory, except for directories" +
+		w := os.Stdout
+		fmt.Fprintf(w, "%s %s\n", color.Secondary.Sprint("Target directory:"), color.Debug.Sprint(root))
+		fmt.Fprintln(w, "Delete everything in the target directory, except for directories"+
 			"\ncontaining unique Windows or MS-DOS programs and assets?")
 		if input := out.YN("Please confirm", out.Nil); !input {
 			os.Exit(0)
 		}
-		fmt.Println()
+		fmt.Fprintln(w)
 	}
 	return removes(root, files)
 }
@@ -446,7 +447,7 @@ func (c *Config) walkDir(root string, skip []string) error {
 			}
 			out.ErrFatal(errW)
 		}
-		fmt.Print(PrintWalk(false, c))
+		fmt.Fprint(os.Stdout, PrintWalk(false, c))
 		wg.Add(1)
 		go func() {
 			if err := c.Checksum(path, root); err != nil {
@@ -712,7 +713,7 @@ func walkCompare(root, path string, c *Config) error {
 	}
 	return c.DB.View(func(tx *bolt.Tx) error {
 		if !c.Test && !c.Quiet && !c.Debug {
-			fmt.Print(out.Status(c.Files, -1, out.Scan))
+			fmt.Fprint(os.Stdout, out.Status(c.Files, -1, out.Scan))
 		}
 		b := tx.Bucket([]byte(root))
 		if b == nil {
@@ -937,7 +938,7 @@ func (c *Config) Read(bucket, name, ext string) {
 	if c.Debug {
 		out.PBug("read archiver: " + name)
 	}
-	// catch any archiver panics such as as opening unsupported ZIP compression formats
+	// catch any archiver panics such as opening unsupported ZIP compression formats
 	defer c.readRecover(name)
 	cnt, filename := 0, name
 	// get the format by filename extension

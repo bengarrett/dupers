@@ -40,7 +40,7 @@ type Flags struct {
 	Version  *bool
 }
 
-// ChkWinDir checks the string for invalid, escaped quoted paths when using using Windows cmd.exe.
+// ChkWinDir checks the string for invalid, escaped quoted paths when using Windows cmd.exe.
 func ChkWinDir(s string) error {
 	if s == "" {
 		return nil

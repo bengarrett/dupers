@@ -4,6 +4,7 @@ package bucket
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -38,7 +39,7 @@ func Check(term, cmd, name string) {
 		return
 	}
 	out.ErrCont(ErrDatabaseName)
-	fmt.Printf("Cannot %s the bucket as no bucket name was provided.\n", term)
+	fmt.Fprintf(os.Stdout, "Cannot %s the bucket as no bucket name was provided.\n", term)
 	if cmd == dmv {
 		out.Example(fmt.Sprintf("\ndupers %s <bucket name> <new directory>", cmd))
 		out.ErrFatal(nil)

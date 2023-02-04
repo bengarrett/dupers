@@ -13,12 +13,8 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func init() { //nolint:gochecknoinits
-	color.Enable = false
-	database.TestMode = true
-}
-
 func TestBackup(t *testing.T) {
+	color.Enable = false
 	tests := []struct {
 		name    string
 		wantErr bool
@@ -53,6 +49,7 @@ func TestBackup(t *testing.T) {
 }
 
 func TestCopyFile(t *testing.T) {
+	color.Enable = false
 	type args struct {
 		src  string
 		dest string
@@ -91,7 +88,6 @@ func TestCopyFile(t *testing.T) {
 
 func TestCSVExport(t *testing.T) {
 	color.Enable = false
-
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
@@ -114,6 +110,7 @@ func TestCSVExport(t *testing.T) {
 }
 
 func TestImport(t *testing.T) {
+	color.Enable = false
 	db, err := mock.Open()
 	if err != nil {
 		t.Error(err)
@@ -144,6 +141,7 @@ func TestImport(t *testing.T) {
 }
 
 func TestScanner(t *testing.T) {
+	color.Enable = false
 	openBin, err := os.Open(mock.Item1())
 	if err != nil {
 		t.Error(err)
@@ -185,6 +183,7 @@ func TestScanner(t *testing.T) {
 }
 
 func TestCSVImport(t *testing.T) {
+	color.Enable = false
 	mdb, err := mock.Open()
 	if err != nil {
 		t.Error(err)
