@@ -1,10 +1,10 @@
 # .goreleaser.yml
 #
-# A specific config for homebrew releases that cannot be run as a Github Action.
+# A specific config for homebrew releases that cannot be run as a GitHub Action.
 #
 # Instructions:
 # 1) Push all changes to the bengarrett/dupers.
-# 2) On github publish a new release tag and let the Github Action finish.
+# 2) On GitHub publish a new release tag and let the GitHub Action finish.
 # 3) In a local terminal do the following:
 #
 # cd github/retrotxtgo
@@ -14,56 +14,34 @@
 #
 # To test the config:
 # goreleaser check
-# goreleaser release --skip-publish --skip-validate --rm-dist
-
+# goreleaser release --clean --snapshot
+project_name: dupers
 before:
   hooks:
     - go mod tidy
 builds:
+  - id: Linux
+    goos: ['linux']
+    goarch: ['amd64', 'arm64']
+    dir: ../
   - id: macOS
-    binary: dupers
     goos: ['darwin']
     goarch: ['amd64', 'arm64']
-    dir: ./
-
-archives:
-  - id: macOS
-    builds: ['macOS']
-    format: tar.gz
-    files:
-    - none*
-    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
-
-universal_binaries:
-  - id: macOS
-    name_template: dupers
-    replace: true
-
+    dir: ../
 release:
   github:
     owner: bengarrett
     name: homebrew-dupers
-
 brews:
-  -
-    name: dupers
-    ids: ['macOS']
-
-    tap:
+  - tap:
       owner: bengarrett
       name: homebrew-dupers
-
-    # Your app's homepage.
+    folder: Formula
+    goarm: "7"
     homepage: "https://github.com/bengarrett/dupers"
-
-    # Your app's description.
-    description: "A batch viewer and extractor for large collections of zip archives."
-
-    # SPDX identifier of your app's license.
+    description: "The blazing-fast file duplicate checker and filename search."
     license: "LGPL 3.0"
-
-    test: |
+    test: |-
       system "#{bin}/dupers --version"
-
-    install: |
+    install: |-
       bin.install "dupers"
