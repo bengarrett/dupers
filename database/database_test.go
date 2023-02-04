@@ -308,7 +308,7 @@ func TestIsEmpty(t *testing.T) {
 		}
 		// test & use remove bucket, leaving the db empty
 		if err1 := database.RM(mock.Bucket1()); err1 != nil {
-			fmt.Println(err1)
+			fmt.Fprintln(os.Stderr, err1)
 		}
 		// test empty db
 		wantErr, want = false, true
@@ -482,7 +482,7 @@ func TestDB(t *testing.T) {
 			t.Errorf("DB Stat error = %v", err)
 			return
 		}
-		fmt.Println("size", s.Size())
+		fmt.Fprintln(os.Stdout, "size", s.Size())
 		if s.Size() == 0 {
 			t.Errorf("DB Stat error, expected a new database file: %s", path)
 			return

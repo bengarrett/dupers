@@ -125,7 +125,7 @@ func Open() (*bolt.DB, error) {
 		return nil, err
 	}
 
-	fmt.Println("open mock db:", path)
+	fmt.Fprintln(os.Stdout, "open mock db:", path)
 	db, err := bolt.Open(path, PrivateFile, nil)
 	if err != nil {
 		return nil, err

@@ -83,7 +83,7 @@ func Database(c *dupe.Config, quiet bool, args ...string) error {
 		if err != nil {
 			out.ErrCont(err)
 		}
-		fmt.Println(s)
+		fmt.Fprintln(os.Stdout, s)
 	case dex:
 		bucket.Export(quiet, buckets)
 	case dim:
@@ -165,15 +165,15 @@ func walkScan(c *dupe.Config, f *cmd.Flags, args ...string) error {
 	// walk, scan and save file paths and hashes to the database
 	duplicate.Lookup(c, f)
 	if !c.Quiet {
-		fmt.Print(out.RMLine())
+		fmt.Fprint(os.Stdout, out.RMLine())
 	}
 	// print the found dupes
-	fmt.Print(c.Print())
+	fmt.Fprint(os.Stdout, c.Print())
 	// remove files
 	duplicate.Cleanup(c, f)
 	// summaries
 	if !c.Quiet {
-		fmt.Println(c.Status())
+		fmt.Fprintln(os.Stdout, c.Status())
 	}
 	return nil
 }
@@ -217,13 +217,13 @@ func Search(f *cmd.Flags, test bool, args ...string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Print(dupe.Print(*f.Quiet, *f.Exact, term, m))
+	fmt.Fprint(os.Stdout, dupe.Print(*f.Quiet, *f.Exact, term, m))
 	if !*f.Quiet {
 		l := 0
 		if m != nil {
 			l = len(*m)
 		}
-		fmt.Println(cmd.SearchSummary(l, term, *f.Exact, *f.Filename))
+		fmt.Fprintln(os.Stdout, cmd.SearchSummary(l, term, *f.Exact, *f.Filename))
 	}
 	return nil
 }
@@ -269,8 +269,9 @@ func checkDupePaths(c *dupe.Config) {
 	if len(c.All()) == 1 {
 		verb = "Bucket"
 	}
-	fmt.Printf("Directory to check:\n %s (%s)\n", c.ToCheck(), color.Info.Sprintf("%s files", p.Sprint(cc)))
-	fmt.Printf("%s to lookup, for finding duplicates:\n %s (%s)\n\n",
+	w := os.Stdout
+	fmt.Fprintf(w, "Directory to check:\n %s (%s)\n", c.ToCheck(), color.Info.Sprintf("%s files", p.Sprint(cc)))
+	fmt.Fprintf(w, "%s to lookup, for finding duplicates:\n %s (%s)\n\n",
 		verb, c.PrintBuckets(), color.Info.Sprintf("%s files", p.Sprint(bc)))
 	color.Warn.Println("\"Directory to check\" is NOT saved to the database.")
 	if !out.YN("Is this what you want", out.No) {

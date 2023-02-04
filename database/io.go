@@ -148,15 +148,16 @@ func CSVImport(name string, db *bolt.DB) (records int, err error) {
 	for range *lists {
 		items++
 	}
+	w := os.Stdout
 	p := message.NewPrinter(language.English)
 	s := "\n"
 	s += color.Secondary.Sprint("Found ") +
 		color.Primary.Sprintf("%s valid items", p.Sprint(number.Decimal(items))) +
 		color.Secondary.Sprint(" in the CSV file.")
-	fmt.Println(s)
+	fmt.Fprintln(w, s)
 	s = color.Secondary.Sprint("These will be added to the bucket: ")
 	s += color.Debug.Sprint(name)
-	fmt.Println(s)
+	fmt.Fprintln(w, s)
 	return Import(Bucket(name), lists, db)
 }
 
@@ -217,7 +218,7 @@ func (batch Lists) iterate(db *bolt.DB, name Bucket, imported, total int) (int, 
 			if err != nil {
 				return err
 			}
-			fmt.Print(out.Status(imported, total, out.Read))
+			fmt.Fprint(os.Stdout, out.Status(imported, total, out.Read))
 			if err := b.Put([]byte(string(path)), sum[:]); err != nil {
 				return err
 			}

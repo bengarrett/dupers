@@ -1005,7 +1005,7 @@ func (c *Config) readRecover(archive string) {
 	if err := recover(); err != nil {
 		if !c.Quiet {
 			if !c.Debug {
-				fmt.Println()
+				fmt.Fprintln(os.Stdout)
 			}
 			color.Warn.Printf("Unsupported archive: '%s'\n", archive)
 		}

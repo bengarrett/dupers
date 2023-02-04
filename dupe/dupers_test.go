@@ -264,7 +264,7 @@ func TestRemoves(t *testing.T) {
 	c.Source = abs
 	c.Sources = append(c.Sources, srcs)
 	s := c.Removes()
-	fmt.Println(s)
+	fmt.Fprintln(os.Stdout, s)
 }
 
 func TestChecksum(t *testing.T) {
@@ -316,7 +316,7 @@ func cleanDir(name string) error {
 		if _, err := os.Stat(path); err != nil {
 			return err
 		}
-		fmt.Println(path)
+		fmt.Fprintln(os.Stdout, path)
 		if err := os.RemoveAll(path); err != nil {
 			log.Println(err)
 		}

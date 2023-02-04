@@ -97,7 +97,7 @@ func parse(a *cmd.Aliases, c *dupe.Config, f *cmd.Flags) {
 		color.Enable = false
 	}
 	if s := options(a, f); s != "" {
-		fmt.Printf("%s", s)
+		fmt.Fprintf(os.Stdout, "%s", s)
 		os.Exit(0)
 	}
 	if *f.Debug {
@@ -120,7 +120,7 @@ func parse(a *cmd.Aliases, c *dupe.Config, f *cmd.Flags) {
 
 func defaultCmd(selection string) {
 	out.ErrCont(ErrCmd)
-	fmt.Printf("Command: '%s'\n\nSee the help for the available commands and options:\n", selection)
+	fmt.Fprintf(os.Stdout, "Command: '%s'\n\nSee the help for the available commands and options:\n", selection)
 	out.Example("dupers " + fhlp)
 	out.ErrFatal(nil)
 }

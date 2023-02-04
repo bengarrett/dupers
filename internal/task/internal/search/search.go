@@ -4,6 +4,7 @@ package search
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/bengarrett/dupers/database"
@@ -22,9 +23,10 @@ func CmdErr(l int, test bool) error {
 	if l > 1 {
 		return nil
 	}
+	w := os.Stdout
 	out.ErrCont(ErrSearch)
-	fmt.Println("A search expression can be a partial or complete filename,")
-	fmt.Println("or a partial or complete directory.")
+	fmt.Fprintln(w, "A search expression can be a partial or complete filename,")
+	fmt.Fprintln(w, "or a partial or complete directory.")
 	out.Example("\ndupers search <search expression> [optional, directories to search]")
 	if test {
 		return ErrSearch
@@ -68,7 +70,7 @@ func Error(err error, test bool) error {
 	}
 	if errors.As(err, &database.ErrBucketNotFound) {
 		out.ErrCont(err)
-		fmt.Println("\nTo add this directory to the database, run:")
+		fmt.Fprintln(os.Stdout, "\nTo add this directory to the database, run:")
 		dir := err.Error()
 		if errors.Unwrap(err) == nil {
 			s := fmt.Sprintf("%s: ", errors.Unwrap(err))

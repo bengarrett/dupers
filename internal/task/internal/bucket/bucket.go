@@ -39,7 +39,7 @@ func Check(term, cmd, name string) {
 		return
 	}
 	out.ErrCont(ErrDatabaseName)
-	fmt.Fprintf(os.Stdout, "Cannot %s the bucket as no bucket name was provided.\n", term)
+	fmt.Fprintf(os.Stderr, "Cannot %s the bucket as no bucket name was provided.\n", term)
 	if cmd == dmv {
 		out.Example(fmt.Sprintf("\ndupers %s <bucket name> <new directory>", cmd))
 		out.ErrFatal(nil)
@@ -56,9 +56,10 @@ func Export(quiet bool, args [2]string) {
 	if err != nil {
 		out.ErrFatal(err)
 	}
+	w := os.Stdout
 	if errEx := database.Exist(name, nil); errors.Is(errEx, database.ErrBucketNotFound) {
 		out.ErrCont(errEx)
-		fmt.Printf("Bucket name: %s\n", name)
+		fmt.Fprintf(w, "Bucket name: %s\n", name)
 		out.Example("\ndupers export <bucket name>")
 		out.ErrFatal(nil)
 	} else if errEx != nil {
@@ -77,7 +78,7 @@ func Export(quiet bool, args [2]string) {
 func Import(quiet bool, args [2]string) {
 	if args[1] == "" {
 		out.ErrCont(ErrImport)
-		fmt.Println("Cannot import file as no filepath was provided.")
+		fmt.Fprintln(os.Stderr, "Cannot import file as no filepath was provided.")
 		out.Example(fmt.Sprintf("\ndupers %s <filepath>", dim))
 		out.ErrFatal(nil)
 	}
@@ -110,14 +111,15 @@ func List(quiet bool, args [2]string) {
 	for name := range ls {
 		names = append(names, string(name))
 	}
+	w := os.Stdout
 	sort.Strings(names)
 	for _, name := range names {
 		sum := ls[database.Filepath(name)]
-		fmt.Printf("%x %s\n", sum, name)
+		fmt.Fprintf(w, "%x %s\n", sum, name)
 	}
 	if cnt := len(ls); !quiet && cnt > 0 {
 		p := message.NewPrinter(language.English)
-		fmt.Printf("%s %s\n", color.Primary.Sprint(p.Sprint(number.Decimal(cnt))),
+		fmt.Fprintf(w, "%s %s\n", color.Primary.Sprint(p.Sprint(number.Decimal(cnt))),
 			color.Secondary.Sprint("items listed. Checksums are 32 byte, SHA-256 (FIPS 180-4)."))
 	}
 }
@@ -130,9 +132,10 @@ func Move(quiet bool, args [3]string) {
 	if err != nil {
 		out.ErrFatal(err)
 	}
+	w := os.Stdout
 	if errEx := database.Exist(name, nil); errors.Is(errEx, database.ErrBucketNotFound) {
 		out.ErrCont(errEx)
-		fmt.Printf("Bucket name: %s\n", name)
+		fmt.Fprintf(w, "Bucket name: %s\n", name)
 		out.Example("\ndupers mv <bucket name> <new directory>")
 		out.ErrFatal(nil)
 	} else if errEx != nil {
@@ -140,7 +143,7 @@ func Move(quiet bool, args [3]string) {
 	}
 	if dir == "" {
 		out.ErrCont(ErrNewName)
-		fmt.Println("Cannot move bucket within the database as no new directory was provided.")
+		fmt.Fprintln(os.Stderr, "Cannot move bucket within the database as no new directory was provided.")
 		out.Example(fmt.Sprintf("\ndupers mv %s <new directory>", b))
 		out.ErrFatal(nil)
 	}
@@ -152,10 +155,10 @@ func Move(quiet bool, args [3]string) {
 		out.ErrFatal(ErrNewName)
 	}
 	if !quiet {
-		fmt.Printf("%s\t%s\n%s\t%s\n",
+		fmt.Fprintf(w, "%s\t%s\n%s\t%s\n",
 			color.Secondary.Sprint("Bucket name:"), color.Debug.Sprint(name),
 			"New name:", color.Debug.Sprint(newName))
-		fmt.Println("Renames the database bucket, but this does not make changes to the file system.")
+		fmt.Fprintln(w, "Renames the database bucket, but this does not make changes to the file system.")
 		if !out.YN("Rename bucket", out.No) {
 			return
 		}
@@ -188,9 +191,10 @@ func Remove(quiet bool, args [2]string) {
 		out.ErrCont(err)
 	}
 	if !quiet {
-		fmt.Printf("%s\t%s\n", color.Secondary.Sprint("Bucket:"), color.Debug.Sprint(name))
+		w := os.Stdout
+		fmt.Fprintf(w, "%s\t%s\n", color.Secondary.Sprint("Bucket:"), color.Debug.Sprint(name))
 		p := message.NewPrinter(language.English)
-		fmt.Printf("%s\t%s\n", color.Secondary.Sprint("Items:"), color.Debug.Sprint(p.Sprint(items)))
+		fmt.Fprintf(w, "%s\t%s\n", color.Secondary.Sprint("Items:"), color.Debug.Sprint(p.Sprint(items)))
 		if !out.YN("Remove this bucket", out.No) {
 			return
 		}
@@ -218,16 +222,17 @@ func rmBucket(name, retry string) {
 
 func notFound(name string, err error) {
 	out.ErrCont(err)
-	fmt.Printf("Bucket to remove: %s\n", color.Danger.Sprint(name))
+	w := os.Stdout
+	fmt.Fprintf(w, "Bucket to remove: %s\n", color.Danger.Sprint(name))
 	buckets, err2 := database.All(nil)
 	if err2 != nil {
 		out.ErrFatal(err2)
 	}
 	if len(buckets) == 0 {
-		fmt.Println("There are no buckets in the database")
+		fmt.Fprintln(w, "There are no buckets in the database")
 		out.ErrFatal(nil)
 	}
-	fmt.Printf("Buckets in use:   %s\n", strings.Join(buckets, "\n\t\t  "))
+	fmt.Fprintf(w, "Buckets in use:   %s\n", strings.Join(buckets, "\n\t\t  "))
 	out.ErrFatal(nil)
 }
 
@@ -251,6 +256,6 @@ func Rescan(c *dupe.Config, plus bool, args [2]string) {
 		out.ErrFatal(err)
 	}
 	if !c.Quiet {
-		fmt.Println(c.Status())
+		fmt.Fprintln(os.Stdout, c.Status())
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
 	"runtime"
 
 	"github.com/bengarrett/dupers/database"
@@ -26,49 +27,51 @@ const (
 
 // Cleanup runs the cleanup commands when the appropriate flags are set.
 func Cleanup(c *dupe.Config, f *cmd.Flags) {
+	w := os.Stdout
 	if *f.Sensen {
 		if c.Debug {
 			out.PBug("remove all non unique Windows and MS-DOS files.")
 		}
-		fmt.Print(c.Remove())
-		fmt.Print(c.Removes())
-		fmt.Print(c.Clean())
+		fmt.Fprint(w, c.Remove())
+		fmt.Fprint(w, c.Removes())
+		fmt.Fprint(w, c.Clean())
 		return
 	}
 	if *f.Rm || *f.RmPlus {
 		if c.Debug {
 			out.PBug("remove duplicate files.")
 		}
-		fmt.Print(c.Remove())
+		fmt.Fprint(w, c.Remove())
 		if *f.RmPlus {
 			if c.Debug {
 				out.PBug("remove empty directories.")
 			}
-			fmt.Print(c.Clean())
+			fmt.Fprint(w, c.Clean())
 		}
 	}
 }
 
 // CmdErr parses the arguments of the dupe command.
 func CmdErr(args, buckets, minArgs int, test bool) {
+	w := os.Stdout
 	if args < minArgs {
 		out.ErrCont(ErrNoArgs)
-		fmt.Println("\nThe dupe command requires a directory or file to check.")
+		fmt.Fprintln(w, "\nThe dupe command requires a directory or file to check.")
 		if runtime.GOOS == winOS {
-			fmt.Println("The optional bucket can be one or more directories or drive letters.")
+			fmt.Fprintln(w, "The optional bucket can be one or more directories or drive letters.")
 		} else {
-			fmt.Println("The optional bucket can be one or more directory paths.")
+			fmt.Fprintln(w, "The optional bucket can be one or more directory paths.")
 		}
 		out.Example("\ndupers dupe <directory or file to check> [buckets to lookup]")
 	}
 	if buckets == 0 && args == minArgs {
-		color.Warn.Println("The database is empty.\n")
+		fmt.Fprintln(w, color.Warn.Sprint("The database is empty.\n"))
 		if runtime.GOOS == winOS {
-			fmt.Println("This dupe request requires at least one directory or drive letter to lookup.")
+			fmt.Fprintln(w, "This dupe request requires at least one directory or drive letter to lookup.")
 		} else {
-			fmt.Println("This dupe request requires at least one directory to lookup.")
+			fmt.Fprintln(w, "This dupe request requires at least one directory to lookup.")
 		}
-		fmt.Println("These lookup directories will be stored to the database as buckets.")
+		fmt.Fprintln(w, "These lookup directories will be stored to the database as buckets.")
 		if len(flag.Args()) > 0 {
 			s := fmt.Sprintf("\ndupers dupe %s <one or more directories>\n", flag.Args()[1])
 			out.Example(s)
@@ -130,7 +133,7 @@ func lookup(c *dupe.Config) error {
 			continue
 		}
 		fastErr = true
-		fmt.Println("The -fast flag cannot be used for this dupe query")
+		fmt.Fprintln(os.Stderr, "The -fast flag cannot be used for this dupe query")
 	}
 	if !fastErr {
 		return ErrFast
