@@ -25,7 +25,7 @@ var ErrCmd = errors.New("command is unknown")
 
 // logo.txt by sensenstahl
 //
-//go:embed logo.txt
+//go:embed internal/logo.txt
 var brand string
 
 var (
