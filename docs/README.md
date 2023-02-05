@@ -13,41 +13,47 @@ Dupers is the blazing-fast file duplicate checker and filename search tool.
 
 <small>Dupers is a standalone (portable) terminal program and doesn't require installation.</small>
 
-- [Windows](https://github.com/bengarrett/dupers/releases/latest/download/dupers_Windows_Intel.zip) or [XP compatible 32-bit](https://github.com/bengarrett/dupers/releases/latest/download/dupers_Windows_32bit.zip)
+- [Windows](https://github.com/bengarrett/dupers/releases/latest/download/dupers_windows_amd64.zip) or [a legacy 32-bit edition](https://github.com/bengarrett/dupers/releases/latest/download/dupers_windows_386.zip).
 - [macOS](https://github.com/bengarrett/dupers/releases/latest/download/dupers_macOS_all.tar.gz
-), [Linux](https://github.com/bengarrett/dupers/releases/latest/download/dupers_Linux_Intel.tar.gz
-) and [FreeBSD](https://github.com/bengarrett/dupers/releases/latest/download/dupers_FreeBSD_Intel.tar.gz
-)
+), [Linux](https://github.com/bengarrett/dupers/releases/latest/download/dupers_linux_amd64.tar.gz
+) or [Linux for ARM CPUs](https://github.com/bengarrett/dupers/releases/latest/download/dupers_linux_arm64.tar.tar.gz
+).
 
 #### Packages
 
-##### macOS [Homebrew](https://brew.sh/)
+##### [Homebrew](https://brew.sh/) for macOS, Linux, on Intel and ARM
 ```sh
 brew install bengarrett/dupers/dupers
 ```
 
-##### Windows [Scoop](https://scoop.sh/)
+##### [Scoop](https://scoop.sh/) for Windows
 ```ps
 scoop bucket add dupers https://github.com/bengarrett/dupers.git
 scoop install dupers
 ```
 
-##### [APK (Alpine package)](https://github.com/bengarrett/dupers/releases/latest/download/dupers.apk)
+##### [DEB (Debian package)](https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.deb)
 ```sh
-wget https://github.com/bengarrett/dupers/releases/latest/download/dupers.apk
-apk add dupers.apk
+wget https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.deb
+dpkg -i dupers_amd64.deb
 ```
 
-##### [DEB (Debian package)](https://github.com/bengarrett/dupers/releases/latest/download/dupers.deb)
+##### [RPM (Red Hat package)](https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.rpm)
 ```sh
-wget https://github.com/bengarrett/dupers/releases/latest/download/dupers.deb
-dpkg -i dupers.deb
+wget https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.rpm
+rpm -i dupers_amd64.rpm
 ```
 
-##### [RPM (Red Hat package)](https://github.com/bengarrett/dupers/releases/latest/download/dupers.rpm)
+##### [APK (Alpine package)](https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.apk)
 ```sh
-wget https://github.com/bengarrett/dupers/releases/latest/download/dupers.rpm
-rpm -i dupers.rpm
+wget https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.apk
+apk add dupers_amd64.apk
+```
+
+##### [Arch Linux](https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.pkg.tar.zst)
+```sh
+wget https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.pkg.tar.zst
+pacman -U dupers_amd64.pkg.tar.zst
 ```
 
 ## Usage
@@ -55,45 +61,73 @@ rpm -i dupers.rpm
 https://user-images.githubusercontent.com/513842/140050025-04adc6ad-f7a4-4680-b83f-3fa3016f1504.mp4
 
 ## Example usage
+
 #### Dupe check
 
-Run a check of the files in Downloads on the collection of text files.
+Run a check to find any duplicate photos.
 
 ```sh
 # Windows
-dupers dupe C:\Downloads D:\textfiles
+dupers dupe D:\photos
 
 # Linux, macOS
-dupers dupe ~/Downloads ~/textfiles
+dupers dupe ~/photos
 
 # dupers        the program name
 # dupe          the command to run
+# D:\photos     the path containing a collection of files (a bucket)
+```
+
+Run a check to see if the photo exists within the photo collection.
+
+```sh
+# Windows
+dupers dupe photo.jpg D:\photos
+
+# Linux, macOS
+dupers dupe photo.jpg ~/photos
+
+# photo.jpg     the new file to check
+# D:\photos     the path containing a collection of files (a bucket)
+```
+
+Run a check of the files in Downloads against the collection of storage files.
+
+```sh
+# Windows
+dupers dupe C:\Downloads D:\Storage
+
+# Linux, macOS
+dupers dupe ~/Downloads ~/storage
+
 # C:\Downloads  the path containing new files to check
-# D:\textfiles  the path containing a collection of files (a bucket)
+# D:\Storage    the path containing a collection of files (a bucket)
 ```
 
 #### Dupe check multiple locations
 
-Run a check of the files in Downloads on collections of text files and images.
+Run a check of the files in Downloads against the collections of documents, music and images.
 
 ```sh
 # Windows
-dupers dupe C:\Downloads D:\textfiles D:\photos
+dupers dupe C:\Downloads D:\documents D:\images E:\music
 
 # Linux, macOS
-dupers dupe ~/Downloads ~/Textfiles ~/Pictures
+dupers dupe ~/Downloads ~/documents ~/images ~/music
 
-# dupers        the program name
-# dupe          the command to run
 # C:\Downloads  the path containing new files to check
-# D:\textfiles  a path containing a collection of files (a bucket)
-# D:\photos     another path containing a collection of files (a bucket)
+# D:\documents  a path containing a collection of files (a bucket)
+# D:\images     another path containing a collection of files (another bucket)
+# D:\music      another path containing a collection of files (and another bucket)
 ```
 
 #### Search for a filename
+
+Search the database for ZIP files.
+
+Note: options such as `-name` always go before the command.
+
 ```sh
-# Search the database for ZIP files
-# Note: options such as -name always go before the command
 dupers -name search .zip
 
 # dupers     the program name
@@ -102,8 +136,10 @@ dupers -name search .zip
 # .zip       the search expression
 ```
 
+
+Search the database for photos containing `2010` in their file or directory names.
+
 ```sh
-# Search the database for photos containing 2010 in their file or directory names
 dupers search "2010" D:\photos
 
 # dupers     the program name
