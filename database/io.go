@@ -28,7 +28,7 @@ var ErrImportList = errors.New("import list is empty")
 
 // Backup makes a copy of the database to the named location.
 func Backup() (name string, written int64, err error) {
-	src, err := DB(false)
+	src, err := DB()
 	if err != nil {
 		return "", 0, err
 	}
@@ -233,7 +233,7 @@ func (batch Lists) iterate(db *bolt.DB, name Bucket, imported, total int) (int, 
 
 // OpenRead opens the Bolt database for reading.
 func OpenRead() (db *bolt.DB, err error) {
-	path, err := DB(false)
+	path, err := DB()
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +251,7 @@ func read() *bolt.Options {
 
 // OpenRead opens the Bolt database for writing and reading.
 func OpenWrite() (db *bolt.DB, err error) {
-	path, err := DB(false)
+	path, err := DB()
 	if err != nil {
 		return nil, err
 	}

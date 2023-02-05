@@ -68,7 +68,7 @@ func Error(err error, test bool) error {
 		out.ErrCont(err)
 		return nil
 	}
-	if errors.As(err, &database.ErrBucketNotFound) {
+	if errors.Is(err, database.ErrBucketNotFound) {
 		out.ErrCont(err)
 		fmt.Fprintln(os.Stdout, "\nTo add this directory to the database, run:")
 		dir := err.Error()

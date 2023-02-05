@@ -31,10 +31,8 @@ var ErrCmd = errors.New("command is unknown")
 //go:embed internal/logo.txt
 var brand string
 
-var (
-	// version only gets updated when built using GoReleaser.
-	version = "0.0.0"
-)
+// version only gets updated when built using GoReleaser.
+var version = "0.0.0"
 
 const (
 	dbf  = "database"
@@ -73,7 +71,8 @@ func main() {
 
 	switch selection {
 	case "dupe":
-		if err := task.Dupe(&c, &f, flag.Args()...); err != nil {
+		const testing = false
+		if err := task.Dupe(&c, &f, testing, flag.Args()...); err != nil {
 			out.ErrFatal(err)
 		}
 	case "search":

@@ -17,6 +17,10 @@ import (
 	"github.com/gookit/color"
 )
 
+func init() { //nolint:gochecknoinits
+	database.TestMode = true
+}
+
 const (
 	testSrc = "../test/files_to_check/ppFlTD6QQYlS"
 	testDst = "../test/tmp/ppFlTD6QQYlS"
@@ -105,7 +109,7 @@ func TestCompact(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := database.Compact(false); (err != nil) != tt.wantErr {
-				if !errors.As(err, &database.ErrDBCompact) {
+				if !errors.Is(err, database.ErrDBCompact) {
 					t.Errorf("Compact() error = %v, wantErr %t", err, tt.wantErr)
 					return
 				}
@@ -433,7 +437,7 @@ func TestDB(t *testing.T) {
 	)
 	color.Enable = false
 	t.Run("sequence 1", func(t *testing.T) {
-		path, err = database.DB(true)
+		path, err = database.DB()
 		if err != nil {
 			t.Errorf("DB() #1 error = %v", err)
 			return
@@ -447,7 +451,7 @@ func TestDB(t *testing.T) {
 		}
 	})
 	t.Run("sequence 2", func(t *testing.T) {
-		path, err = database.DB(true)
+		path, err = database.DB()
 		if err != nil {
 			t.Errorf("DB() #2 error = %v", err)
 			return
@@ -471,7 +475,7 @@ func TestDB(t *testing.T) {
 		if s.Size() != 0 {
 			t.Errorf("DB Stat error, expected a zero-byte file: %s", path)
 		}
-		path, err = database.DB(true)
+		path, err = database.DB()
 		if err != nil {
 			t.Errorf("DB() #3 error = %v", err)
 			return

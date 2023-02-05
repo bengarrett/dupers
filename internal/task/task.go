@@ -107,7 +107,7 @@ func Database(c *dupe.Config, quiet bool, args ...string) error {
 }
 
 // Dupe parses the dupe command.
-func Dupe(c *dupe.Config, f *cmd.Flags, args ...string) error {
+func Dupe(c *dupe.Config, f *cmd.Flags, testing bool, args ...string) error {
 	if c == nil {
 		return ErrCfg
 	}
@@ -118,10 +118,11 @@ func Dupe(c *dupe.Config, f *cmd.Flags, args ...string) error {
 		s := fmt.Sprintf("dupeCmd: %s", strings.Join(args, " "))
 		out.PBug(s)
 	}
+	// const testing = false
 	l := len(args)
 	if l == 1 {
 		const minArgs = 2
-		duplicate.CmdErr(l, 0, minArgs, false)
+		duplicate.CmdErr(l, 0, minArgs, testing)
 	}
 	// fetch bucket info
 	b, err := database.All(nil)
@@ -130,7 +131,7 @@ func Dupe(c *dupe.Config, f *cmd.Flags, args ...string) error {
 	}
 	const minArgs = 3
 	if l < minArgs && len(b) == 0 {
-		duplicate.CmdErr(l, len(b), minArgs, false)
+		duplicate.CmdErr(l, len(b), minArgs, testing)
 	}
 	// directory or a file to match
 	const minReq = 2

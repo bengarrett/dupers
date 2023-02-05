@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	bucket1 = "../test/bucket1"
+	bucket1 = "../../../test/bucket1"
 	file1   = "../../../test/bucket1/0vlLaUEvzAWP"
 	file2   = "../../../test/bucket1/GwejJkMzs3yP"
 	// checksums created from sha256sum <filename>.
@@ -50,6 +50,7 @@ func TestParser_OpenWrite(t *testing.T) {
 }
 
 func TestSetBuckets(t *testing.T) {
+	database.TestMode = true
 	err := mock.TestOpen()
 	if err != nil {
 		t.Error(err)
@@ -59,7 +60,7 @@ func TestSetBuckets(t *testing.T) {
 	if err := p.SetBuckets(); err != nil {
 		t.Error(err)
 	}
-	const expected = 2
+	const expected = 1
 	if l := len(p.All()); l != expected {
 		t.Errorf("Expected %d, got %d", expected, l)
 	}

@@ -229,7 +229,7 @@ func TestRemove() error {
 
 	if runtime.GOOS == "windows" {
 		var e *os.PathError
-		if errors.As(err, &e) {
+		if errors.Is(err, e) {
 			log.Printf("could not remove the mock database as the Windows filesystem has locked it: %s\n", path)
 			return nil
 		}
