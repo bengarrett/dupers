@@ -4,7 +4,6 @@ package database_test
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -402,7 +401,7 @@ func TestRename(t *testing.T) {
 
 func TestCreate(t *testing.T) {
 	color.Enable = false
-	tmp, err := ioutil.TempFile(os.TempDir(), "dupers_create_test.db")
+	tmp, err := os.CreateTemp(os.TempDir(), "dupers_create_test.db")
 	if err != nil {
 		t.Error(err)
 	}
