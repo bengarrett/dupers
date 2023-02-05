@@ -35,7 +35,7 @@ release:
 brews:
   - tap:
       owner: bengarrett
-      name: homebrew-dupers
+      name: homebrew-tap
     folder: Formula
     goarm: "7"
     homepage: "https://github.com/bengarrett/dupers"
