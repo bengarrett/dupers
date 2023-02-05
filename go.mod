@@ -24,7 +24,10 @@ require (
 	golang.org/x/text v0.6.0
 )
 
-require github.com/mholt/archiver/v3 v3.5.1
+require (
+	github.com/carlmjohnson/versioninfo v0.22.4
+	github.com/mholt/archiver/v3 v3.5.1
+)
 
 require (
 	github.com/andybalholm/brotli v1.0.4 // indirect

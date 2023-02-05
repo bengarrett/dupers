@@ -12,12 +12,15 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
+	"unicode/utf8"
 
 	"github.com/bengarrett/dupers/database"
 	"github.com/bengarrett/dupers/dupe"
 	"github.com/bengarrett/dupers/internal/cmd"
 	"github.com/bengarrett/dupers/internal/out"
 	"github.com/bengarrett/dupers/internal/task"
+	"github.com/carlmjohnson/versioninfo"
 	"github.com/gookit/color"
 )
 
@@ -29,9 +32,8 @@ var ErrCmd = errors.New("command is unknown")
 var brand string
 
 var (
+	// version only gets updated when built using GoReleaser.
 	version = "0.0.0"
-	commit  = "unset"
-	date    = "unset"
 )
 
 const (
@@ -47,6 +49,8 @@ const (
 	dup  = "up"
 	dupp = "up+"
 	fhlp = "-help"
+
+	homepage = "https://github.com/bengarrett/dupers"
 )
 
 func main() {
@@ -150,19 +154,74 @@ func options(a *cmd.Aliases, f *cmd.Flags) string {
 
 // vers prints out the program information and version.
 func vers() string {
-	const copyright, year = "\u00A9", "2021-22"
+	const width = 45
 	exe, err := cmd.Self()
 	if err != nil {
 		out.ErrCont(err)
 	}
 	w := new(bytes.Buffer)
 	fmt.Fprintln(w, brand+"\n")
-	fmt.Fprintf(w, "                                dupers v%s\n", version)
-	fmt.Fprintf(w, "                        %s %s Ben Garrett\n", copyright, year)
-	fmt.Fprintf(w, "         %s\n\n", color.Primary.Sprint("https://github.com/bengarrett/dupers"))
-	fmt.Fprintf(w, "  %s    %s (%s)\n", color.Secondary.Sprint("build:"), commit, date)
-	fmt.Fprintf(w, "  %s %s/%s\n", color.Secondary.Sprint("platform:"), runtime.GOOS, runtime.GOARCH)
-	fmt.Fprintf(w, "  %s       %s\n", color.Secondary.Sprint("go:"), strings.Replace(runtime.Version(), "go", "v", 1))
+	fmt.Fprintln(w, ralign(width, "dupers v"+version))
+	fmt.Fprintln(w, ralign(width, copyright()+" Ben Garrett"))
+	fmt.Fprintln(w, color.Primary.Sprint(ralign(width, homepage)))
+	fmt.Fprintln(w)
+	fmt.Fprintf(w, "  %s    %s\n", color.Secondary.Sprint("build:"), commit())
+	fmt.Fprintf(w, "  %s %s/%s\n", color.Secondary.Sprint("platform:"),
+		runtime.GOOS, runtime.GOARCH)
+	fmt.Fprintf(w, "  %s       %s\n", color.Secondary.Sprint("go:"),
+		strings.Replace(runtime.Version(), "go", "v", 1))
 	fmt.Fprintf(w, "  %s     %s\n", color.Secondary.Sprint("path:"), exe)
 	return w.String()
+}
+
+// ralign aligns the string to the right of the terminal using space padding.
+func ralign(maxWidth int, s string) string {
+	l := utf8.RuneCountInString(s)
+	if l >= maxWidth {
+		return s
+	}
+	diff := maxWidth - l
+	return fmt.Sprintf("%s%s", strings.Repeat(" ", diff), s)
+}
+
+// copyright year range for this program.
+func copyright() string {
+	const initYear = 2021
+	t := versioninfo.LastCommit
+	s := fmt.Sprintf("© %d-", initYear)
+	if t.Year() > initYear {
+		s += t.Local().Format("06")
+	} else {
+		s += time.Now().Format("06")
+	}
+	return s
+}
+
+// commit returns a formatted, git commit description for this repository,
+// including tag version and date.
+func commit() string {
+	s := ""
+	c := versioninfo.Short()
+
+	if c == "devel" {
+		return c
+	}
+	if c != "" {
+		s += fmt.Sprintf("%s, ", c)
+	}
+	if l := lastCommit(); l != "" {
+		s += fmt.Sprintf("built on %s", l)
+	}
+	if s == "" {
+		return "n/a"
+	}
+	return strings.TrimSpace(s)
+}
+
+func lastCommit() string {
+	d := versioninfo.LastCommit
+	if d.IsZero() {
+		return ""
+	}
+	return d.Local().Format("2006 Jan 2 15:04")
 }
