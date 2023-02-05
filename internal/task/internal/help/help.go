@@ -94,6 +94,8 @@ func DB(f flag.Flag, w *tabwriter.Writer) {
 		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
 		f = *flag.Lookup("quiet")
 		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
+		f = *flag.Lookup("debug")
+		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
 		f = *flag.Lookup("version")
 		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
 	}

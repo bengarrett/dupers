@@ -77,7 +77,7 @@ func Define(f *Flags) {
 		return
 	}
 	f.Exact = flag.Bool("exact", false, "match case")
-	f.Debug = flag.Bool("debug", false, "debug mode") // hidden flag
+	f.Debug = flag.Bool("debug", false, "debug is a verbose mode to print all the activities and tasks")
 	f.Filename = flag.Bool("name", false, "search for filenames, and ignore directories")
 	f.Help = flag.Bool("help", false, "print help") // only used in certain circumstances
 	f.Lookup = flag.Bool("fast", false, "query the database for a much faster match,"+
