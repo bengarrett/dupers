@@ -23,7 +23,7 @@ universal_binaries:
     replace: true
 
 archives:
-  - name_template: '{{ .ProjectName }}_{{ if eq .Os "darwin" }}macos{{ else }}{{ tolower .Os }}_{{ .Arch }}{{ end }}'
+  - name_template: '{{ .ProjectName }}_{{ if eq .Os "darwin" }}macos{{ else }}{{ tolower .Os }}_{{ tolower .Arch }}{{ end }}'
     files:
     - src: internal/logo.txt
       strip_parent: true
@@ -33,7 +33,7 @@ archives:
     rlcp: true
 
 nfpms:
-  - file_name_template: "{{ .ProjectName }}"
+  - file_name_template: "{{ .ProjectName }}_{{ tolower .Arch }}"
     vendor: Ben Garrett.
     homepage: https://github.com/bengarrett/dupers
     maintainer: Ben Garrett <code.by.ben@gmail.com>
