@@ -410,7 +410,7 @@ func (c *Config) WalkDir(name parse.Bucket) error {
 }
 
 func (c *Config) walkDir(root string, skip []string) error {
-	var wg sync.WaitGroup
+	//var wg sync.WaitGroup
 	if c.Debug {
 		out.PBug("walk directory: " + root)
 	}
@@ -448,14 +448,14 @@ func (c *Config) walkDir(root string, skip []string) error {
 			out.ErrFatal(errW)
 		}
 		fmt.Fprint(os.Stdout, PrintWalk(false, c))
-		wg.Add(1)
-		go func() {
-			if err := c.Checksum(path, root); err != nil {
-				out.ErrCont(err)
-			}
-			wg.Done()
-		}()
-		wg.Wait()
+		// wg.Add(1)
+		// go func() {
+		if err := c.Checksum(path, root); err != nil {
+			out.ErrCont(err)
+		}
+		// 	wg.Done()
+		// }()
+		//wg.Wait()
 		return err
 	})
 }
@@ -767,7 +767,7 @@ func (c *Config) WalkArchiver(name parse.Bucket) error {
 		out.ErrCont(err)
 	}
 	// walk the root directory of the bucket
-	var wg sync.WaitGroup
+	//var wg sync.WaitGroup
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if c.Debug {
 			out.PBug("walk file: " + path)
@@ -790,7 +790,7 @@ func (c *Config) WalkArchiver(name parse.Bucket) error {
 		if skipSelf(path, skip...) {
 			return nil
 		}
-		err = c.walkThread(root, path, &wg)
+		err = c.walkThread(root, path, nil)
 		if err != nil {
 			out.ErrCont(err)
 		}
@@ -831,7 +831,7 @@ func (c *Config) walkThread(bucket, path string, wg *sync.WaitGroup) error {
 		}
 	}
 	// multithread archive reader
-	wg.Add(1)
+	//wg.Add(1)
 
 	go func() {
 		switch ext {
@@ -842,9 +842,9 @@ func (c *Config) walkThread(bucket, path string, wg *sync.WaitGroup) error {
 		default:
 			c.Read(bucket, path, ext)
 		}
-		wg.Done()
+		//wg.Done()
 	}()
-	wg.Wait()
+	//wg.Wait()
 	return nil
 }
 
@@ -941,9 +941,16 @@ func (c *Config) Read(bucket, name, ext string) {
 	// catch any archiver panics such as opening unsupported ZIP compression formats
 	defer c.readRecover(name)
 	cnt, filename := 0, name
-	// get the format by filename extension
 	if ext != "" {
 		filename = ext
+	}
+	// get the format by filename extension
+	tars := []string{".gz", ".br", ".bz2", ".lz4", ".sz", ".xz", ".zz", ".zst"}
+	for _, t := range tars {
+		if strings.HasSuffix(name, ".tar"+t) {
+			filename = ".tar" + t
+			break
+		}
 	}
 	f, err := archiver.ByExtension(strings.ToLower(filename))
 	if err != nil {
@@ -954,7 +961,7 @@ func (c *Config) Read(bucket, name, ext string) {
 	case true:
 		w, ok := f.(archiver.Walker)
 		if !ok {
-			out.ErrCont(fmt.Errorf("%w: %T: %s", archive.ErrType, w, filename))
+			out.ErrCont(fmt.Errorf("%w: %s", archive.ErrType, filename))
 			return
 		}
 		cnt, err = c.readWalk(name, bucket, cnt, w)
