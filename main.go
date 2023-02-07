@@ -12,6 +12,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"text/tabwriter"
 	"time"
 	"unicode/utf8"
 
@@ -113,12 +114,16 @@ func defaultCmd(selection string) {
 
 // exitOptions parses help and version options.
 func exitOptions(a *cmd.Aliases, f *cmd.Flags) string {
+	if *f.Version && *f.Debug {
+		return debug(a, f)
+	}
 	if *a.Help || *f.Help {
 		return task.Help()
 	}
 	if *a.Version || *f.Version {
 		return about(*f.Quiet)
 	}
+
 	noUserArgs := len(flag.Args()) == 0
 	if noUserArgs {
 		return task.Help()
@@ -148,6 +153,28 @@ func about(quiet bool) string {
 		strings.Replace(runtime.Version(), "go", "v", 1))
 	fmt.Fprintf(w, "  %s     %s\n", color.Secondary.Sprint("path:"), exe)
 	return w.String()
+}
+
+func debug(a *cmd.Aliases, f *cmd.Flags) string {
+	const na = "n/a"
+	buf := new(bytes.Buffer)
+	w := tabwriter.NewWriter(buf, 0, 0, 1, ' ', tabwriter.AlignRight)
+	fmt.Fprintln(w, "Dupers arguments debug:")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "\t\tToggle\t\tAlias")
+	fmt.Fprintf(w, "-mono:\t\t%v\t\t%v\n", *f.Mono, *a.Mono)
+	fmt.Fprintf(w, "-quiet:\t\t%v\t\t%v\n", *f.Quiet, *a.Quiet)
+	fmt.Fprintf(w, "-debug:\t\t%v\t\t%v\n", *f.Debug, *a.Debug)
+	fmt.Fprintf(w, "-version:\t\t%v\t\t%v\n", *f.Version, *a.Version)
+	fmt.Fprintf(w, "-help:\t\t%v\t\t%v\n", *f.Help, *a.Help)
+	fmt.Fprintf(w, "-exact:\t\t%v\t\t%v\n", *f.Exact, *a.Exact)
+	fmt.Fprintf(w, "-name:\t\t%v\t\t%v\n", *f.Filename, *a.Filename)
+	fmt.Fprintf(w, "-fast:\t\t%v\t\t%v\n", *f.Lookup, *a.Lookup)
+	fmt.Fprintf(w, "-delete:\t\t%v\t\t%v\n", *f.Rm, na)
+	fmt.Fprintf(w, "-delete+:\t\t%v\t\t%v\n", *f.RmPlus, na)
+	fmt.Fprintf(w, "-sensen:\t\t%v\t\t%v\n", *f.RmPlus, na)
+	w.Flush()
+	return buf.String()
 }
 
 // ralign aligns the string to the right of the terminal using space padding.

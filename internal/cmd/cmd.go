@@ -63,20 +63,30 @@ func (f *Flags) Define() {
 	if f == nil {
 		return
 	}
-	f.Debug = flag.Bool("debug", false, "debug is a verbose mode to print all the activities and tasks")
-	f.Exact = flag.Bool("exact", false, "match case")
-	f.Filename = flag.Bool("name", false, "search for filenames, and ignore directories")
-	f.Help = flag.Bool("help", false, "print help") // only used in certain circumstances
-	f.Lookup = flag.Bool("fast", false, "query the database for a much faster match,"+
-		"\n\t\tthe results maybe stale as it does not look for any file changes on your system")
-	f.Mono = flag.Bool("mono", false, "monochrome mode to remove all color output")
-	f.Quiet = flag.Bool("quiet", false, "quiet mode hides all but essential feedback")
-	f.Sensen = flag.Bool("sensen", false, "delete everything in the <directory to check>"+
-		"\n\t\texcept for directories containing unique Windows programs and assets")
-	f.Rm = flag.Bool("delete", false, "delete the duplicate files found in the <directory to check>")
+	f.Debug = flag.Bool("debug", false,
+		"debug is a verbose mode to print all the activities and tasks")
+	f.Exact = flag.Bool("exact", false,
+		"match case")
+	f.Filename = flag.Bool("name", false,
+		"search for filenames, and ignore directories")
+	f.Help = flag.Bool("help", false,
+		"print help") // only used in certain circumstances
+	f.Lookup = flag.Bool("fast", false,
+		"query the database for a much faster match,\n"+
+			"\t\tthe results maybe stale as it does not look for any file changes on your system")
+	f.Mono = flag.Bool("mono", false,
+		"monochrome mode to remove all color output")
+	f.Quiet = flag.Bool("quiet", false,
+		"quiet mode hides all but essential feedback")
+	f.Sensen = flag.Bool("sensen", false,
+		"delete everything in the <directory to check>"+
+			"\n\t\texcept for directories containing unique Windows programs and assets")
+	f.Rm = flag.Bool("delete", false,
+		"delete the duplicate files found in the <directory to check>")
 	f.RmPlus = flag.Bool("delete+", false,
 		"delete the duplicate files and remove empty directories from the <directory to check>")
-	f.Version = flag.Bool("version", false, "version and information for this program")
+	f.Version = flag.Bool("version", false,
+		"version and information for this program")
 }
 
 // Aliases parses the command aliases and flags, configuring both Flags and dupe.Config.
@@ -103,21 +113,27 @@ func (f *Flags) Aliases(a *Aliases, c *dupe.Config) dupe.Config {
 		*f.Debug = true
 		c.Debug = true
 	}
-	if *a.Quiet || *f.Quiet {
-		*f.Quiet = true
-		c.Quiet = true
-	}
 	if *a.Exact {
 		*f.Exact = true
 	}
 	if *a.Filename {
 		*f.Filename = true
 	}
+	if *a.Help {
+		*f.Help = true
+	}
 	if *a.Lookup {
 		*f.Lookup = true
 	}
 	if *a.Mono {
 		*f.Mono = true
+	}
+	if *a.Quiet || *f.Quiet {
+		*f.Quiet = true
+		c.Quiet = true
+	}
+	if *a.Version {
+		*f.Version = true
 	}
 	return *c
 }
@@ -177,7 +193,8 @@ func Self() (string, error) {
 // SearchSummary formats the results of the search command.
 func SearchSummary(total int, term string, exact, filename bool) string {
 	str := func(t, s, term string) string {
-		return fmt.Sprintf("%s%s exist for '%s'.", t, color.Secondary.Sprint(s), color.Bold.Sprint(term))
+		return fmt.Sprintf("%s%s exist for '%s'.", t,
+			color.Secondary.Sprint(s), color.Bold.Sprint(term))
 	}
 	s, r := "", "results"
 	if total == 0 {

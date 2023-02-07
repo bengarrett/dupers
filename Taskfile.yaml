@@ -29,3 +29,7 @@ tasks:
       - go run -race main.go database
       - echo -e "## DB -d -m"
       - go run -race main.go db -d -m
+      - echo -e "## Debug aliases"
+      - go run -race main.go -m -q -d -v -h -e -n -f
+      - echo -e "## Debug flag"
+      - go run -race main.go -mono -quiet -debug -version -help -exact -name -fast -delete -delete+ -sensen
