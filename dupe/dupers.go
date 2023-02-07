@@ -801,10 +801,10 @@ func (c *Config) WalkArchiver(name parse.Bucket) error {
 
 func (c *Config) walkThread(bucket, path string, wg *sync.WaitGroup) error {
 	// detect archive type by file extension
-	ext := strings.ToLower(filepath.Ext(path))
+	mimeExt := strings.ToLower(filepath.Ext(path))
 	ok := (archive.MIME(path) != "")
 	if c.Debug {
-		out.PBug(fmt.Sprintf("is known extension: %v, %s", ok, ext))
+		out.PBug(fmt.Sprintf("is known extension: %v, %s", ok, mimeExt))
 	}
 	if !ok {
 		// detect archive type by mime type
@@ -818,7 +818,7 @@ func (c *Config) walkThread(bucket, path string, wg *sync.WaitGroup) error {
 		} else if err != nil {
 			return err
 		}
-		ext = archive.Extension(mime)
+		mimeExt = archive.Extension(mime)
 	}
 	c.Files++
 	if c.Debug {
@@ -834,13 +834,13 @@ func (c *Config) walkThread(bucket, path string, wg *sync.WaitGroup) error {
 	//wg.Add(1)
 
 	go func() {
-		switch ext {
+		switch mimeExt {
 		case "":
 			// not a supported archive, do nothing
 		case archive.Ext7z:
 			c.Read7Zip(bucket, path)
 		default:
-			c.Read(bucket, path, ext)
+			c.Read(bucket, path, mimeExt)
 		}
 		//wg.Done()
 	}()
@@ -934,25 +934,25 @@ func (c *Config) Read7Zip(bucket, name string) {
 }
 
 // Read opens the named archive, hashes and saves the content to the bucket.
-func (c *Config) Read(bucket, name, ext string) {
+func (c *Config) Read(bucket, name, mimeExt string) {
 	if c.Debug {
 		out.PBug("read archiver: " + name)
 	}
 	// catch any archiver panics such as opening unsupported ZIP compression formats
 	defer c.readRecover(name)
-	cnt, filename := 0, name
-	if ext != "" {
-		filename = ext
+	cnt, lookup := 0, name
+	if mimeExt != "" {
+		lookup = mimeExt
 	}
 	// get the format by filename extension
 	tars := []string{".gz", ".br", ".bz2", ".lz4", ".sz", ".xz", ".zz", ".zst"}
 	for _, t := range tars {
 		if strings.HasSuffix(name, ".tar"+t) {
-			filename = ".tar" + t
+			lookup = ".tar" + t
 			break
 		}
 	}
-	f, err := archiver.ByExtension(strings.ToLower(filename))
+	f, err := archiver.ByExtension(strings.ToLower(lookup))
 	if err != nil {
 		out.ErrCont(err)
 		return
@@ -961,7 +961,7 @@ func (c *Config) Read(bucket, name, ext string) {
 	case true:
 		w, ok := f.(archiver.Walker)
 		if !ok {
-			out.ErrCont(fmt.Errorf("%w: %s", archive.ErrType, filename))
+			out.ErrCont(fmt.Errorf("%w: %s: %s", archive.ErrType, lookup, name))
 			return
 		}
 		cnt, err = c.readWalk(name, bucket, cnt, w)
