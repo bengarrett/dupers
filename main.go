@@ -36,19 +36,6 @@ var brand string
 var version = "0.0.0"
 
 const (
-	dbf  = "database"
-	dbs  = "db"
-	dbk  = "backup"
-	dcn  = "clean"
-	dex  = "export"
-	dim  = "import"
-	dls  = "ls"
-	dmv  = "mv"
-	drm  = "rm"
-	dup  = "up"
-	dupp = "up+"
-	fhlp = "-help"
-
 	homepage = "https://github.com/bengarrett/dupers"
 )
 
@@ -81,16 +68,27 @@ func main() {
 	}
 
 	switch selection {
-	case "dupe":
+	case task.Dupe_:
 		const testing = false
 		if err := task.Dupe(&c, &f, testing, flag.Args()...); err != nil {
 			out.ErrFatal(err)
 		}
-	case "search":
+	case task.Search_:
 		if err := task.Search(&f, false, flag.Args()...); err != nil {
 			out.ErrFatal(err)
 		}
-	case dbf, dbs, dbk, dcn, dex, dim, dls, dmv, drm, dup, dupp:
+	case
+		task.Database_,
+		task.DB_,
+		task.Backup_,
+		task.Clean_,
+		task.Export_,
+		task.Import_,
+		task.LS_,
+		task.MV_,
+		task.RM_,
+		task.Up_,
+		task.UpPlus_:
 		if err := task.Database(&c, *f.Quiet, flag.Args()...); err != nil {
 			if errors.Is(err, database.ErrDBNotFound) {
 				os.Exit(0)
@@ -108,7 +106,7 @@ func main() {
 func defaultCmd(selection string) {
 	out.ErrCont(ErrCmd)
 	fmt.Fprintf(os.Stdout, "Command: '%s'\n\nSee the help for the available commands and options:\n", selection)
-	out.Example("dupers " + fhlp)
+	out.Example("dupers -help")
 	out.ErrFatal(nil)
 }
 

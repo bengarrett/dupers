@@ -17,7 +17,6 @@ import (
 	"github.com/bengarrett/dupers/internal/out"
 	"github.com/bengarrett/dupers/internal/task/internal/bucket"
 	"github.com/bengarrett/dupers/internal/task/internal/duplicate"
-	"github.com/bengarrett/dupers/internal/task/internal/help"
 	"github.com/bengarrett/dupers/internal/task/internal/search"
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
@@ -34,18 +33,20 @@ var (
 )
 
 const (
-	dbf   = "database"
-	dbs   = "db"
-	dbk   = "backup"
-	dcn   = "clean"
-	dex   = "export"
-	dim   = "import"
-	dls   = "ls"
-	dmv   = "mv"
-	drm   = "rm"
-	dup   = "up"
-	dupp  = "up+"
-	winOS = "windows"
+	Backup_   = "backup"
+	Clean_    = "clean"
+	Database_ = "database"
+	DB_       = "db"
+	Dupe_     = "dupe"
+	Export_   = "export"
+	Import_   = "import"
+	LS_       = "ls"
+	MV_       = "mv"
+	RM_       = "rm"
+	Search_   = "search"
+	Up_       = "up"
+	UpPlus_   = "up+"
+	winOS     = "windows"
 )
 
 // ChkWinDirs checks the arguments for invalid escaped quoted paths when using Windows cmd.exe.
@@ -74,31 +75,31 @@ func Database(c *dupe.Config, quiet bool, args ...string) error {
 	buckets := [2]string{}
 	copy(buckets[:], args)
 	switch args[0] {
-	case dbk:
+	case Backup_:
 		return backupDB(quiet)
-	case dcn:
+	case Clean_:
 		return cleanupDB(quiet, c.Debug)
-	case dbs, dbf:
+	case DB_, Database_:
 		s, err := database.Info()
 		if err != nil {
 			out.ErrCont(err)
 		}
 		fmt.Fprintln(os.Stdout, s)
-	case dex:
+	case Export_:
 		bucket.Export(quiet, buckets)
-	case dim:
+	case Import_:
 		bucket.Import(quiet, buckets)
-	case dls:
+	case LS_:
 		bucket.List(quiet, buckets)
-	case dmv:
+	case MV_:
 		buckets := [3]string{}
 		copy(buckets[:], args)
 		bucket.Move(quiet, buckets)
-	case drm:
+	case RM_:
 		bucket.Remove(quiet, buckets)
-	case dup:
+	case Up_:
 		bucket.Rescan(c, false, buckets)
-	case dupp:
+	case UpPlus_:
 		bucket.Rescan(c, true, buckets)
 	default:
 		return ErrCmd
@@ -190,9 +191,9 @@ func Help() string {
 
 	fmt.Fprintf(w, "%s\n", description)
 
-	help.Dupe(f, w)
-	help.Search(f, w)
-	help.DB(f, w)
+	DupeHelp(f, w)
+	SearchHelp(f, w)
+	DBHelp(f, w)
 	fmt.Fprintln(w)
 	if err := w.Flush(); err != nil {
 		return ""

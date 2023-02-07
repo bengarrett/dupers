@@ -1,5 +1,5 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
-package help
+package task
 
 import (
 	"flag"
@@ -12,23 +12,8 @@ import (
 	"github.com/gookit/color"
 )
 
-const (
-	dbf   = "database"
-	dbk   = "backup"
-	dcn   = "clean"
-	dex   = "export"
-	dim   = "import"
-	dls   = "ls"
-	dmv   = "mv"
-	drm   = "rm"
-	dup   = "up"
-	dupp  = "up+"
-	fhlp  = "-help"
-	winOS = "windows"
-)
-
-// Dupe creates the dupe command help.
-func Dupe(f flag.Flag, w *tabwriter.Writer) {
+// DupeHelp creates the dupe command help.
+func DupeHelp(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintf(w, "\n%s\n  Scan for duplicate files, matching files that share the identical content.\n",
 		color.Primary.Sprint("Dupe:"))
 	fmt.Fprintln(w, "  The \"directory or file to check\" is never added to the database.")
@@ -55,7 +40,7 @@ func Dupe(f flag.Flag, w *tabwriter.Writer) {
 }
 
 // Search creates the search command help.
-func Search(f flag.Flag, w *tabwriter.Writer) {
+func SearchHelp(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintf(w, "\n%s\n  Lookup a file or a directory name in the database.\n",
 		color.Primary.Sprint("Search:"))
 	fmt.Fprintf(w, "  The <search expression> can be a partial or complete, file or directory name.\n")
@@ -71,23 +56,23 @@ func Search(f flag.Flag, w *tabwriter.Writer) {
 	exampleSearch(w)
 }
 
-// DB creates the database command help.
-func DB(f flag.Flag, w *tabwriter.Writer) {
+// DBHelp creates the database command help.
+func DBHelp(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintf(w, "\n%s\n  View information and run optional maintenance on the internal database.\n",
 		color.Primary.Sprint("Database:"))
 	fmt.Fprintln(w, "\n  Usage:")
-	fmt.Fprintf(w, "    dupers %s\tdisplay statistics and bucket information\n", dbf)
-	fmt.Fprintf(w, "    dupers %s\t%s\n", dbk, "make a copy of the database to: "+cmd.Home())
-	fmt.Fprintf(w, "    dupers %s\t%s\n", dcn, "compact and remove all items in the database that point to missing files")
-	fmt.Fprintf(w, "    dupers %s  <bucket>\t%s\n", dls, "list the hashes and files in the bucket")
-	fmt.Fprintf(w, "    dupers %s  <bucket>\t%s\n", dup, "add or update the bucket to the database")
-	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", dupp, "add or update the bucket using an archive scan "+
+	fmt.Fprintf(w, "    dupers %s\tdisplay statistics and bucket information\n", Database_)
+	fmt.Fprintf(w, "    dupers %s\t%s\n", Backup_, "make a copy of the database to: "+cmd.Home())
+	fmt.Fprintf(w, "    dupers %s\t%s\n", Clean_, "compact and remove all items in the database that point to missing files")
+	fmt.Fprintf(w, "    dupers %s  <bucket>\t%s\n", LS_, "list the hashes and files in the bucket")
+	fmt.Fprintf(w, "    dupers %s  <bucket>\t%s\n", Up_, "add or update the bucket to the database")
+	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", UpPlus_, "add or update the bucket using an archive scan "+
 		color.Danger.Sprint("(SLOW)")+
 		"\n\tthe scan reads every file archived with known package formats")
-	fmt.Fprintf(w, "\n    dupers %s  <bucket>\t%s\n", drm, "remove the bucket from the database")
-	fmt.Fprintf(w, "    dupers %s  <bucket> <new directory>\t%s\n", dmv, "move the bucket to a new directory path")
-	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", dex, "export the bucket to a text file in: "+cmd.Home())
-	fmt.Fprintf(w, "    dupers %s <export file>\t%s\n", dim, "import a bucket text file into the database")
+	fmt.Fprintf(w, "\n    dupers %s  <bucket>\t%s\n", RM_, "remove the bucket from the database")
+	fmt.Fprintf(w, "    dupers %s  <bucket> <new directory>\t%s\n", MV_, "move the bucket to a new directory path")
+	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", Export_, "export the bucket to a text file in: "+cmd.Home())
+	fmt.Fprintf(w, "    dupers %s <export file>\t%s\n", Import_, "import a bucket text file into the database")
 	fmt.Fprintln(w, "\nOptions:")
 	if flag.Lookup("mono") != nil {
 		f = *flag.Lookup("mono")
@@ -99,7 +84,7 @@ func DB(f flag.Flag, w *tabwriter.Writer) {
 		f = *flag.Lookup("version")
 		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
 	}
-	fmt.Fprintf(w, "    -h, %s\tshow this list of options\n", fhlp)
+	fmt.Fprintf(w, "    -h, %s\tshow this list of options\n", "-help")
 }
 
 // exampleDupe creates the examples of the dupe command.
