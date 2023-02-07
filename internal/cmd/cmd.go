@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 
 	"github.com/bengarrett/dupers/dupe"
@@ -16,77 +17,109 @@ import (
 
 var ErrWindowsDir = errors.New("cannot parse the directory path")
 
+const (
+	Debug_   = "debug"
+	Delete_  = "delete"
+	DelPlus_ = "delete+"
+	Exact_   = "exact"
+	Fast_    = "fast"
+	Help_    = "help"
+	Mono_    = "mono"
+	Name_    = "name"
+	Quiet_   = "quiet"
+	Sensen_  = "sensen"
+	Version_ = "version"
+)
+
 // Aliases are single letter options for commands.
 type Aliases struct {
-	Debug    *bool
-	Exact    *bool
-	Filename *bool
-	Help     *bool
-	Lookup   *bool
-	Mono     *bool
-	Quiet    *bool
-	Version  *bool
+	Debug    *bool `usage:"alias for debug"`
+	Exact    *bool `usage:"alias for exact"`
+	Filename *bool `usage:"alias for filename"`
+	Help     *bool `usage:"alias for help"`
+	Lookup   *bool `usage:"alias for lookup"`
+	Mono     *bool `usage:"alias for mono"`
+	Quiet    *bool `usage:"alias for quiet"`
+	Version  *bool `usage:"alias for version"`
 }
 
-// DefineShort options for the command aliases.
+// Usage of the command aliases.
+func (a *Aliases) Usage(name string) string {
+	t := reflect.TypeOf(*a)
+	sf, ok := t.FieldByName(name)
+	if !ok {
+		return ""
+	}
+	val, ok := sf.Tag.Lookup("usage")
+	if !ok {
+		return ""
+	}
+	return val
+}
+
+// Define optional aliases for the program and commands flags.
 func (a *Aliases) Define() {
 	if a == nil {
 		return
 	}
-	a.Debug = flag.Bool("d", false, "alias for debug")
-	a.Exact = flag.Bool("e", false, "alias for exact")
-	a.Lookup = flag.Bool("f", false, "alias for fast")
-	a.Filename = flag.Bool("n", false, "alias for name")
-	a.Help = flag.Bool("h", false, "alias for help")
-	a.Mono = flag.Bool("m", false, "alias for mono")
-	a.Quiet = flag.Bool("q", false, "alias for quiet")
-	a.Version = flag.Bool("v", false, "alias for version")
+	a.Debug = flag.Bool("d", false, a.Usage("Debug"))
+	a.Exact = flag.Bool("e", false, a.Usage("Exact"))
+	a.Lookup = flag.Bool("f", false, a.Usage("Lookup"))
+	a.Filename = flag.Bool("n", false, a.Usage("Filename"))
+	a.Help = flag.Bool("h", false, a.Usage("Help"))
+	a.Mono = flag.Bool("m", false, a.Usage("Mono"))
+	a.Quiet = flag.Bool("q", false, a.Usage("Quiet"))
+	a.Version = flag.Bool("v", false, a.Usage("Version"))
 }
 
-// Flags are the options for commands.
+// Flags provide options for both the commands and the program.
 type Flags struct {
-	Debug    *bool
-	Exact    *bool
-	Filename *bool
-	Help     *bool
-	Lookup   *bool
-	Mono     *bool
-	Quiet    *bool
-	Rm       *bool
-	RmPlus   *bool
-	Sensen   *bool
-	Version  *bool
+	Exact    *bool `usage:"match case"`
+	Filename *bool `usage:"search for filenames, and ignore directories"`
+	Lookup   *bool `usage:"query the database for a much faster match,\n\t\tthe results maybe stale as it does not look for any file changes on your system"`
+	Rm       *bool `usage:"delete everything in the <directory to check>\n\t\texcept for directories containing unique Windows programs and assets"`
+	RmPlus   *bool `usage:"delete the duplicate files found in the <directory to check>"`
+	Sensen   *bool `usage:"delete the duplicate files and remove empty directories from the <directory to check>"`
+
+	// global options
+
+	Debug   *bool `usage:"debug is a verbose mode to print all the activities and tasks"`
+	Help    *bool `usage:"print help"`
+	Mono    *bool `usage:"monochrome mode to remove all color output"`
+	Quiet   *bool `usage:"quiet mode hides all but essential feedback"`
+	Version *bool `usage:"version and information for this program"`
 }
 
-// Define options for the commands.
+// Usage of the command flags.
+func (f *Flags) Usage(name string) string {
+	t := reflect.TypeOf(*f)
+	sf, ok := t.FieldByName(name)
+	if !ok {
+		return ""
+	}
+	val, ok := sf.Tag.Lookup("usage")
+	if !ok {
+		return ""
+	}
+	return val
+}
+
+// Define options for the program and commands.
 func (f *Flags) Define() {
 	if f == nil {
 		return
 	}
-	f.Debug = flag.Bool("debug", false,
-		"debug is a verbose mode to print all the activities and tasks")
-	f.Exact = flag.Bool("exact", false,
-		"match case")
-	f.Filename = flag.Bool("name", false,
-		"search for filenames, and ignore directories")
-	f.Help = flag.Bool("help", false,
-		"print help") // only used in certain circumstances
-	f.Lookup = flag.Bool("fast", false,
-		"query the database for a much faster match,\n"+
-			"\t\tthe results maybe stale as it does not look for any file changes on your system")
-	f.Mono = flag.Bool("mono", false,
-		"monochrome mode to remove all color output")
-	f.Quiet = flag.Bool("quiet", false,
-		"quiet mode hides all but essential feedback")
-	f.Sensen = flag.Bool("sensen", false,
-		"delete everything in the <directory to check>"+
-			"\n\t\texcept for directories containing unique Windows programs and assets")
-	f.Rm = flag.Bool("delete", false,
-		"delete the duplicate files found in the <directory to check>")
-	f.RmPlus = flag.Bool("delete+", false,
-		"delete the duplicate files and remove empty directories from the <directory to check>")
-	f.Version = flag.Bool("version", false,
-		"version and information for this program")
+	f.Debug = flag.Bool(Debug_, false, f.Usage("Debug"))
+	f.Exact = flag.Bool(Exact_, false, f.Usage("Exact"))
+	f.Filename = flag.Bool(Name_, false, f.Usage("Filename"))
+	f.Help = flag.Bool(Help_, false, f.Usage("Help")) // only used in certain circumstances
+	f.Lookup = flag.Bool(Fast_, false, f.Usage("Lookup"))
+	f.Mono = flag.Bool(Mono_, false, f.Usage("Mono"))
+	f.Quiet = flag.Bool(Quiet_, false, f.Usage("Quiet"))
+	f.Sensen = flag.Bool(Sensen_, false, f.Usage("Sensen"))
+	f.Rm = flag.Bool(Delete_, false, f.Usage("Rm"))
+	f.RmPlus = flag.Bool(DelPlus_, false, f.Usage("RmPlus"))
+	f.Version = flag.Bool(Version_, false, f.Usage("Version"))
 }
 
 // Aliases parses the command aliases and flags, configuring both Flags and dupe.Config.

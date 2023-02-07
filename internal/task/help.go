@@ -26,14 +26,14 @@ func DupeHelp(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintln(w, "\n  Usage:")
 	fmt.Fprintln(w, "    dupers [options] dupe <directory or file to check> [buckets to lookup]")
 	fmt.Fprintln(w, "\n  Options:")
-	if flag.Lookup("fast") != nil {
-		f = *flag.Lookup("fast")
+	if flag.Lookup(cmd.Fast_) != nil {
+		f = *flag.Lookup(cmd.Fast_)
 		fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
-		f = *flag.Lookup("delete")
+		f = *flag.Lookup(cmd.Delete_)
 		fmt.Fprintf(w, "        -%v\t\t%v\n", f.Name, f.Usage)
-		f = *flag.Lookup("delete+")
+		f = *flag.Lookup(cmd.DelPlus_)
 		fmt.Fprintf(w, "        -%v\t\t%v\n", f.Name, f.Usage)
-		f = *flag.Lookup("sensen")
+		f = *flag.Lookup(cmd.Sensen_)
 		fmt.Fprintf(w, "        -%v\t\t%v\n", f.Name, f.Usage)
 	}
 	exampleDupe(w)
@@ -47,10 +47,10 @@ func SearchHelp(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintln(w, "\n  Usage:")
 	fmt.Fprintln(w, "    dupers [options] search <search expression> [optional, buckets to search]")
 	fmt.Fprintln(w, "\n  Options:")
-	if flag.Lookup("exact") != nil {
-		f = *flag.Lookup("exact")
+	if flag.Lookup(cmd.Exact_) != nil {
+		f = *flag.Lookup(cmd.Exact_)
 		fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
-		f = *flag.Lookup("name")
+		f = *flag.Lookup(cmd.Name_)
 		fmt.Fprintf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
 	}
 	exampleSearch(w)
@@ -74,14 +74,14 @@ func DBHelp(f flag.Flag, w *tabwriter.Writer) {
 	fmt.Fprintf(w, "    dupers %s <bucket>\t%s\n", Export_, "export the bucket to a text file in: "+cmd.Home())
 	fmt.Fprintf(w, "    dupers %s <export file>\t%s\n", Import_, "import a bucket text file into the database")
 	fmt.Fprintln(w, "\nOptions:")
-	if flag.Lookup("mono") != nil {
-		f = *flag.Lookup("mono")
+	if flag.Lookup(cmd.Mono_) != nil {
+		f = *flag.Lookup(cmd.Mono_)
 		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
-		f = *flag.Lookup("quiet")
+		f = *flag.Lookup(cmd.Quiet_)
 		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
-		f = *flag.Lookup("debug")
+		f = *flag.Lookup(cmd.Debug_)
 		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
-		f = *flag.Lookup("version")
+		f = *flag.Lookup(cmd.Version_)
 		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
 	}
 	fmt.Fprintf(w, "    -h, %s\tshow this list of options\n", "-help")
