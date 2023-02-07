@@ -61,17 +61,16 @@ func main() {
 	}
 	flag.Parse()
 
+	c = f.Aliases(&a, &c)
 	if *a.Mono || *f.Mono {
 		color.Enable = false
 	}
 
-	c = f.Aliases(&a, &c)
-
-	if s := options(&a, &f); s != "" {
+	if s := exitOptions(&a, &f); s != "" {
 		fmt.Fprintf(os.Stdout, "%s", s)
 		os.Exit(0)
 	}
-	//parse(&a, &c, &f)
+
 	if err := task.ChkWinDirs(); err != nil {
 		out.ErrFatal(err)
 	}
@@ -112,31 +111,23 @@ func defaultCmd(selection string) {
 	out.ErrFatal(nil)
 }
 
-// options parses universal aliases, flags and any misuse.
-func options(a *cmd.Aliases, f *cmd.Flags) string {
+// exitOptions parses help and version options.
+func exitOptions(a *cmd.Aliases, f *cmd.Flags) string {
 	if *a.Help || *f.Help {
 		return task.Help()
 	}
-	// handle misuse when a flag is passed as an argument
-	for _, arg := range flag.Args() {
-		switch strings.ToLower(arg) {
-		case "-h", fhlp, "--help":
-			return task.Help()
-		case "-v", "-version", "--version":
-			return vers(*f.Quiet)
-		}
-	}
 	if *a.Version || *f.Version {
-		return vers(*f.Quiet)
+		return about(*f.Quiet)
 	}
-	if len(flag.Args()) == 0 {
+	noUserArgs := len(flag.Args()) == 0
+	if noUserArgs {
 		return task.Help()
 	}
 	return ""
 }
 
-// vers prints out the program information and version.
-func vers(quiet bool) string {
+// about returns the program branding and information.
+func about(quiet bool) string {
 	const width = 45
 	exe, err := cmd.Self()
 	if err != nil {

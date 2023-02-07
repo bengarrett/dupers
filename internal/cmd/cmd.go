@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/bengarrett/dupers/dupe"
 	"github.com/bengarrett/dupers/internal/out"
@@ -80,6 +81,24 @@ func (f *Flags) Define() {
 
 // Aliases parses the command aliases and flags, configuring both Flags and dupe.Config.
 func (f *Flags) Aliases(a *Aliases, c *dupe.Config) dupe.Config {
+	// handle misuse when a global flag is passed as an argument
+	for _, arg := range flag.Args() {
+		switch strings.ToLower(arg) {
+		case "-d", "-debug", "--debug":
+			*f.Debug = true
+		case "-m", "-mono", "--mono":
+			*f.Mono = true
+		case "-q", "-quiet", "--quiet":
+			*f.Quiet = true
+		case "-h", "-help", "--help":
+			*f.Help = true
+		case "-v", "-version", "--version":
+			*f.Version = true
+		default:
+			// help and version are handled by main.suffixOpts()
+		}
+	}
+	// configurations
 	if *a.Debug || *f.Debug {
 		*f.Debug = true
 		c.Debug = true
@@ -96,6 +115,9 @@ func (f *Flags) Aliases(a *Aliases, c *dupe.Config) dupe.Config {
 	}
 	if *a.Lookup {
 		*f.Lookup = true
+	}
+	if *a.Mono {
+		*f.Mono = true
 	}
 	return *c
 }

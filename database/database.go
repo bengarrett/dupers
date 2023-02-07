@@ -61,7 +61,9 @@ var (
 	ErrDBZeroByte     = errors.New("database is a zero byte file")
 )
 
-var TestMode = false //nolint:gochecknoglobals
+var (
+	TestMode = false //nolint:gochecknoglobals
+)
 
 // Abs returns an absolute representation of the named bucket.
 func Abs(name string) (string, error) {
@@ -482,7 +484,7 @@ func Info() (string, error) {
 	}
 	fmt.Fprintf(w, "\n")
 	var bucketsB int
-	w, bucketsB, err = info(path, w)
+	w, bucketsB, err = info(w, path)
 	if err != nil {
 		fmt.Fprintln(w)
 		fmt.Fprintf(w, "\tDatabase error:\t%s\n", err.Error())
@@ -497,7 +499,7 @@ func Info() (string, error) {
 	return b.String(), nil
 }
 
-func info(name string, w *tabwriter.Writer) (*tabwriter.Writer, int, error) {
+func info(w *tabwriter.Writer, name string) (*tabwriter.Writer, int, error) {
 	type (
 		vals struct {
 			items int

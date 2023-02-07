@@ -20,4 +20,12 @@ tasks:
       - echo -e "## Testing -version.\n"
       - go run -race main.go -version
       - echo -e "## Testing -mono -version.\n"
-      - go run -race main.go -mono -version
+      - go run -race main.go -mono -version      
+      - echo -e "## Testing -mono -version -quiet.\n"
+      - go run -race main.go -mono -version -quiet
+      - echo -e "## Testing -mvq.\n"
+      - go run -race main.go -m -v -q
+      - echo -e "## Database"
+      - go run -race main.go database
+      - echo -e "## DB -d -m"
+      - go run -race main.go db -d -m
