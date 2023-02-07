@@ -54,13 +54,24 @@ const (
 func main() {
 	a, c, f := cmd.Aliases{}, dupe.Config{}, cmd.Flags{}
 	c.SetTimer()
-	cmd.Define(&f)
-	cmd.DefineShort(&a)
+	f.Define()
+	a.Define()
 	flag.Usage = func() {
 		task.Help()
 	}
 	flag.Parse()
-	parse(&a, &c, &f)
+
+	if *a.Mono || *f.Mono {
+		color.Enable = false
+	}
+
+	c = f.Aliases(&a, &c)
+
+	if s := options(&a, &f); s != "" {
+		fmt.Fprintf(os.Stdout, "%s", s)
+		os.Exit(0)
+	}
+	//parse(&a, &c, &f)
 	if err := task.ChkWinDirs(); err != nil {
 		out.ErrFatal(err)
 	}
@@ -94,33 +105,6 @@ func main() {
 	}
 }
 
-// parse the command aliases and flags and returns true if the program should exit.
-func parse(a *cmd.Aliases, c *dupe.Config, f *cmd.Flags) {
-	if *a.Mono || *f.Mono {
-		color.Enable = false
-	}
-	if s := options(a, f); s != "" {
-		fmt.Fprintf(os.Stdout, "%s", s)
-		os.Exit(0)
-	}
-	if *f.Debug {
-		c.Debug = true
-	}
-	if *a.Quiet || *f.Quiet {
-		*f.Quiet = true
-		c.Quiet = true
-	}
-	if *a.Exact {
-		*f.Exact = true
-	}
-	if *a.Filename {
-		*f.Filename = true
-	}
-	if *a.Lookup {
-		*f.Lookup = true
-	}
-}
-
 func defaultCmd(selection string) {
 	out.ErrCont(ErrCmd)
 	fmt.Fprintf(os.Stdout, "Command: '%s'\n\nSee the help for the available commands and options:\n", selection)
@@ -139,11 +123,11 @@ func options(a *cmd.Aliases, f *cmd.Flags) string {
 		case "-h", fhlp, "--help":
 			return task.Help()
 		case "-v", "-version", "--version":
-			return vers()
+			return vers(*f.Quiet)
 		}
 	}
 	if *a.Version || *f.Version {
-		return vers()
+		return vers(*f.Quiet)
 	}
 	if len(flag.Args()) == 0 {
 		return task.Help()
@@ -152,18 +136,20 @@ func options(a *cmd.Aliases, f *cmd.Flags) string {
 }
 
 // vers prints out the program information and version.
-func vers() string {
+func vers(quiet bool) string {
 	const width = 45
 	exe, err := cmd.Self()
 	if err != nil {
 		out.ErrCont(err)
 	}
 	w := new(bytes.Buffer)
-	fmt.Fprintln(w, brand+"\n")
-	fmt.Fprintln(w, ralign(width, "dupers v"+version))
-	fmt.Fprintln(w, ralign(width, copyright()+" Ben Garrett"))
-	fmt.Fprintln(w, color.Primary.Sprint(ralign(width, homepage)))
-	fmt.Fprintln(w)
+	if !quiet {
+		fmt.Fprintln(w, brand+"\n")
+		fmt.Fprintln(w, ralign(width, "dupers v"+version))
+		fmt.Fprintln(w, ralign(width, copyright()+" Ben Garrett"))
+		fmt.Fprintln(w, color.Primary.Sprint(ralign(width, homepage)))
+		fmt.Fprintln(w)
+	}
 	fmt.Fprintf(w, "  %s    %s\n", color.Secondary.Sprint("build:"), commit())
 	fmt.Fprintf(w, "  %s %s/%s\n", color.Secondary.Sprint("platform:"),
 		runtime.GOOS, runtime.GOARCH)

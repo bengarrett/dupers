@@ -46,7 +46,7 @@ func TestDefine(t *testing.T) {
 		}
 	}()
 	f := cmd.Flags{}
-	cmd.Define(&f)
+	f.Define()
 	if *f.Version != false {
 		t.Errorf("Define() version error = %v, want false", *f.Version)
 	}
@@ -59,7 +59,7 @@ func TestDefineShort(t *testing.T) {
 		}
 	}()
 	a := cmd.Aliases{}
-	cmd.DefineShort(&a)
+	a.Define()
 	if *a.Version != false {
 		t.Errorf("DefineShort() version error = %v, want false", *a.Version)
 	}

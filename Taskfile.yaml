@@ -1,0 +1,23 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars:
+  GREETING: Hello, World!
+
+tasks:
+  race:
+    silent: true
+    cmds:
+      - go build -v -race -o dupers main.go
+  args:
+    silent: true
+    cmds:
+      - echo -e "## Testing help.\n"
+      - go run -race main.go
+      - echo -e "## Testing -mono.\n"
+      - go run -race main.go -mono
+      - echo -e "## Testing -version.\n"
+      - go run -race main.go -version
+      - echo -e "## Testing -mono -version.\n"
+      - go run -race main.go -mono -version

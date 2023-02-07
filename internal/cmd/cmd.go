@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/bengarrett/dupers/dupe"
 	"github.com/bengarrett/dupers/internal/out"
 	"github.com/gookit/color"
 )
@@ -16,6 +17,7 @@ var ErrWindowsDir = errors.New("cannot parse the directory path")
 
 // Aliases are single letter options for commands.
 type Aliases struct {
+	Debug    *bool
 	Exact    *bool
 	Filename *bool
 	Help     *bool
@@ -23,6 +25,21 @@ type Aliases struct {
 	Mono     *bool
 	Quiet    *bool
 	Version  *bool
+}
+
+// DefineShort options for the command aliases.
+func (a *Aliases) Define() {
+	if a == nil {
+		return
+	}
+	a.Debug = flag.Bool("d", false, "alias for debug")
+	a.Exact = flag.Bool("e", false, "alias for exact")
+	a.Lookup = flag.Bool("f", false, "alias for fast")
+	a.Filename = flag.Bool("n", false, "alias for name")
+	a.Help = flag.Bool("h", false, "alias for help")
+	a.Mono = flag.Bool("m", false, "alias for mono")
+	a.Quiet = flag.Bool("q", false, "alias for quiet")
+	a.Version = flag.Bool("v", false, "alias for version")
 }
 
 // Flags are the options for commands.
@@ -38,6 +55,49 @@ type Flags struct {
 	RmPlus   *bool
 	Sensen   *bool
 	Version  *bool
+}
+
+// Define options for the commands.
+func (f *Flags) Define() {
+	if f == nil {
+		return
+	}
+	f.Debug = flag.Bool("debug", false, "debug is a verbose mode to print all the activities and tasks")
+	f.Exact = flag.Bool("exact", false, "match case")
+	f.Filename = flag.Bool("name", false, "search for filenames, and ignore directories")
+	f.Help = flag.Bool("help", false, "print help") // only used in certain circumstances
+	f.Lookup = flag.Bool("fast", false, "query the database for a much faster match,"+
+		"\n\t\tthe results maybe stale as it does not look for any file changes on your system")
+	f.Mono = flag.Bool("mono", false, "monochrome mode to remove all color output")
+	f.Quiet = flag.Bool("quiet", false, "quiet mode hides all but essential feedback")
+	f.Sensen = flag.Bool("sensen", false, "delete everything in the <directory to check>"+
+		"\n\t\texcept for directories containing unique Windows programs and assets")
+	f.Rm = flag.Bool("delete", false, "delete the duplicate files found in the <directory to check>")
+	f.RmPlus = flag.Bool("delete+", false,
+		"delete the duplicate files and remove empty directories from the <directory to check>")
+	f.Version = flag.Bool("version", false, "version and information for this program")
+}
+
+// Aliases parses the command aliases and flags, configuring both Flags and dupe.Config.
+func (f *Flags) Aliases(a *Aliases, c *dupe.Config) dupe.Config {
+	if *a.Debug || *f.Debug {
+		*f.Debug = true
+		c.Debug = true
+	}
+	if *a.Quiet || *f.Quiet {
+		*f.Quiet = true
+		c.Quiet = true
+	}
+	if *a.Exact {
+		*f.Exact = true
+	}
+	if *a.Filename {
+		*f.Filename = true
+	}
+	if *a.Lookup {
+		*f.Lookup = true
+	}
+	return *c
 }
 
 // ChkWinDir checks the string for invalid, escaped quoted paths when using Windows cmd.exe.
@@ -69,41 +129,6 @@ func ChkWinDir(s string) error {
 		fmt.Fprintf(w, "\"%s\\\"", usr)
 	}
 	return fmt.Errorf("%w\n%s", ErrWindowsDir, w.String())
-}
-
-// Define options for the commands.
-func Define(f *Flags) {
-	if f == nil {
-		return
-	}
-	f.Exact = flag.Bool("exact", false, "match case")
-	f.Debug = flag.Bool("debug", false, "debug is a verbose mode to print all the activities and tasks")
-	f.Filename = flag.Bool("name", false, "search for filenames, and ignore directories")
-	f.Help = flag.Bool("help", false, "print help") // only used in certain circumstances
-	f.Lookup = flag.Bool("fast", false, "query the database for a much faster match,"+
-		"\n\t\tthe results maybe stale as it does not look for any file changes on your system")
-	f.Mono = flag.Bool("mono", false, "monochrome mode to remove all color output")
-	f.Quiet = flag.Bool("quiet", false, "quiet mode hides all but essential feedback")
-	f.Sensen = flag.Bool("sensen", false, "delete everything in the <directory to check>"+
-		"\n\t\texcept for directories containing unique Windows programs and assets")
-	f.Rm = flag.Bool("delete", false, "delete the duplicate files found in the <directory to check>")
-	f.RmPlus = flag.Bool("delete+", false,
-		"delete the duplicate files and remove empty directories from the <directory to check>")
-	f.Version = flag.Bool("version", false, "version and information for this program")
-}
-
-// DefineShort options for the command aliases.
-func DefineShort(a *Aliases) {
-	if a == nil {
-		return
-	}
-	a.Exact = flag.Bool("e", false, "alias for exact")
-	a.Lookup = flag.Bool("f", false, "alias for fast")
-	a.Filename = flag.Bool("n", false, "alias for name")
-	a.Help = flag.Bool("h", false, "alias for help")
-	a.Mono = flag.Bool("m", false, "alias for mono")
-	a.Quiet = flag.Bool("q", false, "alias for quiet")
-	a.Version = flag.Bool("v", false, "alias for version")
 }
 
 // Home returns the user home directory.
