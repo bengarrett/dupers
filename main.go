@@ -12,7 +12,6 @@ import (
 	"os"
 	"runtime"
 	"strings"
-	"text/tabwriter"
 	"time"
 	"unicode/utf8"
 
@@ -36,6 +35,7 @@ var brand string
 var version = "0.0.0"
 
 const (
+	author   = "Ben Garrett"
 	homepage = "https://github.com/bengarrett/dupers"
 )
 
@@ -54,19 +54,19 @@ func main() {
 		color.Enable = false
 	}
 
-	if s := exitOptions(&a, &f); s != "" {
-		fmt.Fprint(os.Stdout, s)
+	if help := exitOptions(&a, &f); help != "" {
+		fmt.Fprint(os.Stdout, help)
 		os.Exit(0)
 	}
 
-	if err := task.ChkWinDirs(); err != nil {
+	if err := task.Directories(); err != nil {
 		out.ErrFatal(err)
 	}
+
 	selection := strings.ToLower(flag.Args()[0])
 	if c.Debug {
 		out.PBug("command selection: " + selection)
 	}
-
 	switch selection {
 	case task.Dupe_:
 		const testing = false
@@ -99,22 +99,29 @@ func main() {
 			out.ErrFatal(err)
 		}
 	default:
-		defaultCmd(selection)
+		unknown(selection)
 	}
 }
 
-func defaultCmd(selection string) {
+// unknown returns a command is unknown helper error.
+func unknown(s string) {
+	w := os.Stderr
 	out.ErrCont(ErrCmd)
-	fmt.Fprintf(os.Stdout, "Command: '%s'\n\nSee the help for the available commands and options:\n", selection)
+	fmt.Fprintf(w, "Command: '%s'", s)
+	fmt.Fprintln(w)
+	fmt.Fprintln(w)
+	fmt.Fprint(w, "See the help for the available commands and options:")
+	fmt.Fprintln(w)
 	out.Example("dupers -help")
-	out.ErrFatal(nil)
+
+	os.Exit(1)
 }
 
 // exitOptions parses help and version options.
 func exitOptions(a *cmd.Aliases, f *cmd.Flags) string {
 	noArgs := len(flag.Args()) == 0
 	if *f.Version && *f.Debug {
-		return debug(a, f)
+		return task.Debug(a, f)
 	}
 	if *a.Help || *f.Help {
 		selection := ""
@@ -153,7 +160,7 @@ func about(quiet bool) string {
 	if !quiet {
 		fmt.Fprintln(w, brand+"\n")
 		fmt.Fprintln(w, ralign(width, "dupers v"+version))
-		fmt.Fprintln(w, ralign(width, copyright()+" Ben Garrett"))
+		fmt.Fprintln(w, ralign(width, fmt.Sprintf("%s %s", copyright(), author)))
 		fmt.Fprintln(w, color.Primary.Sprint(ralign(width, homepage)))
 		fmt.Fprintln(w)
 	}
@@ -164,28 +171,6 @@ func about(quiet bool) string {
 		strings.Replace(runtime.Version(), "go", "v", 1))
 	fmt.Fprintf(w, "  %s     %s\n", color.Secondary.Sprint("path:"), exe)
 	return w.String()
-}
-
-func debug(a *cmd.Aliases, f *cmd.Flags) string {
-	const na = "n/a"
-	buf := new(bytes.Buffer)
-	w := tabwriter.NewWriter(buf, 0, 0, 1, ' ', tabwriter.AlignRight)
-	fmt.Fprintln(w, "Dupers arguments debug:")
-	fmt.Fprintln(w)
-	fmt.Fprintln(w, "\t\tToggle\t\tAlias")
-	fmt.Fprintf(w, "-mono:\t\t%v\t\t%v\n", *f.Mono, *a.Mono)
-	fmt.Fprintf(w, "-quiet:\t\t%v\t\t%v\n", *f.Quiet, *a.Quiet)
-	fmt.Fprintf(w, "-debug:\t\t%v\t\t%v\n", *f.Debug, *a.Debug)
-	fmt.Fprintf(w, "-version:\t\t%v\t\t%v\n", *f.Version, *a.Version)
-	fmt.Fprintf(w, "-help:\t\t%v\t\t%v\n", *f.Help, *a.Help)
-	fmt.Fprintf(w, "-exact:\t\t%v\t\t%v\n", *f.Exact, *a.Exact)
-	fmt.Fprintf(w, "-name:\t\t%v\t\t%v\n", *f.Filename, *a.Filename)
-	fmt.Fprintf(w, "-fast:\t\t%v\t\t%v\n", *f.Lookup, *a.Lookup)
-	fmt.Fprintf(w, "-delete:\t\t%v\t\t%v\n", *f.Rm, na)
-	fmt.Fprintf(w, "-delete+:\t\t%v\t\t%v\n", *f.RmPlus, na)
-	fmt.Fprintf(w, "-sensen:\t\t%v\t\t%v\n", *f.RmPlus, na)
-	w.Flush()
-	return buf.String()
 }
 
 // ralign aligns the string to the right of the terminal using space padding.

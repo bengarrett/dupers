@@ -54,8 +54,8 @@ const (
 	description = "Dupers is the blazing-fast file duplicate checker and filename search tool."
 )
 
-// ChkWinDirs checks the arguments for invalid escaped quoted paths when using Windows cmd.exe.
-func ChkWinDirs() error {
+// Directories checks the arguments for invalid escaped quoted paths when using the Windows cmd.exe shell.
+func Directories() error {
 	if runtime.GOOS != winOS {
 		return nil
 	}
