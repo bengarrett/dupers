@@ -393,7 +393,6 @@ func (c *Config) WalkDir(name parse.Bucket) error {
 		return ErrNoBucket
 	}
 	root := string(name)
-
 	c.init()
 	skip := c.skipFiles()
 	// open database
@@ -410,7 +409,6 @@ func (c *Config) WalkDir(name parse.Bucket) error {
 }
 
 func (c *Config) walkDir(root string, skip []string) error {
-	//var wg sync.WaitGroup
 	if c.Debug {
 		out.PBug("walk directory: " + root)
 	}
@@ -427,6 +425,9 @@ func (c *Config) walkDir(root string, skip []string) error {
 				return nil
 			}
 			return err
+		}
+		if path == root {
+			return nil
 		}
 		if err1 := skipDir(d); err1 != nil {
 			return c.walkDirSkip(" - skipping directory", err1)
@@ -448,14 +449,9 @@ func (c *Config) walkDir(root string, skip []string) error {
 			out.ErrFatal(errW)
 		}
 		fmt.Fprint(os.Stdout, PrintWalk(false, c))
-		// wg.Add(1)
-		// go func() {
 		if err := c.Checksum(path, root); err != nil {
 			out.ErrCont(err)
 		}
-		// 	wg.Done()
-		// }()
-		//wg.Wait()
 		return err
 	})
 }

@@ -19,3 +19,4 @@ Tests
 test/tmp/*
 dist/
 dupers
+.task
