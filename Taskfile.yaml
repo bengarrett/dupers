@@ -17,6 +17,12 @@ tasks:
       - go run -race main.go
       - echo -e "## Testing -mono.\n"
       - go run -race main.go -mono
+      - echo -e "## Testing database help"
+      - go run -race main.go -h database
+      - echo -e "## Testing search help"
+      - go run -race main.go search --help
+      - echo -e "## Testing dupe help"
+      - go run -race main.go -help dupe
       - echo -e "## Testing -version.\n"
       - go run -race main.go -version
       - echo -e "## Testing -mono -version.\n"
