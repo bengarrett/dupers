@@ -55,7 +55,7 @@ func main() {
 	}
 
 	if s := exitOptions(&a, &f); s != "" {
-		fmt.Fprintf(os.Stdout, "%s", s)
+		fmt.Fprint(os.Stdout, s)
 		os.Exit(0)
 	}
 
@@ -112,18 +112,31 @@ func defaultCmd(selection string) {
 
 // exitOptions parses help and version options.
 func exitOptions(a *cmd.Aliases, f *cmd.Flags) string {
+	noArgs := len(flag.Args()) == 0
 	if *f.Version && *f.Debug {
 		return debug(a, f)
 	}
 	if *a.Help || *f.Help {
-		return task.Help()
+		selection := ""
+		if !noArgs {
+			selection = strings.ToLower(flag.Args()[0])
+		}
+		switch selection {
+		case task.Dupe_:
+			return task.HelpDupe()
+		case task.Search_:
+			return task.HelpSearch()
+		case task.Database_, task.DB_:
+			return task.HelpDatabase()
+		default:
+			return task.Help()
+		}
 	}
 	if *a.Version || *f.Version {
 		return about(*f.Quiet)
 	}
-
-	noUserArgs := len(flag.Args()) == 0
-	if noUserArgs {
+	// no commands or arguments, then always return help
+	if noArgs {
 		return task.Help()
 	}
 	return ""

@@ -13,7 +13,8 @@ import (
 )
 
 // DatabaseHelp creates the database command help.
-func DatabaseHelp(w io.Writer, f flag.Flag) {
+func DatabaseHelp(w io.Writer) {
+	f := flag.Flag{}
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, color.Primary.Sprint("Database commands:"))
 	fmt.Fprintln(w, "  View information and run optional maintenance on the internal database.")
@@ -58,7 +59,8 @@ func DatabaseHelp(w io.Writer, f flag.Flag) {
 }
 
 // DupeHelp creates the dupe command help.
-func DupeHelp(w io.Writer, f flag.Flag) {
+func DupeHelp(w io.Writer) {
+	f := flag.Flag{}
 	const danger = "(!)"
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, color.Primary.Sprint("Dupe command:"))
@@ -123,7 +125,8 @@ func dupeWindows(w io.Writer) {
 }
 
 // Search creates the search command help.
-func SearchHelp(w io.Writer, f flag.Flag) {
+func SearchHelp(w io.Writer) {
+	f := flag.Flag{}
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, color.Primary.Sprint("Search command:"))
 	fmt.Fprintln(w, "  Lookup a file or a directory name in the database.")

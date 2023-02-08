@@ -49,6 +49,11 @@ const (
 	winOS     = "windows"
 )
 
+const (
+	tabPadding  = 4
+	description = "Dupers is the blazing-fast file duplicate checker and filename search tool."
+)
+
 // ChkWinDirs checks the arguments for invalid escaped quoted paths when using Windows cmd.exe.
 func ChkWinDirs() error {
 	if runtime.GOOS != winOS {
@@ -182,17 +187,45 @@ func walkScan(c *dupe.Config, f *cmd.Flags, args ...string) error {
 
 // Help, usage and examples.
 func Help() string {
-	const (
-		tabPadding  = 4
-		description = "Dupers is the blazing-fast file duplicate checker and filename search tool."
-	)
-	b, f := bytes.Buffer{}, flag.Flag{}
+	b, w := helper()
+	DupeHelp(w)
+	SearchHelp(w)
+	DatabaseHelp(w)
+	fmt.Fprintln(w)
+	if err := w.Flush(); err != nil {
+		return fmt.Sprintf("could not flush the help text: %s", err)
+	}
+	return b.String()
+}
+
+func helper() (*bytes.Buffer, *tabwriter.Writer) {
+	b := bytes.Buffer{}
 	w := tabwriter.NewWriter(&b, 0, 0, tabPadding, ' ', 0)
 	fmt.Fprintln(w, description)
-	DupeHelp(w, f)
-	SearchHelp(w, f)
-	DatabaseHelp(w, f)
-	fmt.Fprintln(w)
+	return &b, w
+}
+
+func HelpDatabase() string {
+	b, w := helper()
+	DatabaseHelp(w)
+	if err := w.Flush(); err != nil {
+		return fmt.Sprintf("could not flush the help text: %s", err)
+	}
+	return b.String()
+}
+
+func HelpDupe() string {
+	b, w := helper()
+	DupeHelp(w)
+	if err := w.Flush(); err != nil {
+		return fmt.Sprintf("could not flush the help text: %s", err)
+	}
+	return b.String()
+}
+
+func HelpSearch() string {
+	b, w := helper()
+	SearchHelp(w)
 	if err := w.Flush(); err != nil {
 		return fmt.Sprintf("could not flush the help text: %s", err)
 	}
