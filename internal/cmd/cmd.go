@@ -76,14 +76,14 @@ func (a *Aliases) Define() {
 type Flags struct {
 	Exact    *bool `usage:"match case"`
 	Filename *bool `usage:"search for filenames, and ignore directories"`
-	Lookup   *bool `usage:"query the database for a much faster match,\n\t\tthe results maybe stale as it does not look for any file changes on your system"`
-	Rm       *bool `usage:"delete everything in the <directory to check>\n\t\texcept for directories containing unique Windows programs and assets"`
-	RmPlus   *bool `usage:"delete the duplicate files found in the <directory to check>"`
-	Sensen   *bool `usage:"delete the duplicate files and remove empty directories from the <directory to check>"`
+	Lookup   *bool `usage:"query the database for a much faster match, the results\n\t maybe stale as it does not look for any file changes on\n\t your system"`
+	Rm       *bool `usage:"delete everything in the <directory to check> except\n\t for directories containing unique Windows programs and\n\t assets"`
+	RmPlus   *bool `usage:"delete the duplicate files found in the\n\t <directory to check>"`
+	Sensen   *bool `usage:"delete the duplicate files and remove empty directories\n\t from the <directory to check>"`
 
 	// global options
 
-	Debug   *bool `usage:"debug is a verbose mode to print all the activities and tasks"`
+	Debug   *bool `usage:"debug is a verbose mode to print all the activities\n\t and tasks"`
 	Help    *bool `usage:"print help"`
 	Mono    *bool `usage:"monochrome mode to remove all color output"`
 	Quiet   *bool `usage:"quiet mode hides all but essential feedback"`

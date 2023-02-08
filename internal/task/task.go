@@ -188,15 +188,13 @@ func Help() string {
 	)
 	b, f := bytes.Buffer{}, flag.Flag{}
 	w := tabwriter.NewWriter(&b, 0, 0, tabPadding, ' ', 0)
-
-	fmt.Fprintf(w, "%s\n", description)
-
-	DupeHelp(f, w)
-	SearchHelp(f, w)
-	DBHelp(f, w)
+	fmt.Fprintln(w, description)
+	DupeHelp(w, f)
+	SearchHelp(w, f)
+	DatabaseHelp(w, f)
 	fmt.Fprintln(w)
 	if err := w.Flush(); err != nil {
-		return ""
+		return fmt.Sprintf("could not flush the help text: %s", err)
 	}
 	return b.String()
 }
