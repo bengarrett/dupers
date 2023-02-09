@@ -88,7 +88,7 @@ func main() {
 		task.RM_,
 		task.Up_,
 		task.UpPlus_:
-		if err := task.Database(&c, *f.Yes, *f.Quiet, flag.Args()...); err != nil {
+		if err := task.Database(&c, *f.Yes, flag.Args()...); err != nil {
 			if errors.Is(err, database.ErrDBNotFound) {
 				os.Exit(0)
 			}

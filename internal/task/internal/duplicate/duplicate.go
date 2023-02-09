@@ -77,23 +77,47 @@ func CmdErr(args, buckets, minArgs int, test bool) {
 }
 
 // Lookup both cleans and then updates the buckets with file system changes.
-func Lookup(c *dupe.Config, f *cmd.Flags) {
+func Lookup(c *dupe.Config, f *cmd.Flags) error {
 	c.DPrint("dupe lookup.")
+
+	var errs error
+
+	db := c.Parser.DB
+	if db == nil {
+		db, err := database.OpenRead()
+		if err != nil {
+			return err
+		}
+		defer db.Close()
+	}
+
 	// normalise bucket names
+
+	// CHECK EXISTANCE
 	for i, b := range c.All() {
 		abs, err := database.Abs(string(b))
 		if err != nil {
-			out.ErrCont(err)
+			errs = errors.Join(errs, fmt.Errorf("%w: %s", err, b))
 			c.All()[i] = ""
 
 			continue
 		}
+		if err := database.Exist(abs, db); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("%w: %s", err, b))
+		}
 		c.All()[i] = dupe.Bucket(abs)
 	}
+	if errs != nil {
+		return errs
+	}
+
 	buckets := make([]string, 0, len(c.All()))
 	for _, b := range c.All() {
 		buckets = append(buckets, string(b))
 	}
+
+	fmt.Println(" >>> ", buckets)
+
 	if !*f.Lookup && len(buckets) > 0 {
 		c.DPrint("non-fast mode, database cleanup.")
 		if err := database.Clean(c.Quiet, c.Debug, buckets...); err != nil {
@@ -102,18 +126,20 @@ func Lookup(c *dupe.Config, f *cmd.Flags) {
 	}
 	if *f.Lookup {
 		if err := lookup(c); err != nil {
-			return
+			return nil
 		}
 	}
 	c.DPrint("walk the buckets.")
 	c.WalkDirs()
+	return nil
 }
 
 func lookup(c *dupe.Config) error {
 	c.DPrint("read the hash values in the buckets.")
 	fastErr := false
-	for _, b := range c.All() {
-		if i, err := c.SetCompares(b); err != nil {
+	for _, bucket := range c.All() {
+		if i, err := c.SetCompares(bucket); err != nil {
+			fmt.Println("---------------> OOPS")
 			out.ErrCont(err)
 		} else if i > 0 {
 			continue

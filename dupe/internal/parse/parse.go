@@ -4,6 +4,7 @@ package parse
 import (
 	"bytes"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -88,10 +89,26 @@ func (p *Parser) SetAllBuckets() error {
 }
 
 // SetBucket adds the bucket name to a list of buckets.
-func (p *Parser) SetBucket(names ...string) {
+func (p *Parser) SetBucket(names ...string) error {
+	var errs error
 	for _, name := range names {
+
+		n, err := filepath.Abs(name)
+		if err != nil {
+			errs = errors.Join(errs, fmt.Errorf("%w: %s", err, n))
+			continue
+		}
+		if _, err := os.Stat(n); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("%w: %s", err, n))
+			continue
+		}
+
 		p.Buckets = append(p.Buckets, Bucket(name))
 	}
+	if errs != nil {
+		return errs
+	}
+	return nil
 }
 
 // SetCompares fetches items from the named bucket and sets them to c.compare.

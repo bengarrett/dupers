@@ -181,13 +181,13 @@ func (f *Flags) Aliases(a *Aliases, c *dupe.Config) dupe.Config {
 	return *c
 }
 
-// ChkWinDir checks the string for invalid, escaped quoted paths when using Windows cmd.exe.
-func ChkWinDir(s string) error {
-	if s == "" {
+// WindowsChk checks the named directory for invalid, escaped quoted paths when using Windows cmd.exe.
+func WindowsChk(name string) error {
+	if name == "" {
 		return nil
 	}
 	const dblQuote rune = 34
-	r := []rune(s)
+	r := []rune(name)
 	l := len(r)
 	first, last := r[0:1][0], r[l-1 : l][0]
 	if first == dblQuote && last == dblQuote {

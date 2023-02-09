@@ -153,22 +153,26 @@ func Clean(quiet, debug bool, buckets ...string) error {
 	if err != nil {
 		return err
 	}
-	out.DPrint(debug, "database path: "+path)
 
+	out.DPrint(debug, "database path: "+path)
 	db, err := bolt.Open(path, PrivateFile, write())
 	if err != nil {
 		return err
 	}
 	defer db.Close()
+
+	out.DPrint(debug, fmt.Sprintf("cleaner of buckets: %s", buckets))
 	buckets, err = cleaner(buckets, debug, db)
 	if err != nil {
 		return err
 	}
+
 	cnt, errs, finds := 0, 0, 0
 	total, err := bucket.Total(buckets, db)
 	if err != nil {
 		return err
 	}
+
 	for _, name := range buckets {
 		var abs string
 		var cont bool

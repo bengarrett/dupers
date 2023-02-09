@@ -63,16 +63,22 @@ func Directories() error {
 	if len(flag.Args()) < minArgs {
 		return nil
 	}
-	for _, s := range flag.Args()[1:] {
-		if err := cmd.ChkWinDir(s); err != nil {
-			return err
+	var errs error
+	directories := flag.Args()[1:]
+	for _, dir := range directories {
+		if err := cmd.WindowsChk(dir); err != nil {
+			errs = errors.Join(errs, err)
+			continue
 		}
+	}
+	if errs != nil {
+		return errs
 	}
 	return nil
 }
 
 // Database parses the commands that interact with the database.
-func Database(c *dupe.Config, assumeYes, quiet bool, args ...string) error {
+func Database(c *dupe.Config, assumeYes bool, args ...string) error {
 	if err := database.Check(); err != nil {
 		return err
 	}
@@ -83,9 +89,9 @@ func Database(c *dupe.Config, assumeYes, quiet bool, args ...string) error {
 	copy(buckets[:], args)
 	switch args[0] {
 	case Backup_:
-		return backupDB(quiet)
+		return backupDB(c.Quiet)
 	case Clean_:
-		return cleanupDB(quiet, c.Debug)
+		return cleanupDB(c.Quiet, c.Debug)
 	case DB_, Database_:
 		s, err := database.Info()
 		if err != nil {
@@ -93,17 +99,17 @@ func Database(c *dupe.Config, assumeYes, quiet bool, args ...string) error {
 		}
 		fmt.Fprintln(os.Stdout, s)
 	case Export_:
-		bucket.Export(quiet, buckets)
+		bucket.Export(c.Quiet, buckets)
 	case Import_:
-		bucket.Import(quiet, assumeYes, buckets)
+		bucket.Import(c.Quiet, assumeYes, buckets)
 	case LS_:
-		bucket.List(quiet, buckets)
+		bucket.List(c.Quiet, buckets)
 	case MV_:
 		buckets := [3]string{}
 		copy(buckets[:], args)
-		bucket.Move(quiet, assumeYes, buckets)
+		bucket.Move(c.Quiet, assumeYes, buckets)
 	case RM_:
-		bucket.Remove(quiet, assumeYes, buckets)
+		bucket.Remove(c.Quiet, assumeYes, buckets)
 	case Up_:
 		bucket.Rescan(c, false, buckets)
 	case UpPlus_:
@@ -147,27 +153,30 @@ func Dupe(c *dupe.Config, f *cmd.Flags, testing bool, args ...string) error {
 	if err := c.SetSource(args[source]); err != nil {
 		return err
 	}
-
-	walkCheck(c, *f.Yes, args...)
+	if err := walkCheck(c, *f.Yes, args...); err != nil {
+		return err
+	}
 	return walkScan(c, f, args...)
 }
 
 // walkCheck checks directories and files to scan, a bucket is the name given to database tables.
-func walkCheck(c *dupe.Config, assumeYes bool, args ...string) {
-	s := fmt.Sprintf("buckets: %s", c.PrintBuckets())
+func walkCheck(c *dupe.Config, assumeYes bool, args ...string) error {
 	buckets := args[2:]
 	if len(buckets) == 0 {
 		if err := c.SetAllBuckets(); err != nil {
-			out.ErrFatal(err)
+			return err
 		}
-		c.DPrint(s)
-		return
+		c.DPrint(fmt.Sprintf("use all buckets: %s", c.PrintBuckets()))
+		return nil
 	}
-	c.SetBucket(buckets...)
+	if err := c.SetBucket(buckets...); err != nil {
+		return err
+	}
 	if code := checkDupePaths(c, assumeYes); code >= 0 {
 		os.Exit(code)
 	}
-	c.DPrint(s)
+	c.DPrint(fmt.Sprintf("use buckets: %s", c.PrintBuckets()))
+	return nil
 }
 
 func walkScan(c *dupe.Config, f *cmd.Flags, args ...string) error {
@@ -177,7 +186,9 @@ func walkScan(c *dupe.Config, f *cmd.Flags, args ...string) error {
 	}
 	c.DPrint("walksource complete.")
 	// walk, scan and save file paths and hashes to the database
-	duplicate.Lookup(c, f)
+	if err := duplicate.Lookup(c, f); err != nil {
+		return err
+	}
 	if !c.Quiet {
 		fmt.Fprint(os.Stdout, out.RMLine())
 	}

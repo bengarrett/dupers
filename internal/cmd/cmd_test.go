@@ -10,32 +10,32 @@ import (
 )
 
 func TestChkWinDir(t *testing.T) {
-	err := cmd.ChkWinDir("")
+	err := cmd.WindowsChk("")
 	if err != nil {
-		t.Errorf("ChkWinDir empty should return nil, got %v", err)
+		t.Errorf("WindowsChk empty should return nil, got %v", err)
 	}
-	err = cmd.ChkWinDir("\"\"")
+	err = cmd.WindowsChk("\"\"")
 	if err != nil {
-		t.Errorf("ChkWinDir empty quotes should return nil, got %v", err)
+		t.Errorf("WindowsChk empty quotes should return nil, got %v", err)
 	}
-	err = cmd.ChkWinDir("\"E:\"")
+	err = cmd.WindowsChk("\"E:\"")
 	if err != nil {
-		t.Errorf("ChkWinDir drive letter should return nil, got %v", err)
+		t.Errorf("WindowsChk drive letter should return nil, got %v", err)
 	}
 	const letter = "C:\""
-	err = cmd.ChkWinDir(letter)
+	err = cmd.WindowsChk(letter)
 	if err == nil {
-		t.Errorf("ChkWinDir drive letter with backslash should return an error")
+		t.Errorf("WindowsChk drive letter with backslash should return an error")
 	}
 	const path = "C:\\My Files"
-	err = cmd.ChkWinDir(path)
+	err = cmd.WindowsChk(path)
 	if err != nil {
-		t.Errorf("ChkWinDir path should return nil, got %v", err)
+		t.Errorf("WindowsChk path should return nil, got %v", err)
 	}
 	const cmdPath = "C:\\My Files\\"
-	err = cmd.ChkWinDir(cmdPath)
+	err = cmd.WindowsChk(cmdPath)
 	if err != nil {
-		t.Errorf("ChkWinDir path should return nil, got %v", err)
+		t.Errorf("WindowsChk path should return nil, got %v", err)
 	}
 }
 
