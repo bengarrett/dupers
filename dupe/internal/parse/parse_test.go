@@ -57,7 +57,7 @@ func TestSetBuckets(t *testing.T) {
 		return
 	}
 	p := parse.Parser{}
-	if err := p.SetBuckets(); err != nil {
+	if err := p.SetAllBuckets(); err != nil {
 		t.Error(err)
 	}
 	const expected = 1
@@ -194,7 +194,9 @@ func Test_SetBucket(t *testing.T) {
 
 func Test_SetSource(t *testing.T) {
 	c := parse.Parser{}
-	c.SetSource(bucket1)
+	if err := c.SetSource(bucket1); err != nil {
+		t.Errorf("SetSource(%v) returned the error: %v", bucket1, err)
+	}
 	t.Run("test set", func(t *testing.T) {
 		if s := c.Source; s == "" {
 			t.Errorf("SetSource() got = %v, want the absolute path of: %v", s, bucket1)

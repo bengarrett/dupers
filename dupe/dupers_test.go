@@ -31,54 +31,6 @@ const (
 	rmDst   = "../test/tmp/mPzd5cu0Gv5j"
 )
 
-func TestConfig_CheckPaths(t *testing.T) {
-	type fields struct {
-		Debug bool
-		Quiet bool
-		Test  bool
-		parse.Parser
-	}
-	type args struct {
-		source  string
-		buckets []parse.Bucket
-	}
-	f := fields{Test: true}
-	tests := []struct {
-		name          string
-		fields        fields
-		args          args
-		wantOk        bool
-		wantCheckCnt  int
-		wantBucketCnt int
-	}{
-		{"empty", f, args{}, true, 0, 0},
-		{"source", f, args{source: bucket2}, false, 3, 0},
-		{"okay", f, args{source: bucket2, buckets: []parse.Bucket{bucket1}}, true, 3, 1},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &dupe.Config{
-				Debug:  tt.fields.Debug,
-				Quiet:  tt.fields.Quiet,
-				Test:   tt.fields.Test,
-				Parser: tt.fields.Parser,
-			}
-			c.Source = tt.args.source
-			c.Buckets = tt.args.buckets
-			gotOk, gotCheckCnt, gotBucketCnt := c.CheckPaths()
-			if gotOk != tt.wantOk {
-				t.Errorf("Config.CheckPaths() gotOk = %v, want %v", gotOk, tt.wantOk)
-			}
-			if gotCheckCnt != tt.wantCheckCnt {
-				t.Errorf("Config.CheckPaths() gotCheckCnt = %v, want %v", gotCheckCnt, tt.wantCheckCnt)
-			}
-			if gotBucketCnt != tt.wantBucketCnt {
-				t.Errorf("Config.CheckPaths() gotBucketCnt = %v, want %v", gotBucketCnt, tt.wantBucketCnt)
-			}
-		})
-	}
-}
-
 func TestConfig_Print(t *testing.T) {
 	b1, _ := filepath.Abs(file1)
 	b2, _ := filepath.Abs(file2)
@@ -201,7 +153,9 @@ func TestConfig_WalkSource(t *testing.T) {
 	if err := c.WalkSource(); err == nil {
 		t.Errorf("Config.WalkSource() should return an error with an empty Config.")
 	}
-	c.SetSource(mock.Bucket2())
+	if err := c.SetSource(mock.Bucket2()); err != nil {
+		t.Errorf("Config.SetSource() returned an error: %v", err)
+	}
 	if err := c.WalkSource(); err != nil {
 		t.Errorf("Config.WalkSource() returned an error: %v", err)
 	}

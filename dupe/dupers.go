@@ -39,7 +39,9 @@ const (
 )
 
 var (
-	ErrNoBucket    = errors.New("a named bucket is required")
+	ErrNoBucket = errors.New("a named bucket is required")
+
+	ErrPathIsFile  = errors.New("path is a file")
 	ErrPathExist   = errors.New("path exists in the database bucket")
 	ErrPathNoFound = errors.New("path does not exist")
 )
@@ -52,27 +54,33 @@ type Config struct {
 	parse.Parser
 }
 
-// CheckPaths counts the number of files in a directory to check and the number of buckets.
-func (c *Config) CheckPaths() (ok bool, files, buckets int) {
-	if c.Debug {
-		out.PBug("count the files within the paths")
+// DPrint prints the string to stdout whenever Config.Debug is true.
+func (c *Config) DPrint(s string) {
+	if !c.Debug {
+		return
 	}
-	root := c.ToCheck()
-	if c.Debug {
-		out.PBug("path to check: " + root)
-	}
+	fmt.Fprintf(os.Stdout, "∙%s\n", s)
+}
 
-	const notDirectory = true
-	if c.checkPath(root, notDirectory) {
-		return notDirectory, 0, 0
+// CheckPaths counts the number of files in a directory to check and the number of buckets.
+func (c *Config) CheckPaths() (files, buckets int, err error) {
+	c.DPrint("count the files within the paths")
+	dupeItem := c.ToCheck()
+	c.DPrint("path to check: " + dupeItem)
+
+	s, err := c.CheckDir(dupeItem)
+	if err != nil {
+		return 0, 0, err
 	}
+	if s != dupeItem {
+		c.DPrint("path to check was not found: " + dupeItem)
+		c.DPrint("will attempt to use: " + s)
+		dupeItem = s
+	}
+	c.DPrint(fmt.Sprintf("all buckets: %s", c.All()))
 
 	buckets = 0
-	files = c.walkPath(root)
-	if c.Debug {
-		s := fmt.Sprintf("all buckets: %s", c.All())
-		out.PBug(s)
-	}
+	files = c.walkPath(dupeItem)
 	for _, b := range c.All() {
 		var err error
 		buckets, err = c.walkBucket(b, files, buckets)
@@ -80,26 +88,26 @@ func (c *Config) CheckPaths() (ok bool, files, buckets int) {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			if c.Debug {
-				out.PBug(err.Error())
-			}
+			c.DPrint(err.Error())
 		}
 	}
-	check := func() bool {
-		return buckets >= files/2
+	if buckets >= files/2 {
+		c.DPrint("there seems to be too few files in the buckets")
 	}
-	return check(), files, buckets
+	return files, buckets, nil
 }
 
 func (c *Config) walkBucket(b parse.Bucket, files, buckets int) (int, error) {
-	return buckets, filepath.WalkDir(string(b), func(path string, d fs.DirEntry, err error) error {
+	root := string(b)
+	return buckets, filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			out.ErrFatal(err)
 			return nil
 		}
-		if c.Debug {
-			out.PBug("walking bucket item: " + path)
+		if root == path {
+			return nil
 		}
+		c.DPrint("walking bucket item: " + path)
 		if err := skipDir(d); err != nil {
 			return err
 		}
@@ -120,11 +128,12 @@ func (c *Config) walkBucket(b parse.Bucket, files, buckets int) (int, error) {
 func (c *Config) walkPath(root string) int {
 	checkCnt := 0
 	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if c.Debug {
-			out.PBug("counting: " + path)
-		}
+		c.DPrint("counting: " + path)
 		if err != nil {
 			return err
+		}
+		if root == path {
+			return nil
 		}
 		if err := skipDir(d); err != nil {
 			return err
@@ -145,21 +154,28 @@ func (c *Config) walkPath(root string) int {
 	return checkCnt
 }
 
-func (c *Config) checkPath(root string, notDirectory bool) (ok bool) {
-	stat, err := os.Stat(root)
+// CheckItem stat and returns the named file or directory.
+// If it does not exist, it looks up an absolute path and returns the result.
+// If the item is a file it returns both the named file and an ErrPathIsFile error.
+func (c *Config) CheckDir(name string) (string, error) {
+	stat, err := os.Stat(name)
 	if err != nil {
-		if c.Debug {
-			out.PBug("path is not found")
+		if errors.Is(err, os.ErrNotExist) {
+			c.DPrint("path is not found, but there is an absolute resolved path")
+			s, err1 := filepath.Abs(name)
+			if err1 != nil {
+				return "", os.ErrNotExist
+			}
+			return s, nil
 		}
-		return notDirectory
+		c.DPrint("path is not found")
+		return "", err
 	}
 	if !stat.IsDir() {
-		if c.Debug {
-			out.PBug("path is a file")
-		}
-		return notDirectory
+		c.DPrint("path is a file")
+		return name, ErrPathIsFile
 	}
-	return false
+	return name, nil
 }
 
 // Checksum the named file and save it to the bucket.
@@ -409,16 +425,14 @@ func (c *Config) WalkDir(name parse.Bucket) error {
 }
 
 func (c *Config) walkDir(root string, skip []string) error {
-	if c.Debug {
-		out.PBug("walk directory: " + root)
-	}
+	c.DPrint("walk directory: " + root)
 	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if c.Debug {
 			s := "walk file"
 			if d.IsDir() {
 				s = "walk subdirectory"
 			}
-			out.PBug(fmt.Sprintf("%s: %s", s, path))
+			c.DPrint(fmt.Sprintf("%s: %s", s, path))
 		}
 		if err != nil {
 			if errors.Is(err, fs.ErrPermission) {
@@ -494,11 +508,12 @@ func (c *Config) WalkSource() error {
 
 func (c *Config) walkSource(root string) error {
 	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if c.Debug {
-			out.PBug(path)
-		}
+		c.DPrint(path)
 		if err != nil {
 			return err
+		}
+		if root == path {
+			return nil
 		}
 		// skip directories
 		if err := skipDir(d); err != nil {
@@ -540,7 +555,7 @@ func (c *Config) create(name parse.Bucket) error {
 func (c *Config) init() {
 	// use all the buckets if no specific buckets are provided
 	if !c.Test && len(c.All()) == 0 {
-		if err := c.SetBuckets(); err != nil {
+		if err := c.SetAllBuckets(); err != nil {
 			out.ErrFatal(err)
 		}
 	}
@@ -763,16 +778,16 @@ func (c *Config) WalkArchiver(name parse.Bucket) error {
 		out.ErrCont(err)
 	}
 	// walk the root directory of the bucket
-	//var wg sync.WaitGroup
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if c.Debug {
-			out.PBug("walk file: " + path)
-		}
+		c.DPrint("walk file: " + path)
 		if err != nil {
 			if errors.Is(err, fs.ErrPermission) {
 				return nil
 			}
 			return err
+		}
+		if root == path {
+			return nil
 		}
 		if err1 := skipDir(d); err1 != nil {
 			return err1

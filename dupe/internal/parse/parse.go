@@ -75,8 +75,8 @@ func (p *Parser) OpenWrite() {
 	p.DB = db
 }
 
-// SetBuckets sets all the database buckets for use with the dupe or search commands.
-func (p *Parser) SetBuckets() error {
+// SetAllBuckets sets all the database buckets for use with the dupe or search commands.
+func (p *Parser) SetAllBuckets() error {
 	names, err := database.All(nil)
 	if err != nil {
 		return err
@@ -115,12 +115,16 @@ func (p *Parser) SetTimer() {
 }
 
 // SetSource sets the named string as the directory or file to check.
-func (p *Parser) SetSource(name string) {
+func (p *Parser) SetSource(name string) error {
 	n, err := filepath.Abs(name)
 	if err != nil {
-		out.ErrFatal(err)
+		return err
+	}
+	if _, err := os.Stat(n); err != nil {
+		return err
 	}
 	p.Source = n
+	return nil
 }
 
 // PrintBuckets returns a list of buckets used by the database.

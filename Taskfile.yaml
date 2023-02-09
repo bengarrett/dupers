@@ -5,6 +5,7 @@ version: '3'
 
 vars:
   FILE: ./test/files_to_check/qziD6WMRvPyk
+  ABSDST: "{{.USER_WORKING_DIR}}/.task"
   DST: ./.task/
   TEST: ./test/
   TMP: ./test/randomfiles.*
@@ -81,18 +82,29 @@ tasks:
     silent: false
     cmds:
       - cmd:
+         go run -race main.go dupe {{.TEST}} {{.ABSDST}}
+        ignore_error: true
+      - cmd:
+         go run -race main.go -fast dupe {{.TEST}} {{.ABSDST}}/
+        ignore_error: true
+      - cmd:
          go run -race main.go dupe {{.TEST}} {{.DST}}
         ignore_error: true
       - cmd:
-         go run -race main.go -fast dupe {{.TEST}} {{.DST}}
+         go run -race main.go dupe {{.TEST}}xx {{.DST}}
         ignore_error: true
+      - cmd:
+         go run -race main.go -fast dupe xx{{.TEST}} {{.DST}}
+        ignore_error: true
+      # todo multiple buckets
+      # mixed valid and broken buckets
   one:
     silent: false
     cmds:
       - task: makeTmp
       - task: dupeFile
       - task: dupeClone
-      - task: removeTmp
+      #- task: removeTmp
   
 # 
 # 

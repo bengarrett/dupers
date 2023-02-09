@@ -120,31 +120,32 @@ func Dupe(c *dupe.Config, f *cmd.Flags, testing bool, args ...string) error {
 	if f == nil {
 		return ErrFlag
 	}
-	if c.Debug {
-		s := fmt.Sprintf("dupeCmd: %s", strings.Join(args, " "))
-		out.PBug(s)
-	}
-	// const testing = false
-	l := len(args)
-	if l == 1 {
-		const minArgs = 2
-		duplicate.CmdErr(l, 0, minArgs, testing)
-	}
+	c.DPrint(fmt.Sprintf("dupe command: %s", strings.Join(args, " ")))
+
 	// fetch bucket info
 	b, err := database.All(nil)
 	if err != nil {
 		return err
 	}
-	const minArgs = 3
-	if l < minArgs && len(b) == 0 {
-		duplicate.CmdErr(l, len(b), minArgs, testing)
-	}
-	// directory or a file to match
-	const minReq = 2
-	if len(args) < minReq {
+
+	const minReq, source = 3, 1
+	const minArgs = source + 1
+	l := len(args)
+	switch {
+	case l == 1:
+		duplicate.CmdErr(l, 0, minArgs, testing)
+		return nil // TODO return err?
+	case l < minArgs:
+		if len(b) == 0 {
+			duplicate.CmdErr(l, len(b), minArgs, testing)
+			return nil // TODO return err?
+		}
 		return ErrArgs
 	}
-	c.SetSource(args[1])
+	if err := c.SetSource(args[source]); err != nil {
+		return err
+	}
+
 	walkCheck(c, args...)
 	return walkScan(c, f, args...)
 }
@@ -154,7 +155,7 @@ func walkCheck(c *dupe.Config, args ...string) {
 	s := fmt.Sprintf("buckets: %s", c.PrintBuckets())
 	buckets := args[2:]
 	if len(buckets) == 0 {
-		if err := c.SetBuckets(); err != nil {
+		if err := c.SetAllBuckets(); err != nil {
 			out.ErrFatal(err)
 		}
 		if c.Debug {
@@ -299,13 +300,20 @@ func cleanupDB(quiet, debug bool) error {
 }
 
 // checkDupePaths checks the path arguments supplied to the dupe command.
+// An os.exit code is return or a -1 for no errors.
 func checkDupePaths(c *dupe.Config) (code int) {
 	if c == nil {
 		return
 	}
-	ok, files, buckets := c.CheckPaths()
-	if ok {
-		return
+	files, buckets, err := c.CheckPaths()
+	if err != nil {
+		if errors.Is(err, dupe.ErrPathIsFile) {
+			return -1
+		}
+		if errors.Is(err, os.ErrNotExist) {
+			return 1
+		}
+		return 2
 	}
 	// handle any problems
 	p := message.NewPrinter(language.English)
