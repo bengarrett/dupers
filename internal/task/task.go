@@ -59,18 +59,20 @@ func Directories() error {
 	if runtime.GOOS != winOS {
 		return nil
 	}
-	if len(flag.Args()) > 1 {
-		for _, s := range flag.Args()[1:] {
-			if err := cmd.ChkWinDir(s); err != nil {
-				return err
-			}
+	const minArgs = 2
+	if len(flag.Args()) < minArgs {
+		return nil
+	}
+	for _, s := range flag.Args()[1:] {
+		if err := cmd.ChkWinDir(s); err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
 // Database parses the commands that interact with the database.
-func Database(c *dupe.Config, quiet bool, args ...string) error {
+func Database(c *dupe.Config, assumeYes, quiet bool, args ...string) error {
 	if err := database.Check(); err != nil {
 		return err
 	}
@@ -93,15 +95,15 @@ func Database(c *dupe.Config, quiet bool, args ...string) error {
 	case Export_:
 		bucket.Export(quiet, buckets)
 	case Import_:
-		bucket.Import(quiet, buckets)
+		bucket.Import(quiet, assumeYes, buckets)
 	case LS_:
 		bucket.List(quiet, buckets)
 	case MV_:
 		buckets := [3]string{}
 		copy(buckets[:], args)
-		bucket.Move(quiet, buckets)
+		bucket.Move(quiet, assumeYes, buckets)
 	case RM_:
-		bucket.Remove(quiet, buckets)
+		bucket.Remove(quiet, assumeYes, buckets)
 	case Up_:
 		bucket.Rescan(c, false, buckets)
 	case UpPlus_:
@@ -146,30 +148,26 @@ func Dupe(c *dupe.Config, f *cmd.Flags, testing bool, args ...string) error {
 		return err
 	}
 
-	walkCheck(c, args...)
+	walkCheck(c, *f.Yes, args...)
 	return walkScan(c, f, args...)
 }
 
 // walkCheck checks directories and files to scan, a bucket is the name given to database tables.
-func walkCheck(c *dupe.Config, args ...string) {
+func walkCheck(c *dupe.Config, assumeYes bool, args ...string) {
 	s := fmt.Sprintf("buckets: %s", c.PrintBuckets())
 	buckets := args[2:]
 	if len(buckets) == 0 {
 		if err := c.SetAllBuckets(); err != nil {
 			out.ErrFatal(err)
 		}
-		if c.Debug {
-			out.PBug(s)
-		}
+		c.DPrint(s)
 		return
 	}
 	c.SetBucket(buckets...)
-	if code := checkDupePaths(c); code >= 0 {
+	if code := checkDupePaths(c, assumeYes); code >= 0 {
 		os.Exit(code)
 	}
-	if c.Debug {
-		out.PBug(s)
-	}
+	c.DPrint(s)
 }
 
 func walkScan(c *dupe.Config, f *cmd.Flags, args ...string) error {
@@ -177,9 +175,7 @@ func walkScan(c *dupe.Config, f *cmd.Flags, args ...string) error {
 	if err := c.WalkSource(); err != nil {
 		return err
 	}
-	if c.Debug {
-		out.PBug("walksource complete.")
-	}
+	c.DPrint("walksource complete.")
 	// walk, scan and save file paths and hashes to the database
 	duplicate.Lookup(c, f)
 	if !c.Quiet {
@@ -274,11 +270,12 @@ func Search(f *cmd.Flags, test bool, args ...string) error {
 
 // backupDB saves the database to a binary file.
 func backupDB(quiet bool) error {
-	n, w, err := database.Backup()
+	name, writ, err := database.Backup()
 	if err != nil {
 		return err
 	}
-	s := fmt.Sprintf("A new copy of the database (%s) is at: %s", humanize.Bytes(uint64(w)), n)
+	s := fmt.Sprintf("A new copy of the database (%s) is at: %s",
+		humanize.Bytes(uint64(writ)), name)
 	out.Response(s, quiet)
 	return nil
 }
@@ -301,7 +298,7 @@ func cleanupDB(quiet, debug bool) error {
 
 // checkDupePaths checks the path arguments supplied to the dupe command.
 // An os.exit code is return or a -1 for no errors.
-func checkDupePaths(c *dupe.Config) (code int) {
+func checkDupePaths(c *dupe.Config, assumeYes bool) (code int) {
 	if c == nil {
 		return
 	}
@@ -347,7 +344,7 @@ func checkDupePaths(c *dupe.Config) (code int) {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "The bucket to lookup is to be stored in the database,")
 	color.Warn.Println(" but the \"Directory to check\" is not.")
-	if !out.YN("Is this what you want", out.No) {
+	if !out.YN("Is this what you want", assumeYes, out.No) {
 		return 0
 	}
 	return -1

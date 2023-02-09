@@ -33,7 +33,7 @@ func Cleanup(c *dupe.Config, f *cmd.Flags) {
 			out.PBug("remove all non unique Windows and MS-DOS files.")
 		}
 		fmt.Fprint(w, c.Remove())
-		fmt.Fprint(w, c.Removes())
+		fmt.Fprint(w, c.Removes(*f.Yes))
 		fmt.Fprint(w, c.Clean())
 		return
 	}

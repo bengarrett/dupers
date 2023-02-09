@@ -28,6 +28,7 @@ const (
 	Name_    = "name"
 	Quiet_   = "quiet"
 	Sensen_  = "sensen"
+	Yes_     = "yes"
 	Version_ = "version"
 )
 
@@ -40,6 +41,7 @@ type Aliases struct {
 	Lookup   *bool `usage:"alias for lookup"`
 	Mono     *bool `usage:"alias for mono"`
 	Quiet    *bool `usage:"alias for quiet"`
+	Yes      *bool `usage:"alias for quiet"`
 	Version  *bool `usage:"alias for version"`
 }
 
@@ -69,6 +71,7 @@ func (a *Aliases) Define() {
 	a.Help = flag.Bool("h", false, a.Usage("Help"))
 	a.Mono = flag.Bool("m", false, a.Usage("Mono"))
 	a.Quiet = flag.Bool("q", false, a.Usage("Quiet"))
+	a.Yes = flag.Bool("y", false, a.Usage("Yes"))
 	a.Version = flag.Bool("v", false, a.Usage("Version"))
 }
 
@@ -87,6 +90,7 @@ type Flags struct {
 	Help    *bool `usage:"print help"`
 	Mono    *bool `usage:"monochrome mode to remove all color output"`
 	Quiet   *bool `usage:"quiet mode hides all but essential feedback"`
+	Yes     *bool `usage:"assume yes for any user prompts"`
 	Version *bool `usage:"version and information for this program"`
 }
 
@@ -119,6 +123,7 @@ func (f *Flags) Define() {
 	f.Sensen = flag.Bool(Sensen_, false, f.Usage("Sensen"))
 	f.Rm = flag.Bool(Delete_, false, f.Usage("Rm"))
 	f.RmPlus = flag.Bool(DelPlus_, false, f.Usage("RmPlus"))
+	f.Yes = flag.Bool(Yes_, false, f.Usage("Yes"))
 	f.Version = flag.Bool(Version_, false, f.Usage("Version"))
 }
 
@@ -135,6 +140,8 @@ func (f *Flags) Aliases(a *Aliases, c *dupe.Config) dupe.Config {
 			*f.Quiet = true
 		case "-h", "-help", "--help":
 			*f.Help = true
+		case "-y", "-yes", "--yes":
+			*f.Yes = true
 		case "-v", "-version", "--version":
 			*f.Version = true
 		default:
@@ -164,6 +171,9 @@ func (f *Flags) Aliases(a *Aliases, c *dupe.Config) dupe.Config {
 	if *a.Quiet || *f.Quiet {
 		*f.Quiet = true
 		c.Quiet = true
+	}
+	if *a.Yes {
+		*f.Yes = true
 	}
 	if *a.Version {
 		*f.Version = true

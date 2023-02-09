@@ -116,7 +116,7 @@ func export() string {
 }
 
 // CSVImport reads the named csv export file and imports its content to the database.
-func CSVImport(name string, db *bolt.DB) (records int, err error) {
+func CSVImport(name string, assumeYes bool, db *bolt.DB) (records int, err error) {
 	if db == nil {
 		db, err = OpenWrite()
 		if err != nil {
@@ -139,7 +139,7 @@ func CSVImport(name string, db *bolt.DB) (records int, err error) {
 		return 0, err2
 	}
 	if db == nil {
-		name, err = Usage(name, db)
+		name, err = Usage(name, assumeYes, db)
 		if err != nil {
 			return 0, err
 		}
@@ -306,7 +306,7 @@ func Scanner(file *os.File) (string, *Lists, error) {
 }
 
 // Usage checks the validity and usage of the named bucket in the database.
-func Usage(name string, db *bolt.DB) (string, error) {
+func Usage(name string, assumeYes bool, db *bolt.DB) (string, error) {
 	if db == nil {
 		db, err := OpenRead()
 		if err != nil {
@@ -320,12 +320,12 @@ func Usage(name string, db *bolt.DB) (string, error) {
 		if err := db.View(func(tx *bolt.Tx) error {
 			if b := tx.Bucket([]byte(name)); b == nil {
 				path = name
-				if bucket.Stats(path) {
+				if bucket.Stats(path, assumeYes) {
 					return nil
 				}
 			}
-			if path = bucket.Rename(name); path != "" {
-				if bucket.Stats(path) {
+			if path = bucket.Rename(name, assumeYes); path != "" {
+				if bucket.Stats(path, assumeYes) {
 					return nil
 				}
 			}

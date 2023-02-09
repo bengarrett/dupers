@@ -190,12 +190,12 @@ func count(b *bolt.Bucket, db *bolt.DB) (int, error) {
 }
 
 // Rename prompts for confirmation for the use of the named bucket.
-func Rename(name string) string {
+func Rename(name string, assumeYes bool) string {
 	out.ErrCont(ErrBucketExists)
 	w := os.Stdout
 	fmt.Fprintf(w, "\nImport bucket name: %s\n\n", color.Debug.Sprint(name))
 	fmt.Fprintln(w, "The existing data in this bucket will overridden and any new data will be appended.")
-	if out.YN("Do you want to continue using this bucket", out.Yes) {
+	if out.YN("Do you want to continue using this bucket", assumeYes, out.Yes) {
 		return name
 	}
 	fmt.Fprintln(w, "\nPlease choose a new bucket, which must be an absolute directory path.")
@@ -203,16 +203,16 @@ func Rename(name string) string {
 }
 
 // Stats checks the validity of the named bucket and prompts for user confirmation on errors.
-func Stats(name string) bool {
+func Stats(name string, assumeYes bool) bool {
 	for {
 		fmt.Fprintln(os.Stdout)
-		if name = Stat(name, false); name != "" {
+		if name = Stat(name, assumeYes, false); name != "" {
 			return true
 		}
 	}
 }
 
-func Stat(name string, test bool) string {
+func Stat(name string, assumeYes, test bool) string {
 	w := os.Stdout
 	printName := func() {
 		fmt.Fprintf(w, "\nImport bucket directory: %s\n\n", color.Debug.Sprint(name))
@@ -233,7 +233,7 @@ func Stat(name string, test bool) string {
 		fmt.Fprintln(w, "You may still run dupe checks and searches without the actual files on your system.")
 		fmt.Fprintln(w, "Choosing no will prompt for a new bucket.")
 		if !test {
-			if out.YN("Do you want to continue using this bucket", out.Yes) {
+			if out.YN("Do you want to continue using this bucket", assumeYes, out.Yes) {
 				return abs
 			}
 			return out.Prompt(query)

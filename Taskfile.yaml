@@ -82,13 +82,13 @@ tasks:
     silent: false
     cmds:
       - cmd:
-         go run -race main.go dupe {{.TEST}} {{.ABSDST}}
+         go run -race main.go -yes dupe {{.TEST}} {{.ABSDST}}
         ignore_error: true
       - cmd:
-         go run -race main.go -fast dupe {{.TEST}} {{.ABSDST}}/
+         go run -race main.go -yes -fast dupe {{.TEST}} {{.ABSDST}}/
         ignore_error: true
       - cmd:
-         go run -race main.go dupe {{.TEST}} {{.DST}}
+         go run -race main.go -yes dupe {{.TEST}} {{.DST}}
         ignore_error: true
       - cmd:
          go run -race main.go dupe {{.TEST}}xx {{.DST}}
@@ -98,6 +98,7 @@ tasks:
         ignore_error: true
       # todo multiple buckets
       # mixed valid and broken buckets
+      # create a -yes global flag
   one:
     silent: false
     cmds:

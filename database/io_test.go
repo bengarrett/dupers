@@ -210,7 +210,7 @@ func TestCSVImport(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotRecords, err := database.CSVImport(tt.args.name, tt.args.db)
+			gotRecords, err := database.CSVImport(tt.args.name, false, tt.args.db)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CSVImport() error = %v, wantErr %v", err, tt.wantErr)
 				return

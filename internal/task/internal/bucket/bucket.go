@@ -75,7 +75,7 @@ func Export(quiet bool, args [2]string) {
 }
 
 // Import a CSV file into the database.
-func Import(quiet bool, args [2]string) {
+func Import(quiet, assumeYes bool, args [2]string) {
 	if args[1] == "" {
 		out.ErrCont(ErrImport)
 		fmt.Fprintln(os.Stderr, "Cannot import file as no filepath was provided.")
@@ -86,7 +86,7 @@ func Import(quiet bool, args [2]string) {
 	if err != nil {
 		out.ErrFatal(err)
 	}
-	r, errIm := database.CSVImport(name, nil)
+	r, errIm := database.CSVImport(name, assumeYes, nil)
 	if errIm != nil {
 		out.ErrFatal(errIm)
 	}
@@ -125,7 +125,7 @@ func List(quiet bool, args [2]string) {
 }
 
 // Move renames a bucket by duplicating it to a new bucket location.
-func Move(quiet bool, args [3]string) {
+func Move(quiet, assumeYes bool, args [3]string) {
 	b, dir := args[1], args[2]
 	Check("move and rename", dmv, b)
 	name, err := database.Abs(b)
@@ -159,7 +159,7 @@ func Move(quiet bool, args [3]string) {
 			color.Secondary.Sprint("Bucket name:"), color.Debug.Sprint(name),
 			"New name:", color.Debug.Sprint(newName))
 		fmt.Fprintln(w, "Renames the database bucket, but this does not make changes to the file system.")
-		if !out.YN("Rename bucket", out.No) {
+		if !out.YN("Rename bucket", assumeYes, out.No) {
 			return
 		}
 	}
@@ -169,7 +169,7 @@ func Move(quiet bool, args [3]string) {
 }
 
 // Remove the bucket from the database.
-func Remove(quiet bool, args [2]string) {
+func Remove(quiet, assumeYes bool, args [2]string) {
 	Check("remove", drm, args[1])
 	name, err := database.Abs(args[1])
 	if err != nil {
@@ -195,7 +195,7 @@ func Remove(quiet bool, args [2]string) {
 		fmt.Fprintf(w, "%s\t%s\n", color.Secondary.Sprint("Bucket:"), color.Debug.Sprint(name))
 		p := message.NewPrinter(language.English)
 		fmt.Fprintf(w, "%s\t%s\n", color.Secondary.Sprint("Items:"), color.Debug.Sprint(p.Sprint(items)))
-		if !out.YN("Remove this bucket", out.No) {
+		if !out.YN("Remove this bucket", assumeYes, out.No) {
 			return
 		}
 	}

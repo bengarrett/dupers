@@ -149,7 +149,7 @@ func TestStat(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := bucket.Stat(tt.args.name, true); (got == "") != tt.wantEmpty {
+			if got := bucket.Stat(tt.args.name, false, true); (got == "") != tt.wantEmpty {
 				t.Errorf("Stat() = %v, want empty %v", got, tt.wantEmpty)
 			}
 		})

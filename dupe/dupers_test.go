@@ -217,7 +217,7 @@ func TestRemoves(t *testing.T) {
 	}
 	c.Source = abs
 	c.Sources = append(c.Sources, srcs)
-	s := c.Removes()
+	s := c.Removes(false)
 	fmt.Fprintln(os.Stdout, s)
 }
 

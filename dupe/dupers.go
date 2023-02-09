@@ -147,9 +147,7 @@ func (c *Config) walkPath(root string) int {
 		checkCnt++
 		return nil
 	}); err != nil {
-		if c.Debug {
-			out.PBug(err.Error())
-		}
+		c.DPrint(err.Error())
 	}
 	return checkCnt
 }
@@ -180,9 +178,7 @@ func (c *Config) CheckDir(name string) (string, error) {
 
 // Checksum the named file and save it to the bucket.
 func (c *Config) Checksum(name, bucket string) error {
-	if c.Debug {
-		out.PBug("update: " + name)
-	}
+	c.DPrint("update: " + name)
 	if c.DB == nil {
 		return bolt.ErrDatabaseNotOpen
 	}
@@ -256,12 +252,10 @@ func (c *Config) Clean() string {
 
 // Print the results of a dupe request.
 func (c *Config) Print() string {
-	if c.Debug {
-		out.PBug("print duplicate results")
-		s := fmt.Sprintf("comparing %d sources against %d unique items to compare",
-			len(c.Sources), len(c.Compare))
-		out.PBug(s)
-	}
+	c.DPrint("print duplicate results")
+	c.DPrint(fmt.Sprintf("comparing %d sources against %d unique items to compare",
+		len(c.Sources), len(c.Compare)))
+
 	w := new(bytes.Buffer)
 	finds := 0
 	for _, path := range c.Sources {
@@ -295,13 +289,9 @@ func (c *Config) Remove() string {
 	}
 	fmt.Fprintln(w)
 	for _, path := range c.Sources {
-		if c.Debug {
-			out.PBug("remove read: " + path)
-		}
+		c.DPrint("remove read: " + path)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
-			if c.Debug {
-				out.PBug("path is not exist: " + path)
-			}
+			c.DPrint("path is not exist: " + path)
 
 			continue
 		}
@@ -312,9 +302,7 @@ func (c *Config) Remove() string {
 		if l := c.lookupOne(h); l == "" {
 			continue
 		}
-		if c.Debug {
-			out.PBug("remove delete: " + path)
-		}
+		c.DPrint("remove delete: " + path)
 		err = os.Remove(path)
 		fmt.Fprintln(w, printRM(path, err))
 	}
@@ -322,7 +310,7 @@ func (c *Config) Remove() string {
 }
 
 // Removes the directories from the source that do not contain unique MS-DOS or Windows programs.
-func (c *Config) Removes() string {
+func (c *Config) Removes(assumeYes bool) string {
 	root := c.ToCheck()
 	if _, err := os.Stat(root); errors.Is(err, os.ErrNotExist) {
 		e := fmt.Errorf("%w: %s", ErrPathNoFound, root)
@@ -342,7 +330,7 @@ func (c *Config) Removes() string {
 		fmt.Fprintf(w, "%s %s\n", color.Secondary.Sprint("Target directory:"), color.Debug.Sprint(root))
 		fmt.Fprintln(w, "Delete everything in the target directory, except for directories"+
 			"\ncontaining unique Windows or MS-DOS programs and assets?")
-		if input := out.YN("Please confirm", out.Nil); !input {
+		if input := out.YN("Please confirm", assumeYes, out.Nil); !input {
 			os.Exit(0)
 		}
 		fmt.Fprintln(w)
@@ -382,9 +370,7 @@ func (c *Config) WalkDirs() {
 	// walk through the directories provided
 	for _, bucket := range c.All() {
 		s := string(bucket)
-		if c.Debug {
-			out.PBug("walkdir bucket: " + s)
-		}
+		c.DPrint("walkdir bucket: " + s)
 		if err := c.WalkDir(bucket); err != nil {
 			if errors.Is(errors.Unwrap(err), ErrPathNoFound) &&
 				errors.Is(database.Exist(s, c.DB), database.ErrBucketNotFound) {
@@ -471,18 +457,14 @@ func (c *Config) walkDir(root string, skip []string) error {
 }
 
 func (c *Config) walkDirSkip(s string, err error) error {
-	if c.Debug {
-		out.PBug(s)
-	}
+	c.DPrint(s)
 	return err
 }
 
 // WalkSource walks the source directory or a file to collect the hashed content for a future comparison.
 func (c *Config) WalkSource() error {
 	root := c.ToCheck()
-	if c.Debug {
-		out.PBug("walksource to check: " + root)
-	}
+	c.DPrint("walksource to check: " + root)
 	stat, err := os.Stat(root)
 	if errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("%w: %s", ErrPathNoFound, root)
@@ -491,18 +473,14 @@ func (c *Config) WalkSource() error {
 	}
 	if !stat.IsDir() {
 		c.Sources = append(c.Sources, root)
-		if c.Debug {
-			out.PBug("items dupe check: " + strings.Join(c.Sources, " "))
-		}
+		c.DPrint("items dupe check: " + strings.Join(c.Sources, " "))
 		return nil
 	}
 	if err := c.walkSource(root); err != nil {
 		out.ErrCont(fmt.Errorf("item has a problem: %w", err))
 		return nil
 	}
-	if c.Debug {
-		out.PBug("directories dupe check: " + strings.Join(c.Sources, " "))
-	}
+	c.DPrint("directories dupe check: " + strings.Join(c.Sources, " "))
 	return nil
 }
 
@@ -576,24 +554,17 @@ func (c *Config) init() {
 	if !c.Test && c.Compare == nil {
 		for i, b := range c.All() {
 			_, _ = c.SetCompares(b)
-			if c.Debug {
-				s := fmt.Sprintf("init %d: %s", i, b)
-				out.PBug(s)
-			}
+			c.DPrint(fmt.Sprintf("init %d: %s", i, b))
 		}
 	}
 }
 
 // lookup the checksum value in c.compare and return the file path.
 func (c *Config) lookupOne(sum parse.Checksum) string {
-	if c.Debug {
-		s := fmt.Sprintf("look up checksum in the compare data, %d items total: %x", len(c.Compare), sum)
-		out.PBug(s)
-	}
+	c.DPrint(fmt.Sprintf("look up checksum in the compare data, %d items total: %x",
+		len(c.Compare), sum))
 	if f := c.Compare[sum]; f != "" {
-		if c.Debug {
-			out.PBug("lookupOne match: " + f)
-		}
+		c.DPrint("lookupOne match: " + f)
 		return f
 	}
 	return ""
@@ -731,9 +702,7 @@ func walkCompare(root, path string, c *Config) error {
 			return ErrNoBucket
 		}
 		h := b.Get([]byte(path))
-		if c.Debug {
-			out.PBug(fmt.Sprintf(" - %d/%d items: %x", len(c.Compare), c.Files, h))
-		}
+		c.DPrint(fmt.Sprintf(" - %d/%d items: %x", len(c.Compare), c.Files, h))
 		if len(h) > 0 {
 			var sum parse.Checksum
 			copy(sum[:], h)
@@ -814,36 +783,29 @@ func (c *Config) walkThread(bucket, path string, wg *sync.WaitGroup) error {
 	// detect archive type by file extension
 	mimeExt := strings.ToLower(filepath.Ext(path))
 	ok := (archive.MIME(path) != "")
-	if c.Debug {
-		out.PBug(fmt.Sprintf("is known extension: %v, %s", ok, mimeExt))
-	}
+	c.DPrint(fmt.Sprintf("is known extension: %v, %s", ok, mimeExt))
 	if !ok {
 		// detect archive type by mime type
 		mime, err := archive.ReadMIME(path)
 		if errors.Is(err, archive.ErrFilename) {
-			if c.Debug && mime != "" {
-				s := fmt.Sprintf("archive not supported: %s: %s", mime, path)
-				out.PBug(s)
+			if mime != "" {
+				c.DPrint(fmt.Sprintf("archive not supported: %s: %s", mime, path))
 			}
 			return nil
-		} else if err != nil {
+		}
+		if err != nil {
 			return err
 		}
 		mimeExt = archive.Extension(mime)
 	}
 	c.Files++
-	if c.Debug {
-		s := fmt.Sprintf("walkCompare #%d", c.Files)
-		out.PBug(s)
-	}
+	c.DPrint(fmt.Sprintf("walkCompare #%d", c.Files))
 	if errD := walkCompare(bucket, path, c); errD != nil {
 		if !errors.Is(errD, ErrPathExist) {
 			out.ErrFatal(errD)
 		}
 	}
 	// multithread archive reader
-	//wg.Add(1)
-
 	go func() {
 		switch mimeExt {
 		case "":
@@ -853,9 +815,7 @@ func (c *Config) walkThread(bucket, path string, wg *sync.WaitGroup) error {
 		default:
 			c.Read(bucket, path, mimeExt)
 		}
-		//wg.Done()
 	}()
-	//wg.Wait()
 	return nil
 }
 
@@ -871,9 +831,7 @@ func (c *Config) findItem(abs string) bool {
 
 // listItems sets c.sources to list all the filenames used in the bucket.
 func (c *Config) listItems(bucket string) error {
-	if c.Debug {
-		out.PBug("list bucket items: " + bucket)
-	}
+	c.DPrint("list bucket items: " + bucket)
 	abs, err := database.AbsB(bucket)
 	if err != nil {
 		out.ErrCont(err)
@@ -900,9 +858,7 @@ func (c *Config) listItems(bucket string) error {
 
 // Read7Zip opens the named 7-Zip archive, hashes and saves the content to the bucket.
 func (c *Config) Read7Zip(bucket, name string) {
-	if c.Debug {
-		out.PBug("read 7zip: " + name)
-	}
+	c.DPrint("read 7zip: " + name)
 	r, err := sevenzip.OpenReader(name)
 	if err != nil {
 		out.ErrAppend(err)
@@ -931,24 +887,20 @@ func (c *Config) Read7Zip(bucket, name string) {
 			continue
 		}
 		var sum parse.Checksum
-
 		copy(sum[:], h.Sum(nil))
 		if err := c.update(fp, bucket, sum); err != nil {
 			out.ErrAppend(err)
 			continue
 		}
 	}
-	if c.Debug && cnt > 0 {
-		s := fmt.Sprintf("read %d items within the 7-Zip archive", cnt)
-		out.PBug(s)
+	if cnt > 0 {
+		c.DPrint(fmt.Sprintf("read %d items within the 7-Zip archive", cnt))
 	}
 }
 
 // Read opens the named archive, hashes and saves the content to the bucket.
 func (c *Config) Read(bucket, name, mimeExt string) {
-	if c.Debug {
-		out.PBug("read archiver: " + name)
-	}
+	c.DPrint("read archiver: " + name)
 	// catch any archiver panics such as opening unsupported ZIP compression formats
 	defer c.readRecover(name)
 	cnt, lookup := 0, name
@@ -983,9 +935,8 @@ func (c *Config) Read(bucket, name, mimeExt string) {
 		color.Warn.Printf("Unsupported archive: '%s'\n", name)
 		return
 	}
-	if c.Debug && cnt > 0 {
-		s := fmt.Sprintf("read %d items within the archive", cnt)
-		out.PBug(s)
+	if cnt > 0 {
+		c.DPrint(fmt.Sprintf("read %d items within the archive", cnt))
 	}
 }
 
@@ -1027,17 +978,13 @@ func (c *Config) readRecover(archive string) {
 			}
 			color.Warn.Printf("Unsupported archive: '%s'\n", archive)
 		}
-		if c.Debug {
-			out.PBug(fmt.Sprint(err))
-		}
+		c.DPrint(fmt.Sprint(err))
 	}
 }
 
 // update saves the checksum and path values to the bucket.
 func (c *Config) update(path, bucket string, sum parse.Checksum) error {
-	if c.Debug {
-		out.PBug("update archiver: " + path)
-	}
+	c.DPrint("update archiver: " + path)
 	if c.DB == nil {
 		return bolt.ErrDatabaseNotOpen
 	}
