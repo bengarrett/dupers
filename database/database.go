@@ -153,9 +153,8 @@ func Clean(quiet, debug bool, buckets ...string) error {
 	if err != nil {
 		return err
 	}
-	if debug {
-		out.PBug("database path: " + path)
-	}
+	out.DPrint(debug, "database path: "+path)
+
 	db, err := bolt.Open(path, PrivateFile, write())
 	if err != nil {
 		return err
@@ -208,13 +207,14 @@ func Clean(quiet, debug bool, buckets ...string) error {
 }
 
 func cleanDebug(debug bool, buckets []string) {
-	if debug {
-		out.PBug("running database clean")
-
-		s := fmt.Sprintf("list of buckets:\n%s",
-			strings.Join(buckets, "\n"))
-		out.PBug(s)
+	if !debug {
+		return
 	}
+	out.DPrint(debug, "running database clean")
+
+	s := fmt.Sprintf("list of buckets:\n%s",
+		strings.Join(buckets, "\n"))
+	out.DPrint(debug, s)
 }
 
 func cleaner(buckets []string, debug bool, db *bolt.DB) ([]string, error) {
@@ -222,9 +222,7 @@ func cleaner(buckets []string, debug bool, db *bolt.DB) ([]string, error) {
 		return buckets, nil
 	}
 
-	if debug {
-		out.PBug("fetching all buckets")
-	}
+	out.DPrint(debug, "fetching all buckets")
 
 	var err1 error
 	buckets, err1 = All(db)
@@ -242,9 +240,8 @@ func cleaner(buckets []string, debug bool, db *bolt.DB) ([]string, error) {
 
 // Compact the database by reclaiming internal space.
 func Compact(debug bool) error {
-	if debug {
-		out.PBug("running database compact")
-	}
+	out.DPrint(debug, "running database compact")
+
 	// active database
 	src, err := DB()
 	if err != nil {
@@ -256,21 +253,19 @@ func Compact(debug bool) error {
 	srcDB, err := bolt.Open(src, PrivateFile, write())
 	if err != nil {
 		return err
-	} else if debug {
-		out.PBug("opened original database: " + src)
+	} else {
+		out.DPrint(debug, "opened original database: "+src)
 	}
 	defer srcDB.Close()
 	tmpDB, err := bolt.Open(tmp, PrivateFile, write())
 	if err != nil {
 		return err
-	} else if debug {
-		out.PBug("opened replacement database: " + tmp)
+	} else {
+		out.DPrint(debug, "opened replacement database: "+tmp)
 	}
 	defer tmpDB.Close()
 	// compress and copy the results to the temporary database
-	if debug {
-		out.PBug("compress and copy databases")
-	}
+	out.DPrint(debug, "compress and copy databases")
 	if errComp := bolt.Compact(tmpDB, srcDB, 0); errComp != nil {
 		return errComp
 	}
@@ -284,19 +279,19 @@ func Compact(debug bool) error {
 			return errT
 		}
 		s1 := fmt.Sprintf("original database: %d bytes, %s", sr.Size(), sr.Name())
-		out.PBug(s1)
+		out.DPrint(debug, s1)
 		s2 := fmt.Sprintf("new database:      %d bytes, %s", tm.Size(), tm.Name())
-		out.PBug(s2)
+		out.DPrint(debug, s2)
 	}
 	if err = srcDB.Close(); err != nil {
 		out.ErrFatal(err)
 	}
-	if cp, err := CopyFile(tmp, src); err != nil {
+	cp, err := CopyFile(tmp, src)
+	if err != nil {
 		return err
-	} else if debug {
-		s := fmt.Sprintf("copied %d bytes to: %s", cp, src)
-		out.PBug(s)
 	}
+	s := fmt.Sprintf("copied %d bytes to: %s", cp, src)
+	out.DPrint(debug, s)
 	return nil
 }
 

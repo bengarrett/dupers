@@ -47,9 +47,9 @@ const (
 	MatchPrefix = "\n  ⤷\t"
 )
 
-// PBug prints the string to a newline.
-func PBug(debug string) {
-	fmt.Fprintf(os.Stderr, "∙%s\n", debug)
+// DPrint prints the string to a newline.
+func DPrint(debug bool, s string) {
+	fmt.Fprintf(os.Stdout, "∙%s\n", s)
 }
 
 // EnterKey returns the Enter keyboard code.

@@ -29,23 +29,17 @@ const (
 func Cleanup(c *dupe.Config, f *cmd.Flags) {
 	w := os.Stdout
 	if *f.Sensen {
-		if c.Debug {
-			out.PBug("remove all non unique Windows and MS-DOS files.")
-		}
+		c.DPrint("remove all non unique Windows and MS-DOS files.")
 		fmt.Fprint(w, c.Remove())
 		fmt.Fprint(w, c.Removes(*f.Yes))
 		fmt.Fprint(w, c.Clean())
 		return
 	}
 	if *f.Rm || *f.RmPlus {
-		if c.Debug {
-			out.PBug("remove duplicate files.")
-		}
+		c.DPrint("remove duplicate files.")
 		fmt.Fprint(w, c.Remove())
 		if *f.RmPlus {
-			if c.Debug {
-				out.PBug("remove empty directories.")
-			}
+			c.DPrint("remove empty directories.")
 			fmt.Fprint(w, c.Clean())
 		}
 	}
@@ -84,9 +78,7 @@ func CmdErr(args, buckets, minArgs int, test bool) {
 
 // Lookup both cleans and then updates the buckets with file system changes.
 func Lookup(c *dupe.Config, f *cmd.Flags) {
-	if c.Debug {
-		out.PBug("dupe lookup.")
-	}
+	c.DPrint("dupe lookup.")
 	// normalise bucket names
 	for i, b := range c.All() {
 		abs, err := database.Abs(string(b))
@@ -103,9 +95,7 @@ func Lookup(c *dupe.Config, f *cmd.Flags) {
 		buckets = append(buckets, string(b))
 	}
 	if !*f.Lookup && len(buckets) > 0 {
-		if c.Debug {
-			out.PBug("non-fast mode, database cleanup.")
-		}
+		c.DPrint("non-fast mode, database cleanup.")
 		if err := database.Clean(c.Quiet, c.Debug, buckets...); err != nil {
 			out.ErrCont(err)
 		}
@@ -115,16 +105,12 @@ func Lookup(c *dupe.Config, f *cmd.Flags) {
 			return
 		}
 	}
-	if c.Debug {
-		out.PBug("walk the buckets.")
-	}
+	c.DPrint("walk the buckets.")
 	c.WalkDirs()
 }
 
 func lookup(c *dupe.Config) error {
-	if c.Debug {
-		out.PBug("read the hash values in the buckets.")
-	}
+	c.DPrint("read the hash values in the buckets.")
 	fastErr := false
 	for _, b := range c.All() {
 		if i, err := c.SetCompares(b); err != nil {

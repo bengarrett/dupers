@@ -64,9 +64,8 @@ func main() {
 	}
 
 	selection := strings.ToLower(flag.Args()[0])
-	if c.Debug {
-		out.PBug("command selection: " + selection)
-	}
+	c.DPrint("command selection: " + selection)
+
 	switch selection {
 	case task.Dupe_:
 		const testing = false

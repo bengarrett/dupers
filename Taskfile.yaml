@@ -7,6 +7,8 @@ vars:
   FILE: ./test/files_to_check/qziD6WMRvPyk
   ABSDST: "{{.USER_WORKING_DIR}}/.task"
   DST: ./.task/
+  DST2: ./task-number-2/
+  DST3: ./task-number-three/
   TEST: ./test/
   TMP: ./test/randomfiles.*
   CHK: ./test/files_to_check/*
@@ -81,29 +83,37 @@ tasks:
   dupeClone:
     silent: false
     cmds:
+      # - cmd:
+      #    go run -race main.go -yes dupe {{.TEST}} {{.ABSDST}}
+      #   ignore_error: true
+      # - cmd:
+      #    go run -race main.go -yes -fast dupe {{.TEST}} {{.ABSDST}}/
+      #   ignore_error: true
+      # - cmd:
+      #    go run -race main.go -yes dupe {{.TEST}} {{.DST}}
+      #   ignore_error: true
+      # - cmd:
+      #    go run -race main.go dupe {{.TEST}}xx {{.DST}}
+      #   ignore_error: true
+      # - cmd:
+      #    go run -race main.go -fast dupe xx{{.TEST}} {{.DST}}
+      #   ignore_error: true
+      # - cmd:
+      #    go run -race main.go -yes dupe {{.TEST}} {{.DST2}} {{.DST3}}
+      #   ignore_error: true
       - cmd:
-         go run -race main.go -yes dupe {{.TEST}} {{.ABSDST}}
+         go run -race main.go -debug -yes dupe {{.TEST}} {{.DST2}} {{.DST3}} {{.DST}}
         ignore_error: true
-      - cmd:
-         go run -race main.go -yes -fast dupe {{.TEST}} {{.ABSDST}}/
-        ignore_error: true
-      - cmd:
-         go run -race main.go -yes dupe {{.TEST}} {{.DST}}
-        ignore_error: true
-      - cmd:
-         go run -race main.go dupe {{.TEST}}xx {{.DST}}
-        ignore_error: true
-      - cmd:
-         go run -race main.go -fast dupe xx{{.TEST}} {{.DST}}
+      - cmd: # TODO: note this behaves different to the prior command
+         go run -race main.go -debug -yes dupe {{.TEST}} {{.DST}} {{.DST2}} {{.DST3}}
         ignore_error: true
       # todo multiple buckets
       # mixed valid and broken buckets
-      # create a -yes global flag
   one:
     silent: false
     cmds:
       - task: makeTmp
-      - task: dupeFile
+      #- task: dupeFile
       - task: dupeClone
       #- task: removeTmp
   
