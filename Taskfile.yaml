@@ -1,16 +1,29 @@
 # https://taskfile.dev
 
+# This Task file uses relative paths and expects to be located in the root of the dupers repository.
 version: '3'
 
 vars:
-  GREETING: Hello, World!
+  FILE: ./test/files_to_check/qziD6WMRvPyk
+  DST: ./.task/
+  TEST: ./test/
+  TMP: ./test/randomfiles.*
+  CHK: ./test/files_to_check/*
+  B1: ./test/bucket1/*
+  B2: ./test/bucket2/*
 
 tasks:
   race:
     silent: true
     cmds:
       - go build -v -race -o dupers main.go
-  args:
+  errs:
+    silent: true
+    cmds:
+      - echo -e "## Testing failures"
+      - go run -race main.go invalid-command
+      - go run -race main.go invalid-command and-more-args
+  flags:
     silent: true
     cmds:
       - echo -e "## Testing help.\n"
@@ -39,3 +52,58 @@ tasks:
       - go run -race main.go -m -q -d -v -h -e -n -f
       - echo -e "## Debug flag"
       - go run -race main.go -mono -quiet -debug -version -help -exact -name -fast -delete -delete+ -sensen
+  makeTmp:
+    silent: false
+    cmds:
+      - cmd:
+          mkdir --verbose {{.DST}}
+        ignore_error: true
+      - cmd:
+          cp --no-clobber --no-dereference {{.CHK}} {{.DST}}
+          cp --no-clobber --no-dereference {{.TMP}} {{.DST}}
+          cp --no-clobber --no-dereference {{.B1}} {{.DST}}
+          cp --no-clobber --no-dereference {{.B2}} {{.DST}}
+        ignore_error: true
+  removeTmp:
+    silent: false
+    cmds:
+      - cmd:
+         rm --force --recursive --verbose {{.DST}}
+        ignore_error: true
+  dupeFile:
+    silent: false
+    cmds:
+      - cmd:
+         go run -race main.go dupe {{.FILE}} {{.DST}}
+      - cmd:
+         go run -race main.go -fast dupe {{.FILE}} {{.DST}}
+  dupeClone:
+    silent: false
+    cmds:
+      - cmd:
+         go run -race main.go dupe {{.TEST}} {{.DST}}
+        ignore_error: true
+      - cmd:
+         go run -race main.go -fast dupe {{.TEST}} {{.DST}}
+        ignore_error: true
+  one:
+    silent: false
+    cmds:
+      - task: makeTmp
+      - task: dupeFile
+      - task: dupeClone
+      - task: removeTmp
+  
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 

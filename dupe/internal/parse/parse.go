@@ -87,7 +87,7 @@ func (p *Parser) SetBuckets() error {
 	return nil
 }
 
-// SetBuckets adds the bucket name to a list of buckets.
+// SetBucket adds the bucket name to a list of buckets.
 func (p *Parser) SetBucket(names ...string) {
 	for _, name := range names {
 		p.Buckets = append(p.Buckets, Bucket(name))
@@ -114,8 +114,8 @@ func (p *Parser) SetTimer() {
 	p.timer = time.Now()
 }
 
-// SetToCheck sets the named string as the directory or file to check.
-func (p *Parser) SetToCheck(name string) {
+// SetSource sets the named string as the directory or file to check.
+func (p *Parser) SetSource(name string) {
 	n, err := filepath.Abs(name)
 	if err != nil {
 		out.ErrFatal(err)

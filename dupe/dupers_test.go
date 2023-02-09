@@ -201,7 +201,7 @@ func TestConfig_WalkSource(t *testing.T) {
 	if err := c.WalkSource(); err == nil {
 		t.Errorf("Config.WalkSource() should return an error with an empty Config.")
 	}
-	c.SetToCheck(mock.Bucket2())
+	c.SetSource(mock.Bucket2())
 	if err := c.WalkSource(); err != nil {
 		t.Errorf("Config.WalkSource() returned an error: %v", err)
 	}

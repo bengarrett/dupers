@@ -54,9 +54,6 @@ type Config struct {
 
 // CheckPaths counts the number of files in a directory to check and the number of buckets.
 func (c *Config) CheckPaths() (ok bool, files, buckets int) {
-	check := func() bool {
-		return buckets >= files/2
-	}
 	if c.Debug {
 		out.PBug("count the files within the paths")
 	}
@@ -87,6 +84,9 @@ func (c *Config) CheckPaths() (ok bool, files, buckets int) {
 				out.PBug(err.Error())
 			}
 		}
+	}
+	check := func() bool {
+		return buckets >= files/2
 	}
 	return check(), files, buckets
 }

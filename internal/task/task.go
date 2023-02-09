@@ -144,21 +144,31 @@ func Dupe(c *dupe.Config, f *cmd.Flags, testing bool, args ...string) error {
 	if len(args) < minReq {
 		return ErrArgs
 	}
-	c.SetToCheck(args[1])
-	// directories and files to scan, a bucket is the name given to database tables
-	if buckets := args[2:]; len(buckets) == 0 {
+	c.SetSource(args[1])
+	walkCheck(c, args...)
+	return walkScan(c, f, args...)
+}
+
+// walkCheck checks directories and files to scan, a bucket is the name given to database tables.
+func walkCheck(c *dupe.Config, args ...string) {
+	s := fmt.Sprintf("buckets: %s", c.PrintBuckets())
+	buckets := args[2:]
+	if len(buckets) == 0 {
 		if err := c.SetBuckets(); err != nil {
 			out.ErrFatal(err)
 		}
-	} else {
-		c.SetBucket(buckets...)
-		checkDupePaths(c)
+		if c.Debug {
+			out.PBug(s)
+		}
+		return
+	}
+	c.SetBucket(buckets...)
+	if code := checkDupePaths(c); code >= 0 {
+		os.Exit(code)
 	}
 	if c.Debug {
-		s := fmt.Sprintf("buckets: %s", c.PrintBuckets())
 		out.PBug(s)
 	}
-	return walkScan(c, f, args...)
 }
 
 func walkScan(c *dupe.Config, f *cmd.Flags, args ...string) error {
@@ -289,25 +299,43 @@ func cleanupDB(quiet, debug bool) error {
 }
 
 // checkDupePaths checks the path arguments supplied to the dupe command.
-func checkDupePaths(c *dupe.Config) {
+func checkDupePaths(c *dupe.Config) (code int) {
 	if c == nil {
 		return
 	}
-	ok, cc, bc := c.CheckPaths()
+	ok, files, buckets := c.CheckPaths()
 	if ok {
 		return
 	}
+	// handle any problems
 	p := message.NewPrinter(language.English)
 	verb := "Buckets"
 	if len(c.All()) == 1 {
 		verb = "Bucket"
 	}
 	w := os.Stdout
-	fmt.Fprintf(w, "Directory to check:\n %s (%s)\n", c.ToCheck(), color.Info.Sprintf("%s files", p.Sprint(cc)))
-	fmt.Fprintf(w, "%s to lookup, for finding duplicates:\n %s (%s)\n\n",
-		verb, c.PrintBuckets(), color.Info.Sprintf("%s files", p.Sprint(bc)))
+	fmt.Fprint(w, "Directory to check:")
+	fmt.Fprintln(w)
+	fmt.Fprintf(w, " %s ", c.ToCheck())
+	fmt.Fprintf(w, "(%s)", color.Info.Sprintf("%s files", p.Sprint(files)))
+	fmt.Fprintln(w)
+	fmt.Fprintln(w)
+	fmt.Fprintf(w, "%s to lookup, for finding duplicates:", verb)
+	fmt.Fprintln(w)
+	fmt.Fprintf(w, " %s ", c.PrintBuckets())
+	if buckets == 0 {
+		fmt.Fprintf(w, "(%s)", color.Danger.Sprintf("%s files", p.Sprint(buckets)))
+		fmt.Fprintln(w)
+		fmt.Fprintln(w)
+		fmt.Fprintln(os.Stderr, color.Danger.Sprintf("The %s to lookup contains no files", strings.ToLower(verb)))
+		return 1
+	}
+	fmt.Fprintf(w, "(%s)", color.Info.Sprintf("%s files", p.Sprint(buckets)))
+	fmt.Fprintln(w)
+	fmt.Fprintln(w)
 	color.Warn.Println("\"Directory to check\" is NOT saved to the database.")
 	if !out.YN("Is this what you want", out.No) {
-		os.Exit(0)
+		return 0
 	}
+	return -1
 }

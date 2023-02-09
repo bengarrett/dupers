@@ -192,12 +192,12 @@ func Test_SetBucket(t *testing.T) {
 	})
 }
 
-func Test_SetToCheck(t *testing.T) {
+func Test_SetSource(t *testing.T) {
 	c := parse.Parser{}
-	c.SetToCheck(bucket1)
+	c.SetSource(bucket1)
 	t.Run("test set", func(t *testing.T) {
 		if s := c.Source; s == "" {
-			t.Errorf("SetToCheck() got = %v, want the absolute path of: %v", s, bucket1)
+			t.Errorf("SetSource() got = %v, want the absolute path of: %v", s, bucket1)
 		}
 	})
 }
