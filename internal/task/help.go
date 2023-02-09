@@ -39,7 +39,6 @@ func Debug(a *cmd.Aliases, f *cmd.Flags) string {
 
 // DatabaseHelp creates the database command help.
 func DatabaseHelp(w io.Writer) {
-	f := flag.Flag{}
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, color.Primary.Sprint("Database commands:"))
 	fmt.Fprintln(w, "  View information and run optional maintenance on the internal database.")
@@ -65,24 +64,6 @@ func DatabaseHelp(w io.Writer) {
 	fmt.Fprintln(w)
 	fmt.Fprintf(w, "    dupers %s <export file>\t%s\n", Import_, "import a bucket text file into the")
 	fmt.Fprintln(w, "\t database")
-	fmt.Fprintln(w)
-	fmt.Fprintln(w, color.Primary.Sprint("Options:"))
-	fmt.Fprintln(w, "  Program options that can be used with any command.")
-	fmt.Fprintln(w)
-	fmt.Fprintln(w, "  Usage:")
-	if flag.Lookup(cmd.Mono_) != nil {
-		f = *flag.Lookup(cmd.Mono_)
-		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
-		f = *flag.Lookup(cmd.Quiet_)
-		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
-		f = *flag.Lookup(cmd.Yes_)
-		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
-		f = *flag.Lookup(cmd.Debug_)
-		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
-		f = *flag.Lookup(cmd.Version_)
-		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
-	}
-	fmt.Fprintf(w, "    -h, %s\tshow this list of options\n", "-help")
 }
 
 // DupeHelp creates the dupe command help.
@@ -149,6 +130,28 @@ func dupeWindows(w io.Writer) {
 	fmt.Fprintln(w, color.Secondary.Sprint(a))
 	fmt.Fprintln(w, color.Info.Sprintf("    dupers dupe \"%s\" %s %s",
 		filepath.Join(cmd.Home(), "Documents"), "D:", "E:"))
+}
+
+func ProgramOpts(w io.Writer) {
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, color.Primary.Sprint("Options:"))
+	fmt.Fprintln(w, "  Program options that can be used with any command.")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "  Usage:")
+	if flag.Lookup(cmd.Mono_) != nil {
+		f := flag.Flag{}
+		f = *flag.Lookup(cmd.Mono_)
+		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
+		f = *flag.Lookup(cmd.Quiet_)
+		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
+		f = *flag.Lookup(cmd.Yes_)
+		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
+		f = *flag.Lookup(cmd.Debug_)
+		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
+		f = *flag.Lookup(cmd.Version_)
+		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
+	}
+	fmt.Fprintf(w, "    -h, %s\tshow this list of options\n", "-help")
 }
 
 // Search creates the search command help.

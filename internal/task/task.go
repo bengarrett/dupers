@@ -198,7 +198,7 @@ func Help() string {
 	DupeHelp(w)
 	SearchHelp(w)
 	DatabaseHelp(w)
-	fmt.Fprintln(w)
+	ProgramOpts(w)
 	if err := w.Flush(); err != nil {
 		return fmt.Sprintf("could not flush the help text: %s", err)
 	}
@@ -215,6 +215,7 @@ func helper() (*bytes.Buffer, *tabwriter.Writer) {
 func HelpDatabase() string {
 	b, w := helper()
 	DatabaseHelp(w)
+	ProgramOpts(w)
 	if err := w.Flush(); err != nil {
 		return fmt.Sprintf("could not flush the help text: %s", err)
 	}
@@ -224,6 +225,7 @@ func HelpDatabase() string {
 func HelpDupe() string {
 	b, w := helper()
 	DupeHelp(w)
+	ProgramOpts(w)
 	if err := w.Flush(); err != nil {
 		return fmt.Sprintf("could not flush the help text: %s", err)
 	}
@@ -233,6 +235,7 @@ func HelpDupe() string {
 func HelpSearch() string {
 	b, w := helper()
 	SearchHelp(w)
+	ProgramOpts(w)
 	if err := w.Flush(); err != nil {
 		return fmt.Sprintf("could not flush the help text: %s", err)
 	}
