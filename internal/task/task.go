@@ -324,7 +324,11 @@ func checkDupePaths(c *dupe.Config) (code int) {
 	w := os.Stdout
 	fmt.Fprint(w, "Directory to check:")
 	fmt.Fprintln(w)
-	fmt.Fprintf(w, " %s ", c.ToCheck())
+	if buckets == 0 {
+		fmt.Fprintf(w, " %s ", c.ToCheck())
+	} else {
+		fmt.Fprintf(w, " %s ", color.Warn.Sprint(c.ToCheck()))
+	}
 	fmt.Fprintf(w, "(%s)", color.Info.Sprintf("%s files", p.Sprint(files)))
 	fmt.Fprintln(w)
 	fmt.Fprintln(w)
@@ -341,7 +345,8 @@ func checkDupePaths(c *dupe.Config) (code int) {
 	fmt.Fprintf(w, "(%s)", color.Info.Sprintf("%s files", p.Sprint(buckets)))
 	fmt.Fprintln(w)
 	fmt.Fprintln(w)
-	color.Warn.Println("\"Directory to check\" is NOT saved to the database.")
+	fmt.Fprintln(w, "The bucket to lookup is to be stored in the database,")
+	color.Warn.Println(" but the \"Directory to check\" is not.")
 	if !out.YN("Is this what you want", out.No) {
 		return 0
 	}
