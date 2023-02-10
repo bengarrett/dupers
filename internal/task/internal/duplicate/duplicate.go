@@ -13,6 +13,7 @@ import (
 	"github.com/bengarrett/dupers/internal/cmd"
 	"github.com/bengarrett/dupers/internal/out"
 	"github.com/gookit/color"
+	bolt "go.etcd.io/bbolt"
 )
 
 var (
@@ -125,7 +126,7 @@ func Lookup(c *dupe.Config, f *cmd.Flags) error {
 		}
 	}
 	if *f.Lookup {
-		if err := lookup(c); err != nil {
+		if err := lookup(db, c); err != nil {
 			return nil
 		}
 	}
@@ -134,11 +135,14 @@ func Lookup(c *dupe.Config, f *cmd.Flags) error {
 	return nil
 }
 
-func lookup(c *dupe.Config) error {
+func lookup(db *bolt.DB, c *dupe.Config) error {
+	if db == nil {
+		return bolt.ErrDatabaseNotOpen
+	}
 	c.DPrint("read the hash values in the buckets.")
 	fastErr := false
 	for _, bucket := range c.All() {
-		if i, err := c.SetCompares(bucket); err != nil {
+		if i, err := c.SetCompares(db, bucket); err != nil {
 			fmt.Println("---------------> OOPS")
 			out.ErrCont(err)
 		} else if i > 0 {

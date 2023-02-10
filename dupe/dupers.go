@@ -177,9 +177,9 @@ func (c *Config) CheckDir(name string) (string, error) {
 }
 
 // Checksum the named file and save it to the bucket.
-func (c *Config) Checksum(name, bucket string) error {
+func (c *Config) Checksum(db *bolt.DB, name, bucket string) error {
 	c.DPrint("update: " + name)
-	if c.DB == nil {
+	if db == nil {
 		return bolt.ErrDatabaseNotOpen
 	}
 	// read file, exit if it fails
@@ -190,7 +190,7 @@ func (c *Config) Checksum(name, bucket string) error {
 	if sum == [32]byte{} {
 		return nil
 	}
-	if err = c.DB.Update(func(tx *bolt.Tx) error {
+	if err = db.Update(func(tx *bolt.Tx) error {
 		// directory bucket
 		b1 := tx.Bucket([]byte(bucket))
 		return b1.Put([]byte(name), sum[:])
@@ -363,10 +363,8 @@ func (c *Config) Status() string {
 // WalkDirs walks the named bucket directories for any new files to add their checksums to the database.
 func (c *Config) WalkDirs() {
 	// TODO: DATABASE FIXES NEEDED
-	c.init()
-	if !c.Test && c.DB == nil {
-		c.OpenWrite()
-		defer c.DB.Close()
+	if err := c.init(c.DB); err != nil {
+		out.ErrFatal(err)
 	}
 	// walk through the directories provided
 	for _, bucket := range c.All() {
@@ -384,7 +382,7 @@ func (c *Config) WalkDirs() {
 	// handle any items that exist in the database but not in the file system
 	// this would include items added using the `up+` archive scan command
 	for _, b := range c.All() {
-		if _, err := c.SetCompares(b); err != nil {
+		if _, err := c.SetCompares(c.DB, b); err != nil {
 			out.ErrCont(err)
 		}
 	}
@@ -396,13 +394,10 @@ func (c *Config) WalkDir(name parse.Bucket) error {
 		return ErrNoBucket
 	}
 	root := string(name)
-	c.init()
-	skip := c.skipFiles()
-	// open database
-	if !c.Test && c.DB == nil {
-		c.OpenWrite()
-		defer c.DB.Close()
+	if err := c.init(c.DB); err != nil {
+		return err
 	}
+	skip := c.skipFiles()
 	// create a new bucket if needed
 	if err := c.create(name); err != nil {
 		return err
@@ -450,7 +445,7 @@ func (c *Config) walkDir(root string, skip []string) error {
 			out.ErrFatal(errW)
 		}
 		fmt.Fprint(os.Stdout, PrintWalk(false, c))
-		if err := c.Checksum(path, root); err != nil {
+		if err := c.Checksum(c.DB, path, root); err != nil {
 			out.ErrCont(err)
 		}
 		return err
@@ -531,11 +526,14 @@ func (c *Config) create(name parse.Bucket) error {
 }
 
 // init initializes the Config maps and database.
-func (c *Config) init() {
+func (c *Config) init(db *bolt.DB) error {
+	if db == nil {
+		return bolt.ErrDatabaseNotOpen
+	}
 	// use all the buckets if no specific buckets are provided
 	if !c.Test && len(c.All()) == 0 {
-		if err := c.SetAllBuckets(); err != nil {
-			out.ErrFatal(err)
+		if err := c.SetAllBuckets(db); err != nil {
+			return err
 		}
 	}
 	// normalise bucket names
@@ -554,10 +552,11 @@ func (c *Config) init() {
 	}
 	if !c.Test && c.Compare == nil {
 		for i, b := range c.All() {
-			_, _ = c.SetCompares(b)
+			_, _ = c.SetCompares(c.DB, b)
 			c.DPrint(fmt.Sprintf("init %d: %s", i, b))
 		}
 	}
+	return nil
 }
 
 // lookup the checksum value in c.compare and return the file path.
@@ -733,12 +732,10 @@ func (c *Config) WalkArchiver(name parse.Bucket) error {
 	}
 	root := string(name)
 
-	c.init()
-	skip := c.skipFiles()
-	if c.DB == nil {
-		c.OpenWrite()
-		defer c.DB.Close()
+	if err := c.init(c.DB); err != nil {
+		return err
 	}
+	skip := c.skipFiles()
 	// create a new bucket if needed
 	if err := c.create(name); err != nil {
 		return err

@@ -121,7 +121,9 @@ func TestConfig_WalkDirs(t *testing.T) {
 		t.Error(err)
 	}
 	defer c.DB.Close()
-	c.SetBucket(mock.Bucket1())
+	if err := c.SetBuckets(mock.Bucket1()); err != nil {
+		t.Error(err)
+	}
 	c.WalkDirs()
 }
 
@@ -223,14 +225,11 @@ func TestRemoves(t *testing.T) {
 
 func TestChecksum(t *testing.T) {
 	c := dupe.Config{Test: true, Quiet: false, Debug: true}
-	var err error
-	c.DB, err = mock.TestDB()
+	db, err := mock.TestDB()
 	if err != nil {
-		c.DB.Close()
 		t.Error(err)
-		return
 	}
-	defer c.DB.Close()
+	defer db.Close()
 	file, err := filepath.Abs(file1)
 	if err != nil {
 		t.Error(err)
@@ -251,7 +250,7 @@ func TestChecksum(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := c.Checksum(tt.args.name, tt.args.bucket); (err != nil) != tt.wantErr {
+			if err := c.Checksum(db, tt.args.name, tt.args.bucket); (err != nil) != tt.wantErr {
 				t.Errorf("Config.Checksum() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

@@ -53,32 +53,35 @@ func (p *Parser) Compares() int {
 }
 
 // OpenRead opens the Bolt database for reading.
-func (p *Parser) OpenRead() {
-	if p.DB != nil {
-		return
-	}
-	db, err := database.OpenRead()
-	if err != nil {
-		out.ErrFatal(err)
-	}
-	p.DB = db
-}
+// func (p *Parser) OpenRead() {
+// 	if p.DB != nil {
+// 		return
+// 	}
+// 	db, err := database.OpenRead()
+// 	if err != nil {
+// 		out.ErrFatal(err)
+// 	}
+// 	p.DB = db
+// }
 
 // OpenWrite opens the Bolt database for reading and writing.
-func (p *Parser) OpenWrite() {
-	if p.DB != nil {
-		return
-	}
-	db, err := database.OpenWrite()
-	if err != nil {
-		out.ErrFatal(err)
-	}
-	p.DB = db
-}
+// func (p *Parser) OpenWrite() {
+// 	if p.DB != nil {
+// 		return
+// 	}
+// 	db, err := database.OpenWrite()
+// 	if err != nil {
+// 		out.ErrFatal(err)
+// 	}
+// 	p.DB = db
+// }
 
 // SetAllBuckets sets all the database buckets for use with the dupe or search commands.
-func (p *Parser) SetAllBuckets() error {
-	names, err := database.All(p.DB)
+func (p *Parser) SetAllBuckets(db *bolt.DB) error {
+	if db == nil {
+		return bolt.ErrDatabaseNotOpen
+	}
+	names, err := database.All(db)
 	if err != nil {
 		return err
 	}
@@ -88,8 +91,8 @@ func (p *Parser) SetAllBuckets() error {
 	return nil
 }
 
-// SetBucket adds the bucket name to a list of buckets.
-func (p *Parser) SetBucket(names ...string) error {
+// SetBuckets adds the bucket name to a list of buckets.
+func (p *Parser) SetBuckets(names ...string) error {
 	var errs error
 	for _, name := range names {
 
@@ -111,9 +114,12 @@ func (p *Parser) SetBucket(names ...string) error {
 	return nil
 }
 
-// SetCompares fetches items from the named bucket and sets them to c.compare.
-func (p *Parser) SetCompares(name Bucket) (int, error) {
-	ls, err := database.List(p.DB, string(name))
+// SetCompares fetches items from the named bucket and sets them to p.Compare.
+func (p *Parser) SetCompares(db *bolt.DB, name Bucket) (int, error) {
+	if db == nil {
+		return 0, bolt.ErrDatabaseNotOpen
+	}
+	ls, err := database.List(db, string(name))
 	if err != nil {
 		return 0, err
 	}

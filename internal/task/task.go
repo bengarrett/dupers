@@ -168,13 +168,13 @@ func Dupe(c *dupe.Config, f *cmd.Flags, testing bool, args ...string) error {
 func walkCheck(c *dupe.Config, assumeYes bool, args ...string) error {
 	buckets := args[2:]
 	if len(buckets) == 0 {
-		if err := c.SetAllBuckets(); err != nil {
+		if err := c.SetAllBuckets(c.DB); err != nil {
 			return err
 		}
 		c.DPrint(fmt.Sprintf("use all buckets: %s", c.PrintBuckets()))
 		return nil
 	}
-	if err := c.SetBucket(buckets...); err != nil {
+	if err := c.SetBuckets(buckets...); err != nil {
 		return err
 	}
 	if code := checkDupePaths(c, assumeYes); code >= 0 {
