@@ -192,6 +192,9 @@ func Import(db *bolt.DB, name Bucket, ls *Lists) (imported int, err error) {
 }
 
 func (batch Lists) iterate(db *bolt.DB, name Bucket, imported, total int) (int, error) {
+	if db == nil {
+		return 0, bolt.ErrDatabaseNotOpen
+	}
 	for path, sum := range batch {
 		if err := db.Update(func(tx *bolt.Tx) error {
 			b, err := tx.CreateBucketIfNotExists([]byte(name))
@@ -286,15 +289,10 @@ func Scanner(file *os.File) (string, *Lists, error) {
 }
 
 // Usage checks the validity and usage of the named bucket in the database.
-func Usage(name string, assumeYes bool, db *bolt.DB) (string, error) {
+func Usage(db *bolt.DB, name string, assumeYes bool) (string, error) {
 	if db == nil {
-		db, err := OpenRead()
-		if err != nil {
-			return "", err
-		}
-		defer db.Close()
+		return "", bolt.ErrDatabaseNotOpen
 	}
-
 	for {
 		path := ""
 		if err := db.View(func(tx *bolt.Tx) error {

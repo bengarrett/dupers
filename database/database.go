@@ -149,7 +149,7 @@ func Clean(db *bolt.DB, quiet, debug bool, buckets ...string) error {
 	}
 
 	cnt, errs, finds := 0, 0, 0
-	total, err := bucket.Total(cleaned, db)
+	total, err := bucket.Total(db, cleaned)
 	if err != nil {
 		return err
 	}
@@ -168,9 +168,12 @@ func Clean(db *bolt.DB, quiet, debug bool, buckets ...string) error {
 			continue
 		}
 		cleaner := bucket.Cleaner{
-			DB: db, Abs: abs, Debug: debug, Quiet: quiet, Cnt: cnt, Total: total, Finds: finds, Errs: errs,
+			Abs: abs, Debug: debug, Quiet: quiet, Cnt: cnt, Total: total, Finds: finds, Errs: errs,
 		}
-		cnt, finds, errs = cleaner.Clean()
+		cnt, finds, errs, err = cleaner.Clean(db)
+		if err != nil {
+			return err
+		}
 	}
 	if quiet {
 		return nil
@@ -377,7 +380,7 @@ func Count(db *bolt.DB, name string) (int, error) {
 	if db == nil {
 		return 0, bolt.ErrDatabaseNotOpen
 	}
-	return bucket.Count(name, db)
+	return bucket.Count(db, name)
 }
 
 // DB returns the absolute path of the database.

@@ -11,10 +11,6 @@ import (
 )
 
 func TestCleaner_Clean(t *testing.T) {
-	if err := mock.TestRemove(); err != nil {
-		t.Error(err)
-		return
-	}
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 		return
@@ -50,7 +46,6 @@ func TestCleaner_Clean(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &bucket.Cleaner{
-				DB:    tt.fields.DB,
 				Abs:   tt.fields.Abs,
 				Debug: tt.fields.Debug,
 				Quiet: tt.fields.Quiet,
@@ -59,7 +54,7 @@ func TestCleaner_Clean(t *testing.T) {
 				Finds: tt.fields.Finds,
 				Errs:  tt.fields.Errs,
 			}
-			gotCount, gotFinds, gotErrors := c.Clean()
+			gotCount, gotFinds, gotErrors, _ := c.Clean(tt.fields.DB)
 			if (gotCount > 0) != tt.wantCount {
 				t.Errorf("Cleaner.Clean() gotCount = %v, want %v", gotCount, tt.wantCount)
 			}
@@ -121,7 +116,7 @@ func TestCount(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotItems, err := bucket.Count(tt.args.name, tt.args.db)
+			gotItems, err := bucket.Count(tt.args.db, tt.args.name)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Count() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -175,11 +170,11 @@ func TestTotal(t *testing.T) {
 	}{
 		{"empty", args{}, 0, true},
 		{"no buckets", args{db: db}, 0, false},
-		{"bad buckets", args{[]string{"abc", "def"}, db}, -1, true},
+		{"bad buckets", args{[]string{"abc", "def"}, db}, 0, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := bucket.Total(tt.args.buckets, tt.args.db)
+			got, err := bucket.Total(tt.args.db, tt.args.buckets)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Total() error = %v, wantErr %v", err, tt.wantErr)
 				return
