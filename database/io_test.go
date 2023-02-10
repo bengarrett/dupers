@@ -15,6 +15,9 @@ import (
 
 func init() { //nolint:gochecknoinits
 	database.TestMode = true
+	if err := mock.TestOpen(); err != nil {
+		log.Panic(err)
+	}
 }
 
 func TestBackup(t *testing.T) {
@@ -25,11 +28,6 @@ func TestBackup(t *testing.T) {
 	}{
 		{"backup", false},
 	}
-
-	if err := mock.TestOpen(); err != nil {
-		t.Error(err)
-	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotName, gotWritten, err := database.Backup()
@@ -93,17 +91,21 @@ func TestCopyFile(t *testing.T) {
 func TestCSVExport(t *testing.T) {
 	color.Enable = false
 	if err := mock.TestOpen(); err != nil {
-		t.Error(err)
+		log.Panic(err)
 	}
-
+	DB, err := mock.TestDB()
+	if err != nil {
+		log.Panic(err)
+	}
+	defer DB.Close()
 	t.Run("csv export", func(t *testing.T) {
-		gotName, err := database.CSVExport(mock.Bucket1(), nil)
+		gotName, err := database.CSVExport(mock.Bucket1(), DB)
 		if err != nil {
 			t.Errorf("Backup() error = %v, want nil", err)
 			return
 		}
 		if gotName == "" {
-			t.Errorf("Backup() gotName = \"\"")
+			t.Errorf("Backup() gotName = \"\", want %s", mock.Bucket1())
 		}
 		if gotName != "" {
 			if err := os.Remove(gotName); err != nil {
@@ -115,12 +117,12 @@ func TestCSVExport(t *testing.T) {
 
 func TestImport(t *testing.T) {
 	color.Enable = false
-	db, err := mock.Open()
+	DB, err := mock.TestDB()
 	if err != nil {
-		t.Error(err)
+		log.Panic(err)
 	}
-	defer db.Close()
-	r, err := database.Import("", nil, db)
+	defer DB.Close()
+	r, err := database.Import("", nil, DB)
 	if r != 0 {
 		t.Errorf("Import(empty) records != 0")
 	}
@@ -188,11 +190,11 @@ func TestScanner(t *testing.T) {
 
 func TestCSVImport(t *testing.T) {
 	color.Enable = false
-	mdb, err := mock.Open()
+	DB, err := mock.TestDB()
 	if err != nil {
-		t.Error(err)
+		log.Panic(err)
 	}
-	defer mdb.Close()
+	defer DB.Close()
 	type args struct {
 		name string
 		db   *bolt.DB
@@ -204,9 +206,9 @@ func TestCSVImport(t *testing.T) {
 		wantErr     bool
 	}{
 		{"invalid", args{}, 0, true},
-		{"no path", args{"", mdb}, 0, true},
-		{"only file", args{os.TempDir(), mdb}, 0, true},
-		{"okay", args{"../test/export-bucket1.csv", mdb}, 26, false},
+		{"no path", args{"", DB}, 0, true},
+		{"only file", args{os.TempDir(), DB}, 0, true},
+		{"okay", args{"../test/export-bucket1.csv", DB}, 26, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

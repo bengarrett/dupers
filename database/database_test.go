@@ -43,6 +43,7 @@ func TestAll(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	defer db.Close()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotNames, err := database.All(db)
@@ -153,7 +154,7 @@ func TestCompare(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	db, err := mock.Open()
+	db, err := mock.TestDB()
 	if err != nil {
 		t.Error(err)
 	}
@@ -293,6 +294,7 @@ func TestExist(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	defer db.Close()
 	color.Enable = false
 	t.Run("exist", func(t *testing.T) {
 		if err := database.Exist(db, mock.Bucket1()); err != nil {
@@ -317,7 +319,7 @@ func TestIsEmpty(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		db, err := mock.Open()
+		db, err := mock.TestDB()
 		if err != nil {
 			t.Error(err)
 		}

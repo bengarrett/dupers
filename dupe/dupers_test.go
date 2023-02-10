@@ -116,7 +116,7 @@ func TestConfig_Status(t *testing.T) {
 func TestConfig_WalkDirs(t *testing.T) {
 	var err error
 	c := dupe.Config{Test: true, Debug: true}
-	c.DB, err = mock.Open()
+	c.DB, err = mock.TestDB()
 	if err != nil {
 		t.Error(err)
 	}
@@ -128,7 +128,7 @@ func TestConfig_WalkDirs(t *testing.T) {
 func TestConfig_WalkDir(t *testing.T) {
 	var err error
 	c := dupe.Config{Test: true, Debug: true}
-	c.DB, err = mock.Open()
+	c.DB, err = mock.TestDB()
 	if err != nil {
 		t.Error(err)
 	}
@@ -224,7 +224,7 @@ func TestRemoves(t *testing.T) {
 func TestChecksum(t *testing.T) {
 	c := dupe.Config{Test: true, Quiet: false, Debug: true}
 	var err error
-	c.DB, err = mock.Open()
+	c.DB, err = mock.TestDB()
 	if err != nil {
 		c.DB.Close()
 		t.Error(err)
@@ -312,7 +312,7 @@ func mirrorDir(src, dst string) error {
 func TestConfig_WalkArchiver(t *testing.T) {
 	c := dupe.Config{Test: true, Quiet: false, Debug: true}
 	var err error
-	c.DB, err = mock.Open()
+	c.DB, err = mock.TestDB()
 	if err != nil {
 		c.DB.Close()
 		t.Error(err)

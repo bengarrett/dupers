@@ -91,7 +91,7 @@ func CSVExport(bucket string, db *bolt.DB) (string, error) {
 	}
 	ls, errLS := List(db, bucket)
 	if errLS != nil {
-		return "", err
+		return "", errLS
 	}
 	for file, sum := range ls {
 		rel := strings.TrimPrefix(string(file), bucket)

@@ -19,11 +19,11 @@ func TestCleaner_Clean(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	mdb, err := mock.Open()
+	db, err := mock.TestDB()
 	if err != nil {
 		t.Error(err)
 	}
-	defer mdb.Close()
+	defer db.Close()
 	type fields struct {
 		DB    *bolt.DB
 		Abs   string
@@ -42,10 +42,10 @@ func TestCleaner_Clean(t *testing.T) {
 		wantErrors int
 	}{
 		{"empty", fields{}, false, 0, 0},
-		{"defaults", fields{DB: mdb}, false, 0, 1},
-		{"okay", fields{DB: mdb, Abs: mock.Bucket1()}, true, 0, 0},
-		{"debug", fields{DB: mdb, Abs: mock.Bucket1(), Debug: true}, true, 0, 0},
-		{"quiet", fields{DB: mdb, Abs: mock.Bucket1(), Quiet: true}, true, 0, 0},
+		{"defaults", fields{DB: db}, false, 0, 1},
+		{"okay", fields{DB: db, Abs: mock.Bucket1()}, true, 0, 0},
+		{"debug", fields{DB: db, Abs: mock.Bucket1(), Debug: true}, true, 0, 0},
+		{"quiet", fields{DB: db, Abs: mock.Bucket1(), Quiet: true}, true, 0, 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -97,12 +97,12 @@ func TestCount(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	mdb, err := mock.Open()
+	db, err := mock.TestDB()
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	defer mdb.Close()
+	defer db.Close()
 	type args struct {
 		name string
 		db   *bolt.DB
@@ -114,10 +114,10 @@ func TestCount(t *testing.T) {
 		wantErr   bool
 	}{
 		{"empty", args{}, false, true},
-		{"no bucket", args{db: mdb}, false, true},
-		{"bad bucket", args{"abc", mdb}, false, true},
-		{"404", args{mock.Bucket2(), mdb}, false, true},
-		{"okay", args{mock.Bucket1(), mdb}, true, false},
+		{"no bucket", args{db: db}, false, true},
+		{"bad bucket", args{"abc", db}, false, true},
+		{"404", args{mock.Bucket2(), db}, false, true},
+		{"okay", args{mock.Bucket1(), db}, true, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -157,11 +157,12 @@ func TestStat(t *testing.T) {
 }
 
 func TestTotal(t *testing.T) {
-	mdb, err := mock.Open()
+
+	db, err := mock.TestDB()
 	if err != nil {
 		t.Error(err)
 	}
-	defer mdb.Close()
+	defer db.Close()
 	type args struct {
 		buckets []string
 		db      *bolt.DB
@@ -173,8 +174,8 @@ func TestTotal(t *testing.T) {
 		wantErr bool
 	}{
 		{"empty", args{}, 0, true},
-		{"no buckets", args{db: mdb}, 0, false},
-		{"bad buckets", args{[]string{"abc", "def"}, mdb}, -1, true},
+		{"no buckets", args{db: db}, 0, false},
+		{"bad buckets", args{[]string{"abc", "def"}, db}, -1, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

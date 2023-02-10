@@ -78,7 +78,7 @@ func Bucket2() string {
 }
 
 // CreateItem adds the bucket and the named file to the database.
-func CreateItem(bucket, file string, db *bolt.DB) error {
+func CreateItem(db *bolt.DB, bucket, file string) error {
 	if db == nil {
 		return bolt.ErrDatabaseNotOpen
 	}
@@ -119,7 +119,7 @@ func Item1() string {
 }
 
 // Open and return the mock database.
-func Open() (*bolt.DB, error) {
+func XOpen() (*bolt.DB, error) {
 	path, err := Name()
 	if err != nil {
 		return nil, err
@@ -180,6 +180,11 @@ func Read(name string) (sum [32]byte, err error) {
 // Note: If this test fails under Windows, try running `go test ./...` after closing VS Code.
 // https://github.com/electron-userland/electron-builder/issues/3666
 func TestOpen() error {
+
+	if err := TestRemove(); err != nil {
+		return err
+	}
+
 	path, err := Name()
 	if err != nil {
 		return err

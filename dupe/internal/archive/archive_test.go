@@ -111,7 +111,7 @@ func TestConfig_WalkArchiver(t *testing.T) {
 			c := dupe.Config{
 				Test: true,
 			}
-			c.DB, err = mock.Open()
+			c.DB, err = mock.TestDB()
 			if err != nil {
 				t.Error(err)
 			}
