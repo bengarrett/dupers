@@ -94,8 +94,8 @@ func TestClean(t *testing.T) {
 				}
 				return
 			}
-			if tt.args.debug == true && !errors.Is(database.ErrDBClean, err) {
-				t.Errorf("Clean() expected %v error, got %v", database.ErrDBClean, err)
+			if tt.args.debug == true && !errors.Is(database.ErrClean, err) {
+				t.Errorf("Clean() expected %v error, got %v", database.ErrClean, err)
 				return
 			}
 			if (err != nil) != tt.wantErr {
@@ -120,7 +120,7 @@ func TestCompact(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := database.Compact(false); (err != nil) != tt.wantErr {
-				if !errors.Is(err, database.ErrDBCompact) {
+				if !errors.Is(err, database.ErrCompact) {
 					t.Errorf("Compact() error = %v, wantErr %t", err, tt.wantErr)
 					return
 				}

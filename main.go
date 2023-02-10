@@ -96,10 +96,10 @@ func main() {
 		task.Up_,
 		task.UpPlus_:
 		if err := task.Database(&c, *f.Yes, flag.Args()...); err != nil {
-			if errors.Is(err, database.ErrDBNotFound) {
+			if errors.Is(err, database.ErrNotFound) {
 				os.Exit(0)
 			}
-			if errors.Is(err, database.ErrDBZeroByte) {
+			if errors.Is(err, database.ErrZeroByte) {
 				os.Exit(1)
 			}
 			out.ErrFatal(err)

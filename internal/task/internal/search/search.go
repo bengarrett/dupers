@@ -10,6 +10,7 @@ import (
 	"github.com/bengarrett/dupers/database"
 	"github.com/bengarrett/dupers/internal/cmd"
 	"github.com/bengarrett/dupers/internal/out"
+	bolt "go.etcd.io/bbolt"
 )
 
 var (
@@ -69,11 +70,11 @@ func Compare(f *cmd.Flags, term string, buckets []string, test bool) (*database.
 
 // Error parses the errors from search compares.
 func Error(err error, test bool) error {
-	if errors.Is(err, database.ErrDBEmpty) {
+	if errors.Is(err, database.ErrEmpty) {
 		out.ErrCont(err)
 		return nil
 	}
-	if errors.Is(err, database.ErrBucketNotFound) {
+	if errors.Is(err, bolt.ErrBucketNotFound) {
 		out.ErrCont(err)
 		fmt.Fprintln(os.Stdout, "\nTo add this directory to the database, run:")
 		dir := err.Error()

@@ -99,7 +99,7 @@ func TestCSVExport(t *testing.T) {
 	}
 	defer DB.Close()
 	t.Run("csv export", func(t *testing.T) {
-		gotName, err := database.CSVExport(mock.Bucket1(), DB)
+		gotName, err := database.CSVExport(DB, mock.Bucket1())
 		if err != nil {
 			t.Errorf("Backup() error = %v, want nil", err)
 			return
@@ -122,7 +122,7 @@ func TestImport(t *testing.T) {
 		log.Panic(err)
 	}
 	defer DB.Close()
-	r, err := database.Import("", nil, DB)
+	r, err := database.Import(DB, "", nil)
 	if r != 0 {
 		t.Errorf("Import(empty) records != 0")
 	}
@@ -212,7 +212,7 @@ func TestCSVImport(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotRecords, err := database.CSVImport(tt.args.name, false, tt.args.db)
+			gotRecords, err := database.CSVImport(tt.args.db, tt.args.name, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CSVImport() error = %v, wantErr %v", err, tt.wantErr)
 				return

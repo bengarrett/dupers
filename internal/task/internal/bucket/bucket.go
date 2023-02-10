@@ -58,7 +58,7 @@ func Export(db *bolt.DB, quiet bool, args [2]string) {
 		out.ErrFatal(err)
 	}
 	w := os.Stdout
-	if errEx := database.Exist(db, name); errors.Is(errEx, database.ErrBucketNotFound) {
+	if errEx := database.Exist(db, name); errors.Is(errEx, bolt.ErrBucketNotFound) {
 		out.ErrCont(errEx)
 		fmt.Fprintf(w, "Bucket name: %s\n", name)
 		out.Example("\ndupers export <bucket name>")
@@ -66,7 +66,7 @@ func Export(db *bolt.DB, quiet bool, args [2]string) {
 	} else if errEx != nil {
 		out.ErrFatal(errEx)
 	}
-	exp, errEx := database.CSVExport(name, nil)
+	exp, errEx := database.CSVExport(db, name)
 	if errEx != nil {
 		out.ErrFatal(errEx)
 	}
@@ -76,24 +76,27 @@ func Export(db *bolt.DB, quiet bool, args [2]string) {
 }
 
 // Import a CSV file into the database.
-func Import(quiet, assumeYes bool, args [2]string) {
+func Import(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
+	if db == nil {
+		return bolt.ErrDatabaseNotOpen
+	}
 	if args[1] == "" {
-		out.ErrCont(ErrImport)
 		fmt.Fprintln(os.Stderr, "Cannot import file as no filepath was provided.")
 		out.Example(fmt.Sprintf("\ndupers %s <filepath>", dim))
-		out.ErrFatal(nil)
+		return ErrImport
 	}
 	name, err := database.Abs(args[1])
 	if err != nil {
-		out.ErrFatal(err)
+		return err
 	}
-	r, errIm := database.CSVImport(name, assumeYes, nil)
-	if errIm != nil {
-		out.ErrFatal(errIm)
+	r, err := database.CSVImport(db, name, assumeYes)
+	if err != nil {
+		return err
 	}
 	p := message.NewPrinter(language.English)
 	s := p.Sprintf("\rSuccessfully imported %d records.", number.Decimal(r))
 	out.Response(s, quiet)
+	return nil
 }
 
 // List the content of a bucket to the stdout.
@@ -138,7 +141,7 @@ func Move(c *dupe.Config, assumeYes bool, args [3]string) {
 		out.ErrFatal(err)
 	}
 	w := os.Stdout
-	if errEx := database.Exist(c.DB, name); errors.Is(errEx, database.ErrBucketNotFound) {
+	if errEx := database.Exist(c.DB, name); errors.Is(errEx, bolt.ErrBucketNotFound) {
 		out.ErrCont(errEx)
 		fmt.Fprintf(w, "Bucket name: %s\n", name)
 		out.Example("\ndupers mv <bucket name> <new directory>")
@@ -184,14 +187,14 @@ func Remove(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
 		out.ErrFatal(err)
 	}
 	items, err := database.Count(db, name)
-	if errors.Is(err, database.ErrBucketNotFound) {
+	if errors.Is(err, bolt.ErrBucketNotFound) {
 		// fallback Abs check
 		name, err = filepath.Abs(args[1])
 		if err != nil {
 			return err
 		}
 		items, err = database.Count(db, name)
-		if errors.Is(err, database.ErrBucketNotFound) {
+		if errors.Is(err, bolt.ErrBucketNotFound) {
 			notFound(db, name, err)
 			return nil
 		}
@@ -218,10 +221,10 @@ func rmBucket(db *bolt.DB, name, retry string) {
 	if err == nil {
 		return
 	}
-	if errors.Is(err, database.ErrBucketNotFound) {
+	if errors.Is(err, bolt.ErrBucketNotFound) {
 		// retry with the original argument
 		if err1 := database.RM(retry); err1 != nil {
-			if errors.Is(err1, database.ErrBucketNotFound) {
+			if errors.Is(err1, bolt.ErrBucketNotFound) {
 				notFound(db, name, err1)
 			}
 			out.ErrFatal(err1)

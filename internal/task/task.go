@@ -80,6 +80,9 @@ func Directories() error {
 // Database parses the commands that interact with the database.
 // TODO drop c.Parser.DB
 func Database(c *dupe.Config, assumeYes bool, args ...string) error {
+	if c == nil {
+		c = new(dupe.Config)
+	}
 	if _, err := database.Check(); err != nil {
 		return err
 	}
@@ -90,6 +93,7 @@ func Database(c *dupe.Config, assumeYes bool, args ...string) error {
 	copy(buckets[:], args)
 	switch args[0] {
 	case Backup_:
+		fmt.Printf("%+v\n\n", c)
 		return backupDB(c.Quiet)
 	case Clean_:
 		return cleanupDB(c)
@@ -102,7 +106,7 @@ func Database(c *dupe.Config, assumeYes bool, args ...string) error {
 	case Export_:
 		bucket.Export(c.DB, c.Quiet, buckets)
 	case Import_:
-		bucket.Import(c.Quiet, assumeYes, buckets)
+		bucket.Import(c.Parser.DB, c.Quiet, assumeYes, buckets)
 	case LS_:
 		return bucket.List(c.Parser.DB, c.Quiet, buckets)
 	case MV_:
@@ -300,13 +304,13 @@ func backupDB(quiet bool) error {
 // db *bolt.DB, quiet, debug bool
 func cleanupDB(c *dupe.Config) error {
 	if err := database.Clean(c.Parser.DB, c.Quiet, c.Debug); err != nil {
-		if b := errors.Is(err, database.ErrDBClean); !b {
+		if b := errors.Is(err, database.ErrClean); !b {
 			return err
 		}
 		out.ErrCont(err)
 	}
 	if err := database.Compact(c.Debug); err != nil {
-		if b := errors.Is(err, database.ErrDBCompact); !b {
+		if b := errors.Is(err, database.ErrCompact); !b {
 			return err
 		}
 	}

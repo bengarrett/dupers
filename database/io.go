@@ -70,7 +70,7 @@ func CopyFile(name, dest string) (int64, error) {
 
 // CSVExport saves the bucket data to an export csv file.
 // The generated file is RFC 4180 compatible using comma-separated values.
-func CSVExport(bucket string, db *bolt.DB) (string, error) {
+func CSVExport(db *bolt.DB, bucket string) (string, error) {
 	if db == nil {
 		return "", bolt.ErrDatabaseNotOpen
 	}
@@ -79,14 +79,14 @@ func CSVExport(bucket string, db *bolt.DB) (string, error) {
 		return "", err
 	}
 	name := filepath.Join(dir, export())
-	f, err := os.Create(name)
+	dest, err := os.Create(name)
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer dest.Close()
 
 	meta := strings.Join([]string{"path", bucket}, "#")
-	r := [][]string{
+	records := [][]string{
 		{"sha256_sum", meta},
 	}
 	ls, errLS := List(db, bucket)
@@ -95,10 +95,10 @@ func CSVExport(bucket string, db *bolt.DB) (string, error) {
 	}
 	for file, sum := range ls {
 		rel := strings.TrimPrefix(string(file), bucket)
-		r = append(r, []string{fmt.Sprintf("%x", sum), rel})
+		records = append(records, []string{fmt.Sprintf("%x", sum), rel})
 	}
-	w := csvEnc.NewWriter(f)
-	if err := w.WriteAll(r); err != nil {
+	w := csvEnc.NewWriter(dest)
+	if err := w.WriteAll(records); err != nil {
 		return "", err
 	}
 	return name, nil
@@ -111,13 +111,9 @@ func export() string {
 }
 
 // CSVImport reads the named csv export file and imports its content to the database.
-func CSVImport(name string, assumeYes bool, db *bolt.DB) (records int, err error) {
+func CSVImport(db *bolt.DB, name string, assumeYes bool) (int, error) {
 	if db == nil {
-		db, err = OpenWrite()
-		if err != nil {
-			return 0, err
-		}
-		defer db.Close()
+		return 0, bolt.ErrDatabaseNotOpen
 	}
 
 	file, err := os.Open(name)
@@ -126,18 +122,12 @@ func CSVImport(name string, assumeYes bool, db *bolt.DB) (records int, err error
 	}
 	defer file.Close()
 
-	if err1 := csv.Checker(file); err1 != nil {
-		return 0, err1
+	if err := csv.Checker(file); err != nil {
+		return 0, err
 	}
-	name, lists, err2 := Scanner(file)
-	if err2 != nil {
-		return 0, err2
-	}
-	if db == nil {
-		name, err = Usage(name, assumeYes, db)
-		if err != nil {
-			return 0, err
-		}
+	name, lists, err := Scanner(file)
+	if err != nil {
+		return 0, err
 	}
 	items := 0
 	for range *lists {
@@ -153,7 +143,7 @@ func CSVImport(name string, assumeYes bool, db *bolt.DB) (records int, err error
 	s = color.Secondary.Sprint("These will be added to the bucket: ")
 	s += color.Debug.Sprint(name)
 	fmt.Fprintln(w, s)
-	return Import(Bucket(name), lists, db)
+	return Import(db, Bucket(name), lists)
 }
 
 // Home returns the user's home directory.
@@ -170,17 +160,12 @@ func Home() (string, error) {
 
 // Import the list of data and save it to the database.
 // If the named bucket does not exist, it is created.
-func Import(name Bucket, ls *Lists, db *bolt.DB) (imported int, err error) {
+func Import(db *bolt.DB, name Bucket, ls *Lists) (imported int, err error) {
+	if db == nil {
+		return 0, bolt.ErrDatabaseNotOpen
+	}
 	if ls == nil {
 		return 0, ErrImportList
-	}
-	if db == nil {
-		var err error
-		db, err = OpenWrite()
-		if err != nil {
-			return 0, err
-		}
-		defer db.Close()
 	}
 	const batchItems = 50000
 	items, total := 0, len(*ls)

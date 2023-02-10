@@ -374,7 +374,7 @@ func (c *Config) WalkDirs() {
 		c.DPrint("walkdir bucket: " + s)
 		if err := c.WalkDir(bucket); err != nil {
 			if errors.Is(errors.Unwrap(err), ErrPathNoFound) &&
-				errors.Is(database.Exist(c.DB, s), database.ErrBucketNotFound) {
+				errors.Is(database.Exist(c.DB, s), bolt.ErrBucketNotFound) {
 				out.ErrCont(err)
 				continue
 			}

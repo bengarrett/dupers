@@ -6,6 +6,7 @@ import (
 
 	"github.com/bengarrett/dupers/database"
 	"github.com/bengarrett/dupers/internal/task/internal/search"
+	bolt "go.etcd.io/bbolt"
 )
 
 func TestCmdErr(t *testing.T) {
@@ -29,8 +30,8 @@ func TestErr(t *testing.T) {
 		err  error
 	}{
 		{"nil", nil},
-		{"empty", database.ErrDBEmpty},
-		{"not found", database.ErrBucketNotFound},
+		{"empty", database.ErrEmpty},
+		{"not found", bolt.ErrBucketNotFound},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

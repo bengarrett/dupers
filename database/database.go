@@ -53,12 +53,11 @@ const (
 )
 
 var (
-	ErrBucketNotFound = bolt.ErrBucketNotFound
-	ErrDBClean        = errors.New("database has nothing to clean")
-	ErrDBCompact      = errors.New("database compression has not reduced the size")
-	ErrDBEmpty        = errors.New("database is empty and contains no items")
-	ErrDBNotFound     = errors.New("database file does not exist")
-	ErrDBZeroByte     = errors.New("database is a zero byte file")
+	ErrClean    = errors.New("database has nothing to clean")
+	ErrCompact  = errors.New("database compression has not reduced the size")
+	ErrEmpty    = errors.New("database is empty and contains no items")
+	ErrNotFound = errors.New("database file does not exist")
+	ErrZeroByte = errors.New("database is a zero byte file")
 )
 
 var (
@@ -85,7 +84,7 @@ func All(db *bolt.DB) ([]string, error) {
 	if err := db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 			if v := tx.Bucket(name); v == nil {
-				return fmt.Errorf("%w: %s", ErrBucketNotFound, string(name))
+				return fmt.Errorf("%w: %s", bolt.ErrBucketNotFound, string(name))
 			}
 			names = append(names, string(name))
 			return nil
@@ -106,17 +105,17 @@ func Check() (int64, error) {
 	w := os.Stdout
 	i, err1 := os.Stat(path)
 	if os.IsNotExist(err1) {
-		out.ErrCont(ErrDBNotFound)
+		out.ErrCont(ErrNotFound)
 		fmt.Fprintf(w, "\n%s\nThe database will be located at: %s\n", NotFound, path)
-		return 0, ErrDBNotFound // 0
+		return 0, ErrNotFound // 0
 	} else if err1 != nil {
 		return 0, err
 	}
 	if i.Size() == 0 {
-		out.ErrCont(ErrDBZeroByte)
+		out.ErrCont(ErrZeroByte)
 		s := "This error occures when dupers cannot save any data to the file system."
 		fmt.Fprintf(w, "\n%s\nThe database is located at: %s\n", s, path)
-		return 0, ErrDBZeroByte // 1
+		return 0, ErrZeroByte // 1
 	}
 	return i.Size(), nil
 }
@@ -129,7 +128,7 @@ func Exist(db *bolt.DB, bucket string) error {
 	return db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
 		if b == nil {
-			return ErrBucketNotFound
+			return bolt.ErrBucketNotFound
 		}
 		return nil
 	})
@@ -142,16 +141,6 @@ func Clean(db *bolt.DB, quiet, debug bool, buckets ...string) error {
 		return bolt.ErrDatabaseNotOpen
 	}
 	cleanDebug(debug, buckets)
-	// path, err := DB()
-	// if err != nil {
-	// 	return err
-	// }
-	// out.DPrint(debug, "database path: "+path)
-	// db, err := bolt.Open(path, PrivateFile, write())
-	// if err != nil {
-	// 	return err
-	// }
-	// defer db.Close()
 
 	out.DPrint(debug, fmt.Sprintf("cleaner of buckets: %s", buckets))
 	cleaned, err := cleaner(db, debug, buckets)
@@ -192,7 +181,7 @@ func Clean(db *bolt.DB, quiet, debug bool, buckets ...string) error {
 	w := os.Stdout
 	if debug && finds == 0 {
 		fmt.Fprintln(w, "")
-		return ErrDBClean
+		return ErrClean
 	}
 	if finds > 0 {
 		fmt.Fprintf(w, "\rThe database removed %d stale items\n", finds)
@@ -220,19 +209,14 @@ func cleaner(db *bolt.DB, debug bool, buckets []string) ([]string, error) {
 	}
 
 	out.DPrint(debug, "fetching all buckets")
-
-	var err1 error
-	buckets, err1 = All(db)
-
-	if err1 != nil {
-		return nil, err1
+	all, err := All(db)
+	if err != nil {
+		return nil, err
 	}
-
-	if len(buckets) == 0 {
-		return nil, ErrDBEmpty
+	if len(all) == 0 {
+		return nil, ErrEmpty
 	}
-
-	return buckets, nil
+	return all, nil
 }
 
 // Compact the database by reclaiming internal space.
@@ -333,7 +317,7 @@ func compare(db *bolt.DB, ignoreCase, pathBase bool, term []byte, buckets ...str
 		if err = db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket(abs)
 			if b == nil {
-				return ErrBucketNotFound
+				return bolt.ErrBucketNotFound
 			}
 			s := term
 			if ignoreCase {
@@ -354,7 +338,7 @@ func compare(db *bolt.DB, ignoreCase, pathBase bool, term []byte, buckets ...str
 				return nil
 			})
 			return err
-		}); errors.Is(err, ErrBucketNotFound) {
+		}); errors.Is(err, bolt.ErrBucketNotFound) {
 			return nil, fmt.Errorf("%w: '%s'", err, abs)
 		} else if err != nil {
 			return nil, err
@@ -375,7 +359,7 @@ func checker(db *bolt.DB, buckets []string) ([]string, error) {
 		return nil, err
 	}
 	if len(all) == 0 {
-		return nil, ErrDBEmpty
+		return nil, ErrEmpty
 	}
 	return all, nil
 }
@@ -418,22 +402,23 @@ func DB() (string, error) {
 	// create a new database if it doesn't exist, this prevents
 	// posix system returning the error a "bad file descriptor" when reading
 	path := filepath.Join(dir, boltName)
-	i, errP := os.Stat(path)
-	if os.IsNotExist(errP) {
-		if errDB := Create(path); errDB != nil {
-			return "", errDB
+	stat, errp := os.Stat(path)
+	if os.IsNotExist(errp) {
+		if err := Create(path); err != nil {
+			return "", err
 		}
 		return path, nil
-	} else if errP != nil {
-		return "", errP
+	}
+	if errp != nil {
+		return "", errp
 	}
 	// recreate an empty database if it is a zero byte file
-	if i.Size() == 0 {
-		if errRM := os.Remove(path); errRM != nil {
-			return "", errRM
+	if stat.Size() == 0 {
+		if err := os.Remove(path); err != nil {
+			return "", err
 		}
-		if errDB := Create(path); errDB != nil {
-			return "", errDB
+		if err := Create(path); err != nil {
+			return "", err
 		}
 	}
 	return path, nil
@@ -458,33 +443,37 @@ func Info() (string, error) {
 	var b bytes.Buffer
 	w := new(tabwriter.Writer)
 	w.Init(&b, 0, tabWidth, 0, '\t', 0)
-	fmt.Fprintf(w, "\tLocation:\t%s\n", path)
-	s, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		fmt.Fprintf(w, "\n%s\n", NotFound)
-		w.Flush()
-		return b.String(), ErrDBNotFound
-	} else if err != nil {
+	fmt.Fprintf(w, "\tLocation:\t%s", path)
+	fmt.Fprintln(w)
+	stat, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			fmt.Fprintf(w, "\n%s\n", NotFound)
+			err = ErrNotFound
+		}
 		w.Flush()
 		return b.String(), err
 	}
-	fmt.Fprintf(w, "\tModified:\t%s\n", s.ModTime().Local().Format("Jan 2 15:04:05"))
+	fmt.Fprintf(w, "\tModified:\t%s", stat.ModTime().Local().Format("Jan 2 15:04:05"))
+	fmt.Fprintln(w)
 	fmt.Fprintf(w, "\tFile:\t%s",
-		color.Primary.Sprint(humanize.Bytes(uint64(s.Size()))))
+		color.Primary.Sprint(humanize.Bytes(uint64(stat.Size()))))
 	if runtime.GOOS != winOS {
-		fmt.Fprintf(w, " (%v)", s.Mode())
+		fmt.Fprintf(w, " (%v)", stat.Mode())
 	}
-	fmt.Fprintf(w, "\n")
+	fmt.Fprintln(w)
 	var bucketsB int
 	w, bucketsB, err = info(w, path)
 	if err != nil {
 		fmt.Fprintln(w)
-		fmt.Fprintf(w, "\tDatabase error:\t%s\n", err.Error())
+		fmt.Fprintf(w, "\tDatabase error:\t%s", err.Error())
+		fmt.Fprintln(w)
 	}
 	const oneAndAHalf, oneMB = 1.5, 1_000_000
 	tooBig := int64(float64(bucketsB) * oneAndAHalf)
-	if s.Size() > oneMB && s.Size() > tooBig {
-		fmt.Fprintln(w, color.Notice.Sprint("\nTo reduce the size of the database:"))
+	if stat.Size() > oneMB && stat.Size() > tooBig {
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, color.Notice.Sprint("To reduce the size of the database:"))
 		fmt.Fprintln(w, color.Debug.Sprint("dupers backup && dupers clean"))
 	}
 	w.Flush()
@@ -499,22 +488,25 @@ func info(w *tabwriter.Writer, name string) (*tabwriter.Writer, int, error) {
 		}
 		item map[string]vals
 	)
+
 	db, err := bolt.Open(name, PrivateFile, read())
 	if err != nil {
 		return w, 0, err
 	}
 	defer db.Close()
+
 	ro := color.Green.Sprint("OK")
 	if !db.IsReadOnly() {
 		ro = color.Danger.Sprint("NO")
 	}
-	fmt.Fprintf(w, "\tRead only mode:\t%s\n", ro)
+	fmt.Fprintf(w, "\tRead only mode:\t%s", ro)
+	fmt.Fprintln(w)
 	items, cnt, sizes := make(item), 0, 0
 	if err := db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 			v := tx.Bucket(name)
 			if v == nil {
-				return fmt.Errorf("%w: %s", ErrBucketNotFound, string(name))
+				return fmt.Errorf("%w: %s", bolt.ErrBucketNotFound, string(name))
 			}
 			cnt++
 			sizes += v.Stats().LeafAlloc
@@ -524,16 +516,21 @@ func info(w *tabwriter.Writer, name string) (*tabwriter.Writer, int, error) {
 	}); err != nil {
 		return nil, 0, err
 	}
-	fmt.Fprintf(w, "Buckets:        %s\n\n", color.Primary.Sprint(cnt))
+	fmt.Fprintf(w, "Buckets:        %s", color.Primary.Sprint(cnt))
+	fmt.Fprintln(w)
+	fmt.Fprintln(w)
 	if cnt == 0 {
 		// exit when no buckets exist
 		return w, sizes, nil
 	}
 	tab := tabwriter.NewWriter(w, 0, 0, tabPadding, ' ', tabwriter.AlignRight)
-	fmt.Fprintf(tab, "Items\tSize\t\tBucket %s\n", color.Secondary.Sprint("(absolute path)"))
+	fmt.Fprintf(tab, "Items\tSize\t\tBucket %s",
+		color.Secondary.Sprint("(absolute path)"))
+	fmt.Fprintln(tab)
 	p := message.NewPrinter(language.English)
 	for i, b := range items {
-		p.Fprintf(tab, "%d\t%s\t\t%v\n", number.Decimal(b.items), b.size, i)
+		p.Fprintf(tab, "%d\t%s\t\t%v", number.Decimal(b.items), b.size, i)
+		fmt.Fprintln(tab)
 	}
 	if err := tab.Flush(); err != nil {
 		return w, 0, err
@@ -570,7 +567,7 @@ func List(db *bolt.DB, bucket string) (Lists, error) {
 	if err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
 		if b == nil {
-			return ErrBucketNotFound
+			return bolt.ErrBucketNotFound
 		}
 		h := [32]byte{}
 		return b.ForEach(func(k, v []byte) error {
@@ -585,7 +582,7 @@ func List(db *bolt.DB, bucket string) (Lists, error) {
 }
 
 // Rename the named bucket in the database to use a new directory path.
-func Rename(name, newName string) error {
+func Rename(name, new string) error {
 	db, err := OpenWrite()
 	if err != nil {
 		return err
@@ -594,9 +591,9 @@ func Rename(name, newName string) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(name))
 		if b == nil {
-			return ErrBucketNotFound
+			return bolt.ErrBucketNotFound
 		}
-		ren, errRen := tx.CreateBucket([]byte(newName))
+		ren, errRen := tx.CreateBucket([]byte(new))
 		if errRen != nil {
 			return errRen
 		}
@@ -618,7 +615,7 @@ func RM(name string) error {
 	defer db.Close()
 	return db.Update(func(tx *bolt.Tx) error {
 		if b := tx.Bucket([]byte(name)); b == nil {
-			return ErrBucketNotFound
+			return bolt.ErrBucketNotFound
 		}
 		return tx.DeleteBucket([]byte(name))
 	})
