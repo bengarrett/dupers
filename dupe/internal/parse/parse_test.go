@@ -54,11 +54,18 @@ func TestSetBuckets(t *testing.T) {
 	err := mock.TestOpen()
 	if err != nil {
 		t.Error(err)
-		return
 	}
-	p := parse.Parser{}
+	db, err := mock.TestDB()
+	if err != nil {
+		t.Error(err)
+	}
+	defer db.Close()
+	p := parse.Parser{
+		DB: db,
+	}
 	if err := p.SetAllBuckets(); err != nil {
 		t.Error(err)
+		return
 	}
 	const expected = 1
 	if l := len(p.All()); l != expected {
@@ -177,17 +184,19 @@ func TestRead(t *testing.T) {
 }
 
 func Test_SetBucket(t *testing.T) {
-	const test = "test"
 	i := parse.Parser{}
-	i.SetBucket(test)
+	if err := i.SetBucket(bucket1); err != nil {
+		t.Error(err)
+		return
+	}
 	t.Run("test set", func(t *testing.T) {
 		if l := len(i.Buckets); l != 1 {
 			t.Errorf("SetBucket() got = %v, want %v", l, 1)
 		}
 	})
 	t.Run("print", func(t *testing.T) {
-		if s := i.PrintBuckets(); s != test {
-			t.Errorf("SetBucket() got = %v, want %v", s, test)
+		if s := i.PrintBuckets(); s != bucket1 {
+			t.Errorf("SetBucket() got = %v, want %v", s, bucket1)
 		}
 	})
 }

@@ -68,8 +68,15 @@ func main() {
 
 	switch selection {
 	case task.Dupe_:
-		const testing = false
-		if err := task.Dupe(&c, &f, testing, flag.Args()...); err != nil {
+		// TODO: defer this out of switch
+		var err error
+		c.Parser.DB, err = database.OpenRead()
+		if err != nil {
+			out.ErrFatal(err)
+		}
+		defer c.Parser.DB.Close()
+
+		if err := task.Dupe(&c, &f, false, flag.Args()...); err != nil {
 			out.ErrFatal(err)
 		}
 	case task.Search_:

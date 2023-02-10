@@ -13,6 +13,7 @@ import (
 	"github.com/bengarrett/dupers/dupe"
 	"github.com/bengarrett/dupers/internal/out"
 	"github.com/gookit/color"
+	bolt "go.etcd.io/bbolt"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"golang.org/x/text/number"
@@ -49,7 +50,7 @@ func Check(term, cmd, name string) {
 }
 
 // Export the bucket as a CSV file.
-func Export(quiet bool, args [2]string) {
+func Export(db *bolt.DB, quiet bool, args [2]string) {
 	const x = "export"
 	Check(x, x, args[1])
 	name, err := database.Abs(args[1])
@@ -57,7 +58,7 @@ func Export(quiet bool, args [2]string) {
 		out.ErrFatal(err)
 	}
 	w := os.Stdout
-	if errEx := database.Exist(name, nil); errors.Is(errEx, database.ErrBucketNotFound) {
+	if errEx := database.Exist(db, name); errors.Is(errEx, database.ErrBucketNotFound) {
 		out.ErrCont(errEx)
 		fmt.Fprintf(w, "Bucket name: %s\n", name)
 		out.Example("\ndupers export <bucket name>")
@@ -96,15 +97,18 @@ func Import(quiet, assumeYes bool, args [2]string) {
 }
 
 // List the content of a bucket to the stdout.
-func List(quiet bool, args [2]string) {
+func List(db *bolt.DB, quiet bool, args [2]string) error {
+	if db == nil {
+		return bolt.ErrDatabaseNotOpen
+	}
 	Check("list", dls, args[1])
 	name, err := database.Abs(args[1])
 	if err != nil {
-		out.ErrFatal(err)
+		return err
 	}
-	ls, err := database.List(name, nil)
+	ls, err := database.List(db, name)
 	if err != nil {
-		out.ErrCont(err)
+		return err
 	}
 	// sort the filenames
 	names := make([]string, 0, len(ls))
@@ -122,10 +126,11 @@ func List(quiet bool, args [2]string) {
 		fmt.Fprintf(w, "%s %s\n", color.Primary.Sprint(p.Sprint(number.Decimal(cnt))),
 			color.Secondary.Sprint("items listed. Checksums are 32 byte, SHA-256 (FIPS 180-4)."))
 	}
+	return nil
 }
 
 // Move renames a bucket by duplicating it to a new bucket location.
-func Move(quiet, assumeYes bool, args [3]string) {
+func Move(c *dupe.Config, assumeYes bool, args [3]string) {
 	b, dir := args[1], args[2]
 	Check("move and rename", dmv, b)
 	name, err := database.Abs(b)
@@ -133,7 +138,7 @@ func Move(quiet, assumeYes bool, args [3]string) {
 		out.ErrFatal(err)
 	}
 	w := os.Stdout
-	if errEx := database.Exist(name, nil); errors.Is(errEx, database.ErrBucketNotFound) {
+	if errEx := database.Exist(c.DB, name); errors.Is(errEx, database.ErrBucketNotFound) {
 		out.ErrCont(errEx)
 		fmt.Fprintf(w, "Bucket name: %s\n", name)
 		out.Example("\ndupers mv <bucket name> <new directory>")
@@ -154,7 +159,7 @@ func Move(quiet, assumeYes bool, args [3]string) {
 	if newName == "" {
 		out.ErrFatal(ErrNewName)
 	}
-	if !quiet {
+	if !c.Quiet {
 		fmt.Fprintf(w, "%s\t%s\n%s\t%s\n",
 			color.Secondary.Sprint("Bucket name:"), color.Debug.Sprint(name),
 			"New name:", color.Debug.Sprint(newName))
@@ -169,26 +174,29 @@ func Move(quiet, assumeYes bool, args [3]string) {
 }
 
 // Remove the bucket from the database.
-func Remove(quiet, assumeYes bool, args [2]string) {
+func Remove(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
+	if db == nil {
+		return bolt.ErrBucketNotFound
+	}
 	Check("remove", drm, args[1])
 	name, err := database.Abs(args[1])
 	if err != nil {
 		out.ErrFatal(err)
 	}
-	items, err := database.Count(name, nil)
+	items, err := database.Count(db, name)
 	if errors.Is(err, database.ErrBucketNotFound) {
 		// fallback Abs check
 		name, err = filepath.Abs(args[1])
 		if err != nil {
-			out.ErrFatal(err)
+			return err
 		}
-		items, err = database.Count(name, nil)
+		items, err = database.Count(db, name)
 		if errors.Is(err, database.ErrBucketNotFound) {
-			notFound(name, err)
-			return
+			notFound(db, name, err)
+			return nil
 		}
 	} else if err != nil {
-		out.ErrCont(err)
+		return err
 	}
 	if !quiet {
 		w := os.Stdout
@@ -196,15 +204,16 @@ func Remove(quiet, assumeYes bool, args [2]string) {
 		p := message.NewPrinter(language.English)
 		fmt.Fprintf(w, "%s\t%s\n", color.Secondary.Sprint("Items:"), color.Debug.Sprint(p.Sprint(items)))
 		if !out.YN("Remove this bucket", assumeYes, out.No) {
-			return
+			return nil
 		}
 	}
-	rmBucket(name, args[1])
+	rmBucket(db, name, args[1])
 	s := fmt.Sprintf("Removed bucket from the database: '%s'\n", name)
 	out.Response(s, quiet)
+	return nil
 }
 
-func rmBucket(name, retry string) {
+func rmBucket(db *bolt.DB, name, retry string) {
 	err := database.RM(name)
 	if err == nil {
 		return
@@ -213,18 +222,18 @@ func rmBucket(name, retry string) {
 		// retry with the original argument
 		if err1 := database.RM(retry); err1 != nil {
 			if errors.Is(err1, database.ErrBucketNotFound) {
-				notFound(name, err1)
+				notFound(db, name, err1)
 			}
 			out.ErrFatal(err1)
 		}
 	}
 }
 
-func notFound(name string, err error) {
+func notFound(db *bolt.DB, name string, err error) {
 	out.ErrCont(err)
 	w := os.Stdout
 	fmt.Fprintf(w, "Bucket to remove: %s\n", color.Danger.Sprint(name))
-	buckets, err2 := database.All(nil)
+	buckets, err2 := database.All(db)
 	if err2 != nil {
 		out.ErrFatal(err2)
 	}

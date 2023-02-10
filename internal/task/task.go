@@ -78,8 +78,9 @@ func Directories() error {
 }
 
 // Database parses the commands that interact with the database.
+// TODO drop c.Parser.DB
 func Database(c *dupe.Config, assumeYes bool, args ...string) error {
-	if err := database.Check(); err != nil {
+	if _, err := database.Check(); err != nil {
 		return err
 	}
 	if len(args) == 0 {
@@ -91,7 +92,7 @@ func Database(c *dupe.Config, assumeYes bool, args ...string) error {
 	case Backup_:
 		return backupDB(c.Quiet)
 	case Clean_:
-		return cleanupDB(c.Quiet, c.Debug)
+		return cleanupDB(c)
 	case DB_, Database_:
 		s, err := database.Info()
 		if err != nil {
@@ -99,17 +100,17 @@ func Database(c *dupe.Config, assumeYes bool, args ...string) error {
 		}
 		fmt.Fprintln(os.Stdout, s)
 	case Export_:
-		bucket.Export(c.Quiet, buckets)
+		bucket.Export(c.DB, c.Quiet, buckets)
 	case Import_:
 		bucket.Import(c.Quiet, assumeYes, buckets)
 	case LS_:
-		bucket.List(c.Quiet, buckets)
+		return bucket.List(c.Parser.DB, c.Quiet, buckets)
 	case MV_:
 		buckets := [3]string{}
 		copy(buckets[:], args)
-		bucket.Move(c.Quiet, assumeYes, buckets)
+		bucket.Move(c, assumeYes, buckets)
 	case RM_:
-		bucket.Remove(c.Quiet, assumeYes, buckets)
+		return bucket.Remove(c.Parser.DB, c.Quiet, assumeYes, buckets)
 	case Up_:
 		bucket.Rescan(c, false, buckets)
 	case UpPlus_:
@@ -131,7 +132,7 @@ func Dupe(c *dupe.Config, f *cmd.Flags, testing bool, args ...string) error {
 	c.DPrint(fmt.Sprintf("dupe command: %s", strings.Join(args, " ")))
 
 	// fetch bucket info
-	b, err := database.All(nil)
+	b, err := database.All(c.Parser.DB)
 	if err != nil {
 		return err
 	}
@@ -295,14 +296,16 @@ func backupDB(quiet bool) error {
 }
 
 // cleanupDB cleans and compacts the database.
-func cleanupDB(quiet, debug bool) error {
-	if err := database.Clean(quiet, debug); err != nil {
+// c *dupe.Config
+// db *bolt.DB, quiet, debug bool
+func cleanupDB(c *dupe.Config) error {
+	if err := database.Clean(c.Parser.DB, c.Quiet, c.Debug); err != nil {
 		if b := errors.Is(err, database.ErrDBClean); !b {
 			return err
 		}
 		out.ErrCont(err)
 	}
-	if err := database.Compact(debug); err != nil {
+	if err := database.Compact(c.Debug); err != nil {
 		if b := errors.Is(err, database.ErrDBCompact); !b {
 			return err
 		}

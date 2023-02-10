@@ -41,21 +41,26 @@ func Compare(f *cmd.Flags, term string, buckets []string, test bool) (*database.
 	if f == nil {
 		return nil, ErrNoFlags
 	}
+	db, err := database.OpenRead()
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
 	switch {
 	case *f.Filename && !*f.Exact:
-		if m, err = database.CompareBaseNoCase(term, buckets...); err != nil {
+		if m, err = database.CompareBaseNoCase(db, term, buckets...); err != nil {
 			return nil, Error(err, test)
 		}
 	case *f.Filename && *f.Exact:
-		if m, err = database.CompareBase(term, buckets...); err != nil {
+		if m, err = database.CompareBase(db, term, buckets...); err != nil {
 			return nil, Error(err, test)
 		}
 	case !*f.Filename && !*f.Exact:
-		if m, err = database.CompareNoCase(term, buckets...); err != nil {
+		if m, err = database.CompareNoCase(db, term, buckets...); err != nil {
 			return nil, Error(err, test)
 		}
 	case !*f.Filename && *f.Exact:
-		if m, err = database.Compare(term, buckets...); err != nil {
+		if m, err = database.Compare(db, term, buckets...); err != nil {
 			return nil, Error(err, test)
 		}
 	}

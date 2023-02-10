@@ -72,13 +72,8 @@ func CopyFile(name, dest string) (int64, error) {
 // The generated file is RFC 4180 compatible using comma-separated values.
 func CSVExport(bucket string, db *bolt.DB) (string, error) {
 	if db == nil {
-		db, err := OpenRead()
-		if err != nil {
-			return "", err
-		}
-		defer db.Close()
+		return "", bolt.ErrDatabaseNotOpen
 	}
-
 	dir, err := Home()
 	if err != nil {
 		return "", err
@@ -94,7 +89,7 @@ func CSVExport(bucket string, db *bolt.DB) (string, error) {
 	r := [][]string{
 		{"sha256_sum", meta},
 	}
-	ls, errLS := List(bucket, db)
+	ls, errLS := List(db, bucket)
 	if errLS != nil {
 		return "", err
 	}

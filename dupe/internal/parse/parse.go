@@ -78,7 +78,7 @@ func (p *Parser) OpenWrite() {
 
 // SetAllBuckets sets all the database buckets for use with the dupe or search commands.
 func (p *Parser) SetAllBuckets() error {
-	names, err := database.All(nil)
+	names, err := database.All(p.DB)
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func (p *Parser) SetBucket(names ...string) error {
 
 // SetCompares fetches items from the named bucket and sets them to c.compare.
 func (p *Parser) SetCompares(name Bucket) (int, error) {
-	ls, err := database.List(string(name), p.DB)
+	ls, err := database.List(p.DB, string(name))
 	if err != nil {
 		return 0, err
 	}

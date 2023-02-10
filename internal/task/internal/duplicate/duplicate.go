@@ -102,7 +102,7 @@ func Lookup(c *dupe.Config, f *cmd.Flags) error {
 
 			continue
 		}
-		if err := database.Exist(abs, db); err != nil {
+		if err := database.Exist(db, abs); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("%w: %s", err, b))
 		}
 		c.All()[i] = dupe.Bucket(abs)
@@ -120,7 +120,7 @@ func Lookup(c *dupe.Config, f *cmd.Flags) error {
 
 	if !*f.Lookup && len(buckets) > 0 {
 		c.DPrint("non-fast mode, database cleanup.")
-		if err := database.Clean(c.Quiet, c.Debug, buckets...); err != nil {
+		if err := database.Clean(c.Parser.DB, c.Quiet, c.Debug, buckets...); err != nil {
 			out.ErrCont(err)
 		}
 	}

@@ -362,6 +362,7 @@ func (c *Config) Status() string {
 
 // WalkDirs walks the named bucket directories for any new files to add their checksums to the database.
 func (c *Config) WalkDirs() {
+	// TODO: DATABASE FIXES NEEDED
 	c.init()
 	if !c.Test && c.DB == nil {
 		c.OpenWrite()
@@ -373,7 +374,7 @@ func (c *Config) WalkDirs() {
 		c.DPrint("walkdir bucket: " + s)
 		if err := c.WalkDir(bucket); err != nil {
 			if errors.Is(errors.Unwrap(err), ErrPathNoFound) &&
-				errors.Is(database.Exist(s, c.DB), database.ErrBucketNotFound) {
+				errors.Is(database.Exist(c.DB, s), database.ErrBucketNotFound) {
 				out.ErrCont(err)
 				continue
 			}

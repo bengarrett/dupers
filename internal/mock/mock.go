@@ -215,6 +215,19 @@ func TestOpen() error {
 	return db.Close()
 }
 
+func TestDB() (*bolt.DB, error) {
+	path, err := Name()
+	if err != nil {
+		return nil, err
+	}
+
+	db, err := bolt.Open(path, PrivateFile, nil)
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}
+
 // TestRemove deletes the mock database.
 func TestRemove() error {
 	path, err := Name()
