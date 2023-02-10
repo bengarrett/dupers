@@ -159,16 +159,15 @@ func Clean(db *bolt.DB, quiet, debug bool, buckets ...string) error {
 		var cont bool
 		parser := bucket.Parser{
 			Name:  name,
-			DB:    db,
-			Cnt:   cnt,
+			Items: cnt,
 			Errs:  errs,
 			Debug: debug,
 		}
-		if cnt, errs, abs, cont = parser.Parse(); cont {
+		if cnt, errs, abs, cont = parser.Parse(db); cont {
 			continue
 		}
 		cleaner := bucket.Cleaner{
-			Abs: abs, Debug: debug, Quiet: quiet, Cnt: cnt, Total: total, Finds: finds, Errs: errs,
+			Name: abs, Debug: debug, Quiet: quiet, Items: cnt, Total: total, Finds: finds, Errs: errs,
 		}
 		cnt, finds, errs, err = cleaner.Clean(db)
 		if err != nil {

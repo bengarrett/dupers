@@ -61,20 +61,17 @@ func Checker(file *os.File) error {
 		return ErrFileNoDesc
 	}
 	l := len(Header)
-	_, err := file.Seek(0, io.SeekStart)
-	if err != nil {
+	b := make([]byte, l)
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
 		return fmt.Errorf("%w: %s", err, file.Name())
 	}
-	b := make([]byte, l)
-	_, err = io.ReadAtLeast(file, b, len(Header))
-	if err != nil {
+	if _, err := io.ReadAtLeast(file, b, len(Header)); err != nil {
 		return err
 	}
 	if !bytes.Equal(b, []byte(Header)) {
 		return fmt.Errorf("%w, missing header: %s", ErrImportFile, Header)
 	}
-	_, err = file.Seek(0, io.SeekStart)
-	if err != nil {
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
 		return fmt.Errorf("%w: %s", err, file.Name())
 	}
 	return nil

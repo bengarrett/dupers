@@ -22,10 +22,10 @@ func TestCleaner_Clean(t *testing.T) {
 	defer db.Close()
 	type fields struct {
 		DB    *bolt.DB
-		Abs   string
+		Name  string
 		Debug bool
 		Quiet bool
-		Cnt   int
+		Items int
 		Total int
 		Finds int
 		Errs  int
@@ -39,17 +39,17 @@ func TestCleaner_Clean(t *testing.T) {
 	}{
 		{"empty", fields{}, false, 0, 0},
 		{"defaults", fields{DB: db}, false, 0, 1},
-		{"okay", fields{DB: db, Abs: mock.Bucket1()}, true, 0, 0},
-		{"debug", fields{DB: db, Abs: mock.Bucket1(), Debug: true}, true, 0, 0},
-		{"quiet", fields{DB: db, Abs: mock.Bucket1(), Quiet: true}, true, 0, 0},
+		{"okay", fields{DB: db, Name: mock.Bucket1()}, true, 0, 0},
+		{"debug", fields{DB: db, Name: mock.Bucket1(), Debug: true}, true, 0, 0},
+		{"quiet", fields{DB: db, Name: mock.Bucket1(), Quiet: true}, true, 0, 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &bucket.Cleaner{
-				Abs:   tt.fields.Abs,
+				Name:  tt.fields.Name,
 				Debug: tt.fields.Debug,
 				Quiet: tt.fields.Quiet,
-				Cnt:   tt.fields.Cnt,
+				Items: tt.fields.Items,
 				Total: tt.fields.Total,
 				Finds: tt.fields.Finds,
 				Errs:  tt.fields.Errs,
