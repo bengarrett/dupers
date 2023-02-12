@@ -56,8 +56,8 @@ func TestConfig_Remove(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if r != "No duplicate files to remove." {
-		t.Errorf("Config.Remove() should have returned a nothing to remove message, not %v.", r)
+	if strings.TrimSpace(r) != "No duplicate files to remove." {
+		t.Errorf("Config.Remove() should have returned a nothing to remove message, not %q.", r)
 	}
 	// copy file
 	const written = 20

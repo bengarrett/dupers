@@ -94,6 +94,14 @@ func TestMIME(t *testing.T) {
 }
 
 func TestConfig_WalkArchiver(t *testing.T) {
+	err := mock.TestOpen()
+	if err != nil {
+		t.Error(err)
+	}
+	db, err := mock.TestDB()
+	if err != nil {
+		t.Error(err)
+	}
 	type args struct {
 		name parse.Bucket
 	}
@@ -110,12 +118,7 @@ func TestConfig_WalkArchiver(t *testing.T) {
 			c := dupe.Config{
 				Test: true,
 			}
-			db, err := mock.TestDB()
-			if err != nil {
-				t.Error(err)
-			}
-			defer db.Close()
-			if err := c.WalkArchiver(nil, tt.args.name); (err != nil) != tt.wantErr {
+			if err := c.WalkArchiver(db, tt.args.name); (err != nil) != tt.wantErr {
 				t.Errorf("Config.WalkArchiver() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

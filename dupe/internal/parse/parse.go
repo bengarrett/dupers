@@ -32,27 +32,27 @@ const (
 	oneMb = oneKb * oneKb
 )
 
-type Parser struct {
+type Scanner struct {
 	Buckets []Bucket  // Buckets to lookup.
-	Compare Checksums // Compare hashes fetched from the database or file system.
-	Files   int       // Files count.
-	Sources []string  // Sources are directories or files to compare.
+	Sources []string  // Sources to compare, either directories or files.
 	Source  string    // Source directory or file to compare.
+	Compare Checksums // Compare hashes fetched from the database or file system.
+	Files   int       // Files scan and process counter.
 	timer   time.Time
 }
 
 // All buckets returned as a slice.
-func (p *Parser) All() []Bucket {
+func (p *Scanner) All() []Bucket {
 	return p.Buckets
 }
 
 // Compares the number of items contained in c.compare.
-func (p *Parser) Compares() int {
+func (p *Scanner) Compares() int {
 	return len(p.Compare)
 }
 
 // OpenRead opens the Bolt database for reading.
-// func (p *Parser) OpenRead() {
+// func (p *Scanner) OpenRead() {
 // 	if p.DB != nil {
 // 		return
 // 	}
@@ -64,7 +64,7 @@ func (p *Parser) Compares() int {
 // }
 
 // OpenWrite opens the Bolt database for reading and writing.
-// func (p *Parser) OpenWrite() {
+// func (p *Scanner) OpenWrite() {
 // 	if p.DB != nil {
 // 		return
 // 	}
@@ -76,7 +76,7 @@ func (p *Parser) Compares() int {
 // }
 
 // SetAllBuckets sets all the database buckets for use with the dupe or search commands.
-func (p *Parser) SetAllBuckets(db *bolt.DB) error {
+func (p *Scanner) SetAllBuckets(db *bolt.DB) error {
 	if db == nil {
 		return bolt.ErrDatabaseNotOpen
 	}
@@ -91,7 +91,7 @@ func (p *Parser) SetAllBuckets(db *bolt.DB) error {
 }
 
 // SetBuckets adds the bucket name to a list of buckets.
-func (p *Parser) SetBuckets(names ...string) error {
+func (p *Scanner) SetBuckets(names ...string) error {
 	var errs error
 	for _, name := range names {
 		n, err := filepath.Abs(name)
@@ -113,7 +113,7 @@ func (p *Parser) SetBuckets(names ...string) error {
 }
 
 // SetCompares fetches items from the named bucket and sets them to p.Compare.
-func (p *Parser) SetCompares(db *bolt.DB, name Bucket) (int, error) {
+func (p *Scanner) SetCompares(db *bolt.DB, name Bucket) (int, error) {
 	if db == nil {
 		return 0, bolt.ErrDatabaseNotOpen
 	}
@@ -131,12 +131,12 @@ func (p *Parser) SetCompares(db *bolt.DB, name Bucket) (int, error) {
 }
 
 // SetTimer starts a process timer.
-func (p *Parser) SetTimer() {
+func (p *Scanner) SetTimer() {
 	p.timer = time.Now()
 }
 
 // SetSource sets the named string as the directory or file to check.
-func (p *Parser) SetSource(name string) error {
+func (p *Scanner) SetSource(name string) error {
 	n, err := filepath.Abs(name)
 	if err != nil {
 		return err
@@ -149,7 +149,7 @@ func (p *Parser) SetSource(name string) error {
 }
 
 // PrintBuckets returns a list of buckets used by the database.
-func (p *Parser) PrintBuckets() string {
+func (p *Scanner) PrintBuckets() string {
 	s := make([]string, 0, len(p.All()))
 	for _, b := range p.All() {
 		s = append(s, string(b))
@@ -158,12 +158,12 @@ func (p *Parser) PrintBuckets() string {
 }
 
 // ToCheck returns the directory or file to check.
-func (p *Parser) ToCheck() string {
+func (p *Scanner) ToCheck() string {
 	return p.Source
 }
 
 // Timer returns the time taken since the process timer was instigated.
-func (p *Parser) Timer() time.Duration {
+func (p *Scanner) Timer() time.Duration {
 	return time.Since(p.timer)
 }
 

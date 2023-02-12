@@ -32,7 +32,7 @@ func ExamplePrint() {
 }
 
 // func TestParser_OpenRead(t *testing.T) {
-// 	p := parse.Parser{}
+// 	p := parse.Scanner{}
 // 	p.OpenRead()
 // 	defer p.DB.Close()
 // 	if p.DB == nil {
@@ -41,7 +41,7 @@ func ExamplePrint() {
 // }
 
 // func TestParser_OpenWrite(t *testing.T) {
-// 	p := parse.Parser{}
+// 	p := parse.Scanner{}
 // 	p.OpenWrite()
 // 	defer p.DB.Close()
 // 	if p.DB == nil {
@@ -60,7 +60,7 @@ func TestSetBuckets(t *testing.T) {
 		t.Error(err)
 	}
 	defer db.Close()
-	var p parse.Parser
+	var p parse.Scanner
 	if err := p.SetAllBuckets(db); err != nil {
 		t.Error(err)
 		return
@@ -72,7 +72,7 @@ func TestSetBuckets(t *testing.T) {
 }
 
 func TestTimer(t *testing.T) {
-	p := parse.Parser{}
+	p := parse.Scanner{}
 	p.SetTimer()
 	if z := p.Timer(); z == 0 {
 		t.Error("timer should not be zero")
@@ -100,14 +100,14 @@ func TestParser_SetCompares(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := parse.Parser{}
+			p := parse.Scanner{}
 			got, err := p.SetCompares(db, parse.Bucket(tt.args.name))
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Parser.SetCompares() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Scanner.SetCompares() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("Parser.SetCompares() = %v, want %v", got, tt.want)
+				t.Errorf("Scanner.SetCompares() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -187,7 +187,7 @@ func TestRead(t *testing.T) {
 }
 
 func Test_SetBucket(t *testing.T) {
-	i := parse.Parser{}
+	i := parse.Scanner{}
 	if err := i.SetBuckets(bucket1); err != nil {
 		t.Error(err)
 		return
@@ -205,7 +205,7 @@ func Test_SetBucket(t *testing.T) {
 }
 
 func Test_SetSource(t *testing.T) {
-	c := parse.Parser{}
+	c := parse.Scanner{}
 	if err := c.SetSource(bucket1); err != nil {
 		t.Errorf("SetSource(%v) returned the error: %v", bucket1, err)
 	}

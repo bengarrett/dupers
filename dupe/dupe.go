@@ -50,7 +50,7 @@ type Config struct {
 	Debug bool // Debug spams technobabble to stdout.
 	Quiet bool // Quiet the feedback sent to stdout.
 	Test  bool // Test toggles the internal unit test mode.
-	parse.Parser
+	parse.Scanner
 }
 
 // DPrint prints the string to stdout whenever Config.Debug is true.
