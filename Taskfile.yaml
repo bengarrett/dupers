@@ -6,6 +6,7 @@ version: '3'
 vars:
   FILE: ./test/files_to_check/qziD6WMRvPyk
   USERDST: "{{.USER_WORKING_DIR}}/.task"
+  USERTST: "{{.USER_WORKING_DIR}}/test"
   DST: ./.task/
   DST2: ./task-number-2/
   DST3: ./task-number-three/
@@ -14,6 +15,7 @@ vars:
   CHK: ./test/files_to_check/*
   B1: ./test/bucket1/*
   B2: ./test/bucket2/*
+  SENSEN: ./test/sensen/*
   RUNRACE: run -race main.go
 
 tasks:
@@ -44,8 +46,8 @@ tasks:
       - go {{.RUNRACE}} -m -v -q
       - go {{.RUNRACE}} database
       - go {{.RUNRACE}} db -d -m
-      - go {{.RUNRACE}} -m -q -d -v -h -e -n -f
-      - go {{.RUNRACE}} -mono -quiet -debug -version -help -exact -name -fast -delete -delete+ -sensen
+      - go {{.RUNRACE}} -m -q -d -v -h -e -n -f -y
+      - go {{.RUNRACE}} -mono -quiet -debug -version -help -exact -name -fast -delete -delete+ -sensen -yes
   lint:
     silent: false
     desc: runs a formatter and linter over the source code
@@ -57,6 +59,22 @@ tasks:
     desc: build a binary of this program with the race detection configuration
     cmds:
       - go build -v -race -o dupers main.go
+      - ./dupers --version
+  releases:
+    silent: false
+    desc: build the multiple distribution packages for this program by simulating a release
+    cmds:
+      - goreleaser release --clean --snapshot
+      - cmd: ./dist/Linux_linux_amd64_v1/dupers --version
+        platforms: [linux/amd64]
+      - cmd: ./dist/Linux_linux_arm64/dupers --version
+        platforms: [linux/arm64]
+      - cmd: ./dist/macOS_darwin_all/dupers --version
+        platforms: [darwin]
+      - cmd: ./dist/Windows_windows_amd64_v1/dupers --version
+        platforms: [windows/amd64]
+      - cmd: ./dist/Windows_windows_386/dupers --version
+        platforms: [windows/386]
   tests:
     desc: runs all of the test commands
     silent: false
@@ -88,6 +106,18 @@ tasks:
     cmds:
       - task: make-tmp
       - task: up-upplus
+  test-delete: # TODO broken?
+    desc: runs the dupe command with the -delete flag
+    silent: false
+    cmds:
+      - task: make-tmp
+      - task: dupe-flag-delete
+  test-delete+: # TODO broken?
+    desc: runs the dupe command with the -delete+ flag
+    silent: false
+    cmds:
+      - task: make-tmp
+      - task: dupe-flag-delete+
   test-dupe:
     desc: runs the dupe on directories scans
     cmds:
@@ -105,7 +135,15 @@ tasks:
     cmds:
       - task: make-tmp
       - task: searches
-
+  test-sensen: # TODO broken?
+    desc: runs the dupe command with the -sensen flag
+    silent: false
+    cmds:
+      - task: make-tmp
+      - cmd: mkdir --parent {{.USERDST}}/zxcvbn
+      - cmd: mkdir --parent {{.USERDST}}/asdfgh
+      - cmd: mkdir --parent {{.USERDST}}/qwerty
+      - task: dupe-flag-sensen
   make-tmp:
     silent: false
     internal: true
@@ -113,14 +151,17 @@ tasks:
       - cmd:
           mkdir --verbose {{.DST}}
         ignore_error: true
-      - cmd:
-          cp --no-clobber --no-dereference {{.CHK}} {{.DST}}
-          cp --no-clobber --no-dereference {{.TMP}} {{.DST}}
-          cp --no-clobber --no-dereference {{.B1}} {{.DST}}
-          cp --no-clobber --no-dereference {{.B2}} {{.DST}}
+      - cmd: cp --no-clobber --no-dereference {{.CHK}} {{.DST}}
+      - cmd: cp --no-clobber --no-dereference {{.TMP}} {{.DST}}
+      - cmd: cp --no-clobber --no-dereference {{.B1}} {{.DST}}
+      - cmd: cp --no-clobber --no-dereference {{.B2}} {{.DST}}
+      - cmd: cp --no-clobber --no-dereference {{.FILE}} {{.USERDST}}.runmenow.exe
+      - cmd: mkdir --parent {{.USERDST}}/some-app
+      - cmd: cp --no-clobber --no-dereference {{.FILE}} {{.USERDST}}/some-app/program.exe
         ignore_error: true
-    status: 
-      - test -d {{.DST}}
+      - cmd: cp --recursive {{.SENSEN}} {{.USERDST}}
+   #  status: 
+   #    - test -d {{.DST}}
   clean:
     silent: false
     internal: false
@@ -142,7 +183,7 @@ tasks:
       - defer: go {{.RUNRACE}} -yes rm {{.USERDST}}
       - go {{.RUNRACE}} dupe {{.FILE}} {{.DST}}
       - go {{.RUNRACE}} -fast dupe {{.FILE}} {{.DST}}
-  dupe-directories:
+  dupe-directories: # TODO: bunch of dupe commands cleaning and also stuck in read-only mode
     silent: false
     internal: true
     cmds:
@@ -165,7 +206,31 @@ tasks:
       - task: clone-a-temp-file
       - cmd: go {{.RUNRACE}} -yes dupe {{.DST}}  # this is also returning debug info, clean is only in READONLY mode
       - cmd: go {{.RUNRACE}} -yes -fast dupe {{.DST}}
-      # TODO commands -fast, -delete -delete+ -sensen flags
+      # TODO commands -delete -delete+ -sensen flags
+  dupe-flag-delete:
+    silent: false
+    internal: true
+    cmds:
+      - go {{.RUNRACE}} up {{.USERTST}}
+      - defer: go {{.RUNRACE}} -yes rm {{.USERTST}}
+      - go {{.RUNRACE}} -delete -yes dupe {{.DST}} {{.USERTST}}
+      - defer: rmdir {{.DST}}
+  dupe-flag-delete+:
+    silent: false
+    internal: true
+    cmds:
+      - go {{.RUNRACE}} up {{.USERTST}}
+      - defer: go {{.RUNRACE}} -yes rm {{.USERTST}}
+      - go {{.RUNRACE}} -delete+ -yes dupe {{.DST}} {{.USERTST}}
+      - defer: rmdir {{.DST}}
+  dupe-flag-sensen:
+    silent: false
+    internal: true
+    cmds:
+      - go {{.RUNRACE}} up {{.USERTST}}
+      - defer: go {{.RUNRACE}} -yes rm {{.USERTST}}
+      - go {{.RUNRACE}} -sensen -yes dupe {{.DST}} {{.USERTST}}
+      #- defer: rmdir {{.DST}}
   searches:
     silent: false
     internal: true

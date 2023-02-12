@@ -42,16 +42,14 @@ const (
 func tasks(selection string, a cmd.Aliases, c dupe.Config, f cmd.Flags) error {
 	// Move this to its own func
 	switch selection {
-	case
-		task.Dupe_:
+	case task.Dupe_:
 		db, err := database.OpenRead()
 		if err != nil {
 			return err
 		}
 		defer db.Close()
 		return task.Dupe(db, &c, &f, false, flag.Args()...)
-	case
-		task.Search_:
+	case task.Search_:
 		db, err := database.OpenRead()
 		if err != nil {
 			return err
