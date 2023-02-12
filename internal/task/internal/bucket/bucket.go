@@ -22,6 +22,7 @@ var (
 	ErrDatabaseName = errors.New("database has no bucket name")
 	ErrImport       = errors.New("import filepath is missing")
 	ErrNewName      = errors.New("a new directory is required")
+	ErrBucketEmpty  = errors.New("the bucket is empty with no files")
 )
 
 const (

@@ -40,7 +40,11 @@ func TestConfig_Print(t *testing.T) {
 	c.Compare = make(parse.Checksums)
 	c.Compare[sum] = file1
 
-	if s := c.Print(); s == "" {
+	s, err := c.Print()
+	if err != nil {
+		t.Error(err)
+	}
+	if s == "" {
 		t.Errorf("Config.Print() should have returned a result.")
 	}
 }
@@ -48,7 +52,11 @@ func TestConfig_Print(t *testing.T) {
 func TestConfig_Remove(t *testing.T) {
 	color.Enable = false
 	c := dupe.Config{Test: true}
-	if r := strings.TrimSpace(c.Remove()); r != "No duplicate files to remove." {
+	r, err := c.Remove()
+	if err != nil {
+		t.Error(err)
+	}
+	if r != "No duplicate files to remove." {
 		t.Errorf("Config.Remove() should have returned a nothing to remove message, not %v.", r)
 	}
 	// copy file
@@ -71,15 +79,19 @@ func TestConfig_Remove(t *testing.T) {
 	c.Compare = make(parse.Checksums)
 	c.Compare[sum] = rmDst
 	want := fmt.Sprintf("removed: %s", rmDst)
-	if s := c.Remove(); strings.TrimSpace(s) != want {
+	s, err := c.Remove()
+	if err != nil {
+		t.Error(err)
+	}
+	if strings.TrimSpace(s) != want {
 		t.Errorf("Config.Remove() returned an unexpected reply: %s, want %s", s, want)
 	}
 }
 
 func TestConfig_Clean(t *testing.T) {
 	c := dupe.Config{Test: true}
-	if r := strings.TrimSpace(c.Clean()); r != "" {
-		t.Errorf("Config.Clean() should have returned blank, not %v.", r)
+	if err := c.Clean(); err != nil {
+		t.Error(err)
 	}
 	// copy file
 	const written = 20
@@ -99,8 +111,8 @@ func TestConfig_Clean(t *testing.T) {
 		t.Error(err)
 	}
 	// clean
-	if r := strings.TrimSpace(c.Clean()); !strings.Contains(r, "Removed ") {
-		t.Errorf("Config.Clean() should have returned a remove notice, not %v.", r)
+	if err := c.Clean(); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -219,7 +231,10 @@ func TestRemoves(t *testing.T) {
 	}
 	c.Source = abs
 	c.Sources = append(c.Sources, srcs)
-	s := c.Removes(false)
+	s, err := c.Removes(false)
+	if err != nil {
+		t.Error(err)
+	}
 	fmt.Fprintln(os.Stdout, s)
 }
 

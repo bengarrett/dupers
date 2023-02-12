@@ -15,7 +15,10 @@ import (
 	"github.com/gookit/color"
 )
 
-var ErrWindowsDir = errors.New("cannot parse the directory path")
+var (
+	ErrWindowsDir = errors.New("cannot parse the directory path")
+	ErrNilFlag    = errors.New("flags cannot be a nil value")
+)
 
 const (
 	Debug_   = "debug"

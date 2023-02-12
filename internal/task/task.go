@@ -26,10 +26,9 @@ import (
 )
 
 var (
-	ErrArgs      = errors.New("no buckets were given as arguments")
-	ErrCommand   = errors.New("command is unknown")
-	ErrNilConfig = errors.New("config cannot be a nil value")
-	ErrNilFlags  = errors.New("flags cannot be a nil value")
+	ErrArgs     = errors.New("no buckets were given as arguments")
+	ErrCommand  = errors.New("command is unknown")
+	ErrNilFlags = errors.New("flags cannot be a nil value")
 )
 
 const (
@@ -132,7 +131,7 @@ func Dupe(db *bolt.DB, c *dupe.Config, f *cmd.Flags, testing bool, args ...strin
 		return bolt.ErrDatabaseNotOpen
 	}
 	if c == nil {
-		return ErrNilConfig
+		return dupe.ErrNilConfig
 	}
 	if f == nil {
 		return ErrNilFlags
@@ -184,8 +183,8 @@ func walkCheck(db *bolt.DB, c *dupe.Config, assumeYes bool, args ...string) erro
 	if err := c.SetBuckets(buckets...); err != nil {
 		return err
 	}
-	if code := checkDupePaths(c, assumeYes); code >= 0 {
-		os.Exit(code)
+	if err := checkDupePaths(c, assumeYes); err != nil {
+		return err
 	}
 	c.DPrint(fmt.Sprintf("use buckets: %s", c.PrintBuckets()))
 	return nil
@@ -208,7 +207,11 @@ func walkScan(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
 		fmt.Fprint(os.Stdout, out.RMLine())
 	}
 	// print the found dupes
-	fmt.Fprint(os.Stdout, c.Print())
+	s, err := c.Print()
+	if err != nil {
+		return err
+	}
+	fmt.Fprint(os.Stdout, s)
 	// remove files
 	duplicate.Cleanup(c, f)
 	// summaries
@@ -332,21 +335,13 @@ func cleanupDB(db *bolt.DB, c *dupe.Config) error {
 }
 
 // checkDupePaths checks the path arguments supplied to the dupe command.
-// An os.exit code is return or a -1 for no errors.
-func checkDupePaths(c *dupe.Config, assumeYes bool) (code int) {
+func checkDupePaths(c *dupe.Config, assumeYes bool) error {
 	if c == nil {
-		return
+		return dupe.ErrNilConfig
 	}
 	files, buckets, err := c.CheckPaths()
 	if err != nil {
-		if errors.Is(err, dupe.ErrPathIsFile) {
-			return -1
-		}
-		if errors.Is(err, os.ErrNotExist) {
-			return 1
-		}
-		const otherErr = 2
-		return otherErr
+		return err
 	}
 	// handle any problems
 	p := message.NewPrinter(language.English)
@@ -373,7 +368,7 @@ func checkDupePaths(c *dupe.Config, assumeYes bool) (code int) {
 		fmt.Fprintln(w)
 		fmt.Fprintln(w)
 		fmt.Fprintln(os.Stderr, color.Danger.Sprintf("The %s to lookup contains no files", strings.ToLower(verb)))
-		return 1
+		return bucket.ErrBucketEmpty
 	}
 	fmt.Fprintf(w, "(%s)", color.Info.Sprintf("%s files", p.Sprint(buckets)))
 	fmt.Fprintln(w)
@@ -381,7 +376,7 @@ func checkDupePaths(c *dupe.Config, assumeYes bool) (code int) {
 	fmt.Fprintln(w, "The bucket to lookup is to be stored in the database,")
 	color.Warn.Println(" but the \"Directory to check\" is not.")
 	if !out.YN("Is this what you want", assumeYes, out.No) {
-		return 0
+		return nil
 	}
-	return -1
+	return nil
 }

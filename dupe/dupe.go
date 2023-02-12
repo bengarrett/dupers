@@ -38,11 +38,11 @@ const (
 )
 
 var (
-	ErrNoBucket = errors.New("a named bucket is required")
-
-	ErrPathIsFile  = errors.New("path is a file")
-	ErrPathExist   = errors.New("path exists in the database bucket")
-	ErrPathNoFound = errors.New("path does not exist")
+	ErrNoNamedBucket = errors.New("a named bucket is required")
+	ErrPathIsFile    = errors.New("path is a file")
+	ErrPathExist     = errors.New("path exists in the database bucket")
+	ErrPathNoFound   = errors.New("path does not exist")
+	ErrNilConfig     = errors.New("config cannot be a nil value")
 )
 
 // Config options.
@@ -79,7 +79,10 @@ func (c *Config) CheckPaths() (files, buckets int, err error) {
 	c.DPrint(fmt.Sprintf("all buckets: %s", c.All()))
 
 	buckets = 0
-	files = c.walkPath(dupeItem)
+	files, err = c.walkPath(dupeItem)
+	if err != nil {
+		return 0, 0, err
+	}
 	for _, b := range c.All() {
 		var err error
 		buckets, err = c.walkBucket(b, files, buckets)
@@ -87,7 +90,7 @@ func (c *Config) CheckPaths() (files, buckets int, err error) {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			c.DPrint(err.Error())
+			return 0, 0, err
 		}
 	}
 	if buckets >= files/2 {
@@ -100,8 +103,7 @@ func (c *Config) walkBucket(b parse.Bucket, files, buckets int) (int, error) {
 	root := string(b)
 	return buckets, filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			out.ErrFatal(err)
-			return nil
+			return err
 		}
 		if root == path {
 			return nil
@@ -124,7 +126,7 @@ func (c *Config) walkBucket(b parse.Bucket, files, buckets int) (int, error) {
 	})
 }
 
-func (c *Config) walkPath(root string) int {
+func (c *Config) walkPath(root string) (int, error) {
 	checkCnt := 0
 	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		c.DPrint("counting: " + path)
@@ -146,9 +148,9 @@ func (c *Config) walkPath(root string) int {
 		checkCnt++
 		return nil
 	}); err != nil {
-		c.DPrint(err.Error())
+		return 0, err
 	}
-	return checkCnt
+	return checkCnt, nil
 }
 
 // CheckItem stat and returns the named file or directory.
@@ -169,7 +171,6 @@ func (c *Config) CheckDir(name string) (string, error) {
 		return "", err
 	}
 	if !stat.IsDir() {
-		c.DPrint("path is a file")
 		return name, ErrPathIsFile
 	}
 	return name, nil
@@ -205,10 +206,10 @@ func (c *Config) Checksum(db *bolt.DB, name, bucket string) error {
 
 // Clean removes all empty directories from c.Source.
 // Directories containing hidden system directories or files are not considered empty.
-func (c *Config) Clean() string {
+func (c *Config) Clean() error {
 	path := c.ToCheck()
 	if path == "" {
-		return ""
+		return nil
 	}
 	var count int
 	if err := godirwalk.Walk(path, &godirwalk.Options{
@@ -241,16 +242,19 @@ func (c *Config) Clean() string {
 			return err
 		},
 	}); err != nil {
-		out.ErrFatal(err)
+		return err
 	}
+	w := os.Stdout
 	if count == 0 {
-		return fmt.Sprintln("Nothing required cleaning.")
+		fmt.Fprintln(w, "Nothing required cleaning.")
+		return nil
 	}
-	return fmt.Sprintf("Removed %d empty directories in: '%s'\n", count, path)
+	fmt.Fprintf(w, "Removed %d empty directories in: '%s'\n", count, path)
+	return nil
 }
 
 // Print the results of a dupe request.
-func (c *Config) Print() string {
+func (c *Config) Print() (string, error) {
 	c.DPrint("print duplicate results")
 	c.DPrint(fmt.Sprintf("comparing %d sources against %d unique items to compare",
 		len(c.Sources), len(c.Compare)))
@@ -260,7 +264,7 @@ func (c *Config) Print() string {
 	for _, path := range c.Sources {
 		sum, err := parse.Read(path)
 		if err != nil {
-			out.ErrCont(err)
+			return "", err
 		}
 		l := c.lookupOne(sum)
 		if l == "" {
@@ -276,53 +280,51 @@ func (c *Config) Print() string {
 	if finds == 0 {
 		fmt.Fprintln(w, color.Info.Sprint("\rNo duplicate files found.          "))
 	}
-	return w.String()
+	return w.String(), nil
 }
 
 // Remove duplicate files from the source directory.
-func (c *Config) Remove() string {
+func (c *Config) Remove() (string, error) {
 	w := new(bytes.Buffer)
 	if len(c.Sources) == 0 || len(c.Compare) == 0 {
 		fmt.Fprintln(w, "No duplicate files to remove.          ")
-		return w.String()
+		return w.String(), nil
 	}
 	fmt.Fprintln(w)
 	for _, path := range c.Sources {
 		c.DPrint("remove read: " + path)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			c.DPrint("path is not exist: " + path)
-
-			continue
+			return "", err
 		}
-		h, err := parse.Read(path)
+		checksum, err := parse.Read(path)
 		if err != nil {
-			out.ErrCont(err)
+			return "", err
 		}
-		if l := c.lookupOne(h); l == "" {
+		if l := c.lookupOne(checksum); l == "" {
 			continue
 		}
 		c.DPrint("remove delete: " + path)
 		err = os.Remove(path)
 		fmt.Fprintln(w, printRM(path, err))
 	}
-	return w.String()
+	return w.String(), nil
 }
 
 // Removes the directories from the source that do not contain unique MS-DOS or Windows programs.
-func (c *Config) Removes(assumeYes bool) string {
+func (c *Config) Removes(assumeYes bool) (string, error) {
 	root := c.ToCheck()
 	if _, err := os.Stat(root); errors.Is(err, os.ErrNotExist) {
-		e := fmt.Errorf("%w: %s", ErrPathNoFound, root)
-		out.ErrFatal(e)
+		return "", fmt.Errorf("%w: %s", ErrPathNoFound, root)
 	} else if err != nil {
-		out.ErrFatal(err)
+		return "", err
 	}
 	if len(c.Sources) == 0 {
-		return ""
+		return "", nil
 	}
 	files, err := os.ReadDir(root)
 	if err != nil {
-		out.ErrCont(err)
+		return "", err
 	}
 	if !c.Test {
 		w := os.Stdout
@@ -334,7 +336,7 @@ func (c *Config) Removes(assumeYes bool) string {
 		}
 		fmt.Fprintln(w)
 	}
-	return removes(root, files)
+	return removes(root, files), nil
 }
 
 // Status summarizes the file totals and process duration.
@@ -377,14 +379,14 @@ func (c *Config) WalkDirs(db *bolt.DB) error {
 				out.ErrCont(err)
 				continue
 			}
-			out.ErrCont(err)
+			return err
 		}
 	}
 	// handle any items that exist in the database but not in the file system
 	// this would include items added using the `up+` archive scan command
 	for _, b := range c.All() {
 		if _, err := c.SetCompares(db, b); err != nil {
-			out.ErrCont(err)
+			return err
 		}
 	}
 	return nil
@@ -396,7 +398,7 @@ func (c *Config) WalkDir(db *bolt.DB, name parse.Bucket) error {
 		return bolt.ErrDatabaseNotOpen
 	}
 	if name == "" {
-		return ErrNoBucket
+		return ErrNoNamedBucket
 	}
 	root := string(name)
 	if err := c.init(db); err != nil {
@@ -433,34 +435,34 @@ func (c *Config) walkDir(db *bolt.DB, root string, skip []string) error {
 		if path == root {
 			return nil
 		}
-		if err1 := skipDir(d); err1 != nil {
-			return c.walkDirSkip(" - skipping directory", err1)
+		if err := skipDir(d); err != nil {
+			return c.walkDebug(" - skipping directory", err)
 		}
 		if skipFile(d.Name()) {
-			return c.walkDirSkip(" - skipping file", nil)
+			return c.walkDebug(" - skipping file", nil)
 		}
 		if !d.Type().IsRegular() {
-			return c.walkDirSkip(" - skipping not regular file", nil)
+			return c.walkDebug(" - skipping not regular file", nil)
 		}
 		if skipSelf(path, skip...) {
-			return c.walkDirSkip(" - skipping self item", nil)
+			return c.walkDebug(" - skipping self item", nil)
 		}
 		c.Files++
-		if errW := walkCompare(db, c, root, path); errW != nil {
-			if errors.Is(errW, ErrPathExist) {
+		if err := c.walkCompare(db, root, path); err != nil {
+			if errors.Is(err, ErrPathExist) {
 				return nil
 			}
-			out.ErrFatal(errW)
+			return err
 		}
 		fmt.Fprint(os.Stdout, PrintWalk(false, c))
 		if err := c.Checksum(db, path, root); err != nil {
-			out.ErrCont(err)
+			return err
 		}
-		return err
+		return nil
 	})
 }
 
-func (c *Config) walkDirSkip(s string, err error) error {
+func (c *Config) walkDebug(s string, err error) error {
 	c.DPrint(s)
 	return err
 }
@@ -472,7 +474,8 @@ func (c *Config) WalkSource() error {
 	stat, err := os.Stat(root)
 	if errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("%w: %s", ErrPathNoFound, root)
-	} else if err != nil {
+	}
+	if err != nil {
 		return fmt.Errorf("%w: %s", err, root)
 	}
 	if !stat.IsDir() {
@@ -527,8 +530,8 @@ func (c *Config) create(db *bolt.DB, name parse.Bucket) error {
 	}
 	return db.Update(func(tx *bolt.Tx) error {
 		if b := tx.Bucket([]byte(name)); b == nil {
-			_, err1 := tx.CreateBucket([]byte(name))
-			return err1
+			_, err := tx.CreateBucket([]byte(name))
+			return err
 		}
 		return nil
 	})
@@ -698,7 +701,7 @@ func skipSelf(path string, skip ...string) bool {
 }
 
 // walkCompare walks the root directory and adds the checksums of the files to c.compare.
-func walkCompare(db *bolt.DB, c *Config, root, path string) error {
+func (c *Config) walkCompare(db *bolt.DB, root, path string) error {
 	if db == nil {
 		return bolt.ErrDatabaseNotOpen
 	}
@@ -711,7 +714,7 @@ func walkCompare(db *bolt.DB, c *Config, root, path string) error {
 		}
 		b := tx.Bucket([]byte(root))
 		if b == nil {
-			return ErrNoBucket
+			return ErrNoNamedBucket
 		}
 		h := b.Get([]byte(path))
 		c.DPrint(fmt.Sprintf(" - %d/%d items: %x", len(c.Compare), c.Files, h))
@@ -730,9 +733,9 @@ func Print(quiet, exact bool, term string, m *database.Matches) string {
 	return parse.Print(quiet, exact, term, m)
 }
 
-// Bucket returns s as the Bucket type.
-func Bucket(s string) parse.Bucket {
-	return parse.Bucket(s)
+// Bucket returns the named string as a Bucket type.
+func Bucket(name string) parse.Bucket {
+	return parse.Bucket(name)
 }
 
 // WalkArchiver walks the bucket directory saving the checksums of new files to the database.
@@ -740,7 +743,7 @@ func Bucket(s string) parse.Bucket {
 // Archives within archives are currently left unwalked.
 func (c *Config) WalkArchiver(db *bolt.DB, name parse.Bucket) error {
 	if name == "" {
-		return ErrNoBucket
+		return ErrNoNamedBucket
 	}
 	root := string(name)
 
@@ -812,12 +815,12 @@ func (c *Config) walkThread(db *bolt.DB, bucket, path string) error {
 	}
 	c.Files++
 	c.DPrint(fmt.Sprintf("walkCompare #%d", c.Files))
-	if errD := walkCompare(db, c, bucket, path); errD != nil {
+	if errD := c.walkCompare(db, bucket, path); errD != nil {
 		if !errors.Is(errD, ErrPathExist) {
 			out.ErrFatal(errD)
 		}
 	}
-	// multithread archive reader
+	// archive reader
 	const unknownExt = ""
 	switch mimeExt {
 	case unknownExt:

@@ -27,23 +27,45 @@ const (
 )
 
 // Cleanup runs the cleanup commands when the appropriate flags are set.
-func Cleanup(c *dupe.Config, f *cmd.Flags) {
+func Cleanup(c *dupe.Config, f *cmd.Flags) error {
+	if c == nil {
+		return dupe.ErrNilConfig
+	}
+	if f == nil {
+		return cmd.ErrNilFlag
+	}
+	if !*f.Sensen && !*f.Rm && !*f.RmPlus {
+		return nil
+	}
 	w := os.Stdout
 	if *f.Sensen {
 		c.DPrint("remove all non unique Windows and MS-DOS files.")
-		fmt.Fprint(w, c.Remove())
-		fmt.Fprint(w, c.Removes(*f.Yes))
+		s, err := c.Remove()
+		if err != nil {
+			return err
+		}
+		fmt.Fprint(w, s)
+		s, err = c.Removes(*f.Yes)
+		if err != nil {
+			return err
+		}
+		fmt.Fprint(w, s)
 		fmt.Fprint(w, c.Clean())
-		return
+		return nil
 	}
 	if *f.Rm || *f.RmPlus {
 		c.DPrint("remove duplicate files.")
-		fmt.Fprint(w, c.Remove())
+		s, err := c.Remove()
+		if err != nil {
+			return err
+		}
+		fmt.Fprint(w, s)
 		if *f.RmPlus {
 			c.DPrint("remove empty directories.")
 			fmt.Fprint(w, c.Clean())
 		}
 	}
+	return nil
 }
 
 // CmdErr parses the arguments of the dupe command.

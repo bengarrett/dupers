@@ -113,11 +113,9 @@ func main() {
 	c.DPrint("command selection: " + selection)
 	if err := tasks(selection, a, c, f); err != nil {
 		if errors.Is(err, database.ErrNotFound) {
-			// TODO: print errors?
 			os.Exit(0)
 		}
 		if errors.Is(err, database.ErrZeroByte) {
-			// TODO: print errors?
 			os.Exit(1)
 		}
 		out.ErrFatal(err)
