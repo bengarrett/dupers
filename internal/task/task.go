@@ -26,11 +26,10 @@ import (
 )
 
 var (
-	ErrArgs = errors.New("no buckets were given as arguments")
-	ErrCfg  = errors.New("config cannot be a nil value")
-	ErrCmd  = errors.New("command is unknown")
-	ErrFlag = errors.New("flags cannot be a nil value")
-	ErrNil  = errors.New("argument cannot be a nil value")
+	ErrArgs      = errors.New("no buckets were given as arguments")
+	ErrCommand   = errors.New("command is unknown")
+	ErrNilConfig = errors.New("config cannot be a nil value")
+	ErrNilFlags  = errors.New("flags cannot be a nil value")
 )
 
 const (
@@ -82,7 +81,7 @@ func Directories() error {
 // TODO: move assumeYes into Config
 func Database(db *bolt.DB, c *dupe.Config, assumeYes bool, args ...string) error {
 	if len(args) == 0 {
-		return ErrCmd
+		return ErrCommand
 	}
 	buckets := [2]string{}
 	copy(buckets[:], args)
@@ -114,31 +113,34 @@ func Database(db *bolt.DB, c *dupe.Config, assumeYes bool, args ...string) error
 	case MV_:
 		buckets := [3]string{}
 		copy(buckets[:], args)
-		bucket.Move(c, assumeYes, buckets)
+		return bucket.Move(db, c, assumeYes, buckets)
 	case RM_:
 		return bucket.Remove(db, quiet, assumeYes, buckets)
 	case Up_:
-		bucket.Rescan(c, false, buckets)
+		return bucket.Rescan(db, c, false, buckets)
 	case UpPlus_:
-		bucket.Rescan(c, true, buckets)
+		return bucket.Rescan(db, c, true, buckets)
 	default:
-		return ErrCmd
+		return ErrCommand
 	}
 	return nil
 }
 
 // Dupe parses the dupe command.
-func Dupe(c *dupe.Config, f *cmd.Flags, testing bool, args ...string) error {
+func Dupe(db *bolt.DB, c *dupe.Config, f *cmd.Flags, testing bool, args ...string) error {
+	if db == nil {
+		return bolt.ErrDatabaseNotOpen
+	}
 	if c == nil {
-		return ErrCfg
+		return ErrNilConfig
 	}
 	if f == nil {
-		return ErrFlag
+		return ErrNilFlags
 	}
 	c.DPrint(fmt.Sprintf("dupe command: %s", strings.Join(args, " ")))
 
 	// fetch bucket info
-	b, err := database.All(c.Parser.DB)
+	b, err := database.All(db)
 	if err != nil {
 		return err
 	}
@@ -160,17 +162,20 @@ func Dupe(c *dupe.Config, f *cmd.Flags, testing bool, args ...string) error {
 	if err := c.SetSource(args[source]); err != nil {
 		return err
 	}
-	if err := walkCheck(c, *f.Yes, args...); err != nil {
+	if err := walkCheck(db, c, *f.Yes, args...); err != nil {
 		return err
 	}
-	return walkScan(c, f, args...)
+	return walkScan(db, c, f, args...)
 }
 
 // walkCheck checks directories and files to scan, a bucket is the name given to database tables.
-func walkCheck(c *dupe.Config, assumeYes bool, args ...string) error {
+func walkCheck(db *bolt.DB, c *dupe.Config, assumeYes bool, args ...string) error {
+	if db == nil {
+		return bolt.ErrDatabaseNotOpen
+	}
 	buckets := args[2:]
 	if len(buckets) == 0 {
-		if err := c.SetAllBuckets(c.DB); err != nil {
+		if err := c.SetAllBuckets(db); err != nil {
 			return err
 		}
 		c.DPrint(fmt.Sprintf("use all buckets: %s", c.PrintBuckets()))
@@ -186,14 +191,17 @@ func walkCheck(c *dupe.Config, assumeYes bool, args ...string) error {
 	return nil
 }
 
-func walkScan(c *dupe.Config, f *cmd.Flags, args ...string) error {
+func walkScan(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
+	if db == nil {
+		return bolt.ErrDatabaseNotOpen
+	}
 	// files or directories to compare (these are not saved to database)
 	if err := c.WalkSource(); err != nil {
 		return err
 	}
 	c.DPrint("walksource complete.")
 	// walk, scan and save file paths and hashes to the database
-	if err := duplicate.Lookup(c, f); err != nil {
+	if err := duplicate.Lookup(db, c, f); err != nil {
 		return err
 	}
 	if !c.Quiet {
@@ -261,9 +269,12 @@ func HelpSearch() string {
 }
 
 // Search parses the commands that handle search.
-func Search(f *cmd.Flags, test bool, args ...string) error {
+func Search(db *bolt.DB, f *cmd.Flags, test bool, args ...string) error {
+	if db == nil {
+		return bolt.ErrDatabaseNotOpen
+	}
 	if f == nil {
-		return ErrFlag
+		return ErrNilFlags
 	}
 	l := len(args)
 	if err := search.CmdErr(l, test); err != nil {
@@ -274,7 +285,7 @@ func Search(f *cmd.Flags, test bool, args ...string) error {
 	if l > minArgs {
 		buckets = args[minArgs:]
 	}
-	m, err := search.Compare(f, term, buckets, false)
+	m, err := search.Compare(db, f, term, buckets, false)
 	if err != nil {
 		return err
 	}

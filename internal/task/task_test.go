@@ -41,7 +41,7 @@ func TestDupe(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := task.Dupe(tt.args.c, tt.args.f, tester, tt.args.args...); (err != nil) != tt.wantErr {
+			if err := task.Dupe(nil, tt.args.c, tt.args.f, tester, tt.args.args...); (err != nil) != tt.wantErr {
 				t.Errorf("Dupe() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

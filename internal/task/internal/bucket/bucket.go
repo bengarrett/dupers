@@ -135,34 +135,35 @@ func List(db *bolt.DB, quiet bool, args [2]string) error {
 }
 
 // Move renames a bucket by duplicating it to a new bucket location.
-func Move(c *dupe.Config, assumeYes bool, args [3]string) {
+func Move(db *bolt.DB, c *dupe.Config, assumeYes bool, args [3]string) error {
+	if db == nil {
+		return bolt.ErrDatabaseNotOpen
+	}
 	b, dir := args[1], args[2]
 	Check("move and rename", dmv, b)
 	name, err := database.Abs(b)
 	if err != nil {
-		out.ErrFatal(err)
+		return err
 	}
 	w := os.Stdout
-	if errEx := database.Exist(c.DB, name); errors.Is(errEx, bolt.ErrBucketNotFound) {
-		out.ErrCont(errEx)
-		fmt.Fprintf(w, "Bucket name: %s\n", name)
-		out.Example("\ndupers mv <bucket name> <new directory>")
-		out.ErrFatal(nil)
-	} else if errEx != nil {
-		out.ErrFatal(errEx)
+	if errEx := database.Exist(db, name); errEx != nil {
+		if errors.Is(errEx, bolt.ErrBucketNotFound) {
+			fmt.Fprintf(w, "Bucket name: %s\n", name)
+			out.Example("\ndupers mv <bucket name> <new directory>")
+		}
+		return errEx
 	}
 	if dir == "" {
-		out.ErrCont(ErrNewName)
 		fmt.Fprintln(os.Stderr, "Cannot move bucket within the database as no new directory was provided.")
 		out.Example(fmt.Sprintf("\ndupers mv %s <new directory>", b))
-		out.ErrFatal(nil)
+		return ErrNewName
 	}
 	newName, err := database.Abs(dir)
 	if err != nil {
-		out.ErrFatal(err)
+		return err
 	}
 	if newName == "" {
-		out.ErrFatal(ErrNewName)
+		return ErrNewName
 	}
 	if !c.Quiet {
 		fmt.Fprintf(w, "%s\t%s\n%s\t%s\n",
@@ -170,12 +171,13 @@ func Move(c *dupe.Config, assumeYes bool, args [3]string) {
 			"New name:", color.Debug.Sprint(newName))
 		fmt.Fprintln(w, "Renames the database bucket, but this does not make changes to the file system.")
 		if !out.YN("Rename bucket", assumeYes, out.No) {
-			return
+			return nil
 		}
 	}
-	if err := database.Rename(c.DB, name, newName); err != nil {
-		out.ErrFatal(err)
+	if err := database.Rename(db, name, newName); err != nil {
+		return err
 	}
+	return nil
 }
 
 // Remove the bucket from the database.
@@ -241,25 +243,29 @@ func notFound(db *bolt.DB, name string, err error) {
 }
 
 // Rescan the bucket for changes with the file system.
-func Rescan(c *dupe.Config, plus bool, args [2]string) {
+func Rescan(db *bolt.DB, c *dupe.Config, archives bool, args [2]string) error {
+	if db == nil {
+		return bolt.ErrDatabaseNotOpen
+	}
 	cmd := dup
-	if plus {
+	if archives {
 		cmd = dupp
 	}
 	Check("add or update", cmd, args[1])
 	path, err := database.Abs(args[1])
 	if err != nil {
-		out.ErrFatal(err)
+		return err
 	}
 	name := dupe.Bucket(path)
-	if plus {
-		if err := c.WalkArchiver(name); err != nil {
-			out.ErrFatal(err)
+	if archives {
+		if err := c.WalkArchiver(db, name); err != nil {
+			return err
 		}
-	} else if err := c.WalkDir(name); err != nil {
-		out.ErrFatal(err)
+	} else if err := c.WalkDir(db, name); err != nil {
+		return err
 	}
 	if !c.Quiet {
 		fmt.Fprintln(os.Stdout, c.Status())
 	}
+	return nil
 }

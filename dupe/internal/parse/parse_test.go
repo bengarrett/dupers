@@ -60,9 +60,7 @@ func TestSetBuckets(t *testing.T) {
 		t.Error(err)
 	}
 	defer db.Close()
-	p := parse.Parser{
-		DB: db,
-	}
+	var p parse.Parser
 	if err := p.SetAllBuckets(db); err != nil {
 		t.Error(err)
 		return

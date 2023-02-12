@@ -36,17 +36,15 @@ func CmdErr(l int, test bool) error {
 	return nil
 }
 
-func Compare(f *cmd.Flags, term string, buckets []string, test bool) (*database.Matches, error) {
-	var err error
-	var m *database.Matches
+func Compare(db *bolt.DB, f *cmd.Flags, term string, buckets []string, test bool) (*database.Matches, error) {
+	if db == nil {
+		return nil, bolt.ErrDatabaseNotOpen
+	}
 	if f == nil {
 		return nil, ErrNoFlags
 	}
-	db, err := database.OpenRead()
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
+	var err error
+	var m *database.Matches
 	switch {
 	case *f.Filename && !*f.Exact:
 		if m, err = database.CompareBaseNoCase(db, term, buckets...); err != nil {

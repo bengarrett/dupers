@@ -107,16 +107,15 @@ func TestConfig_WalkArchiver(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var err error
 			c := dupe.Config{
 				Test: true,
 			}
-			c.DB, err = mock.TestDB()
+			db, err := mock.TestDB()
 			if err != nil {
 				t.Error(err)
 			}
-			defer c.DB.Close()
-			if err := c.WalkArchiver(tt.args.name); (err != nil) != tt.wantErr {
+			defer db.Close()
+			if err := c.WalkArchiver(nil, tt.args.name); (err != nil) != tt.wantErr {
 				t.Errorf("Config.WalkArchiver() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -141,7 +140,7 @@ func TestConfigRead7Zip(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c.Read7Zip(tt.args.bucket, tt.args.name)
+			c.Read7Zip(nil, tt.args.bucket, tt.args.name)
 		})
 	}
 	if err := mock.TestRemove(); err != nil {

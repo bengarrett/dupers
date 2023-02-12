@@ -44,42 +44,38 @@ func tasks(selection string, a cmd.Aliases, c dupe.Config, f cmd.Flags) error {
 	switch selection {
 	case
 		task.Dupe_:
-		// TODO: defer this out of switch
-		var err error
-		c.Parser.DB, err = database.OpenRead()
-		if err != nil {
-			return err
-		}
-		defer c.Parser.DB.Close()
-
-		return task.Dupe(&c, &f, false, flag.Args()...)
-	case
-		task.Search_:
-		return task.Search(&f, false, flag.Args()...)
-	case
-		task.Database_, task.DB_:
-		// no open database needed?
-		// TODO: use readonly?
-		return task.Database(nil, &c, *f.Yes, flag.Args()...)
-	case
-		task.Backup_,
-		task.Clean_,
-		task.Export_,
-		task.Import_,
-		task.LS_:
-
 		db, err := database.OpenRead()
 		if err != nil {
 			return err
 		}
-		defer c.Parser.DB.Close()
+		defer db.Close()
+		return task.Dupe(db, &c, &f, false, flag.Args()...)
+	case
+		task.Search_:
+		db, err := database.OpenRead()
+		if err != nil {
+			return err
+		}
+		defer db.Close()
+		return task.Search(db, &f, false, flag.Args()...)
+	case
+		task.Backup_,
+		task.Clean_,
+		task.Database_, task.DB_,
+		task.Export_,
+		task.Import_,
+		task.LS_:
+		db, err := database.OpenRead()
+		if err != nil {
+			return err
+		}
+		defer db.Close()
 		return task.Database(db, &c, *f.Yes, flag.Args()...)
 	case
 		task.MV_,
 		task.RM_,
 		task.Up_,
 		task.UpPlus_:
-
 		db, err := database.OpenWrite()
 		if err != nil {
 			return err
@@ -87,7 +83,7 @@ func tasks(selection string, a cmd.Aliases, c dupe.Config, f cmd.Flags) error {
 		defer db.Close()
 		return task.Database(db, &c, *f.Yes, flag.Args()...)
 	default:
-		unknown(selection)
+		unknownExit(selection)
 	}
 	return fmt.Errorf("%w: %q", ErrCmd, selection)
 }
@@ -107,7 +103,7 @@ func main() {
 		color.Enable = false
 	}
 
-	if help := exitOptions(&a, &f); help != "" {
+	if help := taskHelpVer(&a, &f); help != "" {
 		fmt.Fprint(os.Stdout, help)
 		os.Exit(0)
 	}
@@ -119,6 +115,7 @@ func main() {
 	selection := strings.ToLower(flag.Args()[0])
 	c.DPrint("command selection: " + selection)
 	if err := tasks(selection, a, c, f); err != nil {
+		// TODO: print for bolt.ErrDatabaseNotOpen...
 		if errors.Is(err, database.ErrNotFound) {
 			// TODO: print errors?
 			os.Exit(0)
@@ -131,8 +128,8 @@ func main() {
 	}
 }
 
-// unknown returns a command is unknown helper error.
-func unknown(s string) {
+// unknownExit prints the command is unknown helper error and exits.
+func unknownExit(s string) {
 	w := os.Stderr
 	out.ErrCont(ErrCmd)
 	fmt.Fprintf(w, "Command: '%s'", s)
@@ -145,8 +142,8 @@ func unknown(s string) {
 	os.Exit(1)
 }
 
-// exitOptions parses help and version options.
-func exitOptions(a *cmd.Aliases, f *cmd.Flags) string {
+// taskHelpVer returns the help or version options.
+func taskHelpVer(a *cmd.Aliases, f *cmd.Flags) string {
 	noArgs := len(flag.Args()) == 0
 	if *f.Version && *f.Debug {
 		return task.Debug(a, f)

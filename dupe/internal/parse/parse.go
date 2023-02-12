@@ -33,7 +33,7 @@ const (
 )
 
 type Parser struct {
-	DB      *bolt.DB  // Bolt database.
+	//DB      *bolt.DB  // Bolt database.
 	Buckets []Bucket  // Buckets to lookup.
 	Compare Checksums // Compare hashes fetched from the database or file system.
 	Files   int       // Files count.

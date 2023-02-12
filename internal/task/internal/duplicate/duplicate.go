@@ -78,19 +78,13 @@ func CmdErr(args, buckets, minArgs int, test bool) {
 }
 
 // Lookup both cleans and then updates the buckets with file system changes.
-func Lookup(c *dupe.Config, f *cmd.Flags) error {
+func Lookup(db *bolt.DB, c *dupe.Config, f *cmd.Flags) error {
+	if db == nil {
+		return bolt.ErrDatabaseNotOpen
+	}
 	c.DPrint("dupe lookup.")
 
 	var errs error
-
-	db := c.Parser.DB
-	if db == nil {
-		db, err := database.OpenRead()
-		if err != nil {
-			return err
-		}
-		defer db.Close()
-	}
 
 	// normalise bucket names
 
@@ -119,7 +113,7 @@ func Lookup(c *dupe.Config, f *cmd.Flags) error {
 
 	if !*f.Lookup && len(buckets) > 0 {
 		c.DPrint("non-fast mode, database cleanup.")
-		if err := database.Clean(c.Parser.DB, c.Quiet, c.Debug, buckets...); err != nil {
+		if err := database.Clean(db, c.Quiet, c.Debug, buckets...); err != nil {
 			out.ErrCont(err)
 		}
 	}
@@ -129,8 +123,7 @@ func Lookup(c *dupe.Config, f *cmd.Flags) error {
 		}
 	}
 	c.DPrint("walk the buckets.")
-	c.WalkDirs()
-	return nil
+	return c.WalkDirs(db)
 }
 
 func lookup(db *bolt.DB, c *dupe.Config) error {
