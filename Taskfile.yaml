@@ -14,7 +14,7 @@ vars:
   CHK: ./test/files_to_check/*
   B1: ./test/bucket1/*
   B2: ./test/bucket2/*
-  RUNRACE: run -race main.go
+  RUNRACE: run -race main.go -debug
 
 tasks:
   race:
@@ -25,37 +25,37 @@ tasks:
     silent: true
     cmds:
       - echo -e "## Testing failures"
-      - go run -race main.go invalid-command
-      - go run -race main.go invalid-command and-more-args
+      - go {{.RUNRACE}} invalid-command
+      - go {{.RUNRACE}} invalid-command and-more-args
   flags:
     silent: true
     cmds:
       - echo -e "## Testing help.\n"
       - go run -race main.go
       - echo -e "## Testing -mono.\n"
-      - go run -race main.go -mono
+      - go {{.RUNRACE}} -mono
       - echo -e "## Testing database help"
-      - go run -race main.go -h database
+      - go {{.RUNRACE}} -h database
       - echo -e "## Testing search help"
-      - go run -race main.go search --help
+      - go {{.RUNRACE}} search --help
       - echo -e "## Testing dupe help"
-      - go run -race main.go -help dupe
+      - go {{.RUNRACE}} -help dupe
       - echo -e "## Testing -version.\n"
-      - go run -race main.go -version
+      - go {{.RUNRACE}} -version
       - echo -e "## Testing -mono -version.\n"
-      - go run -race main.go -mono -version      
+      - go {{.RUNRACE}} -mono -version      
       - echo -e "## Testing -mono -version -quiet.\n"
-      - go run -race main.go -mono -version -quiet
+      - go {{.RUNRACE}} -mono -version -quiet
       - echo -e "## Testing -mvq.\n"
-      - go run -race main.go -m -v -q
+      - go {{.RUNRACE}} -m -v -q
       - echo -e "## Database"
-      - go run -race main.go database
+      - go {{.RUNRACE}} database
       - echo -e "## DB -d -m"
-      - go run -race main.go db -d -m
+      - go {{.RUNRACE}} db -d -m
       - echo -e "## Debug aliases"
-      - go run -race main.go -m -q -d -v -h -e -n -f
+      - go {{.RUNRACE}} -m -q -d -v -h -e -n -f
       - echo -e "## Debug flag"
-      - go run -race main.go -mono -quiet -debug -version -help -exact -name -fast -delete -delete+ -sensen
+      - go {{.RUNRACE}} -mono -quiet -debug -version -help -exact -name -fast -delete -delete+ -sensen
   makeTmp:
     silent: false
     cmds:
@@ -82,112 +82,157 @@ tasks:
       - cmd:
          cp --no-clobber --no-dereference {{.FILE}} {{.DST}}/random_duplicate#file📁with+unicode.tmp
       # - cmd:
-      #    go run -race main.go up {{.DST}} # TODO fails
+      #    go {{.RUNRACE}} up {{.DST}} # TODO fails
 
   dupeFile:
     silent: false
     cmds:
       - cmd:
-         go run -race main.go dupe {{.FILE}} {{.DST}}
+         go {{.RUNRACE}} dupe {{.FILE}} {{.DST}}
       - cmd:
-         go run -race main.go -fast dupe {{.FILE}} {{.DST}}
+         go {{.RUNRACE}} -fast dupe {{.FILE}} {{.DST}}
   dupeCmds:
     silent: false
     cmds:
       # - cmd:
-      #    go run -race main.go -yes dupe {{.TEST}} {{.USERDST}}
+      #    go {{.RUNRACE}} -yes dupe {{.TEST}} {{.USERDST}}
       # - cmd:
-      #    go run -race main.go -yes -fast dupe {{.TEST}} {{.USERDST}}/
+      #    go {{.RUNRACE}} -yes -fast dupe {{.TEST}} {{.USERDST}}/
       # - cmd:
-      #    go run -race main.go -yes dupe {{.TEST}} {{.DST}}
+      #    go {{.RUNRACE}} -yes dupe {{.TEST}} {{.DST}}
       # - cmd:
-      #    go run -race main.go dupe {{.TEST}}xx {{.DST}}
+      #    go {{.RUNRACE}} dupe {{.TEST}}xx {{.DST}}
       #   ignore_error: true # the cmds with ignore_error should always fail
       # - cmd:
-      #    go run -race main.go -fast dupe xx{{.TEST}} {{.DST}}
+      #    go {{.RUNRACE}} -fast dupe xx{{.TEST}} {{.DST}}
       #   ignore_error: true
       # - cmd:
-      #    go run -race main.go -yes dupe {{.TEST}} {{.DST2}} {{.DST3}}
+      #    go {{.RUNRACE}} -yes dupe {{.TEST}} {{.DST2}} {{.DST3}}
       #   ignore_error: true
       # - cmd:
-      #    go run -race main.go -yes dupe {{.TEST}} {{.DST2}} {{.DST3}} {{.DST}}
+      #    go {{.RUNRACE}} -yes dupe {{.TEST}} {{.DST2}} {{.DST3}} {{.DST}}
       #   ignore_error: true
       # - cmd:
-      #    go run -race main.go -yes dupe {{.TEST}} {{.DST}} {{.DST2}} {{.DST3}}
+      #    go {{.RUNRACE}} -yes dupe {{.TEST}} {{.DST}} {{.DST2}} {{.DST3}}
       #   ignore_error: true
       - cmd:
-         go run -race main.go -yes dupe {{.DST}} # this scans all buckets, maybe make a note or a prompt? or change behavior
+         go {{.RUNRACE}} -yes dupe {{.DST}} # this scans all buckets, maybe make a note or a prompt? or change behavior
          # THIS SHOULD NOT BE running debug
       - task: cloneTmp
       - cmd:
-         go run -race main.go -yes dupe {{.DST}}  # this is also returning debug info, clean is only in READONLY mode
+         go {{.RUNRACE}} -yes dupe {{.DST}}  # this is also returning debug info, clean is only in READONLY mode
       - cmd:
-         go run -race main.go -yes -fast dupe {{.DST}}
+         go {{.RUNRACE}} -yes -fast dupe {{.DST}}
       # TODO commands -fast, -delete -delete+ -sensen flags
 
   searchCmds:
     silent: false
     cmds:
       - cmd:
-         go run -race main.go -yes search
+         go {{.RUNRACE}} -yes search
         ignore_error: true
       - cmd:
-         go run -race main.go -yes search asinglelineoftextwithoutspaces 
+         go {{.RUNRACE}} -yes search asinglelineoftextwithoutspaces 
       - cmd:
-         go run -race main.go -yes search 'a single line of text with spaces'
+         go {{.RUNRACE}} -yes search 'a single line of text with spaces'
       - cmd:
-         go run -race main.go -yes search "a single line of text with spaces"
+         go {{.RUNRACE}} -yes search "a single line of text with spaces"
       - task: cloneTmp
       - cmd:
-         go run -race main.go -yes search with+unicode
+         go {{.RUNRACE}} -yes search with+unicode
       - cmd:
-         go run -race main.go -yes search "with+unicode"
+         go {{.RUNRACE}} -yes search "with+unicode"
       - cmd:
-         go run -race main.go -yes search "WiTh+UnIcOdE"
+         go {{.RUNRACE}} -yes search "WiTh+UnIcOdE"
       - cmd:
-         go run -race main.go -yes search file📁with # move emoji to .task/
+         go {{.RUNRACE}} -yes search file📁with # move emoji to .task/
       - cmd:
-         go run -race main.go -yes -name search file📁with
+         go {{.RUNRACE}} -yes -name search file📁with
       - cmd:
-         go run -race main.go -yes -name -exact search file📁with
+         go {{.RUNRACE}} -yes -name -exact search file📁with
       - cmd:
-         go run -race main.go -yes search ".task"
+         go {{.RUNRACE}} -yes search ".task"
       - cmd:
-         go run -race main.go -yes -name search ".task"
+         go {{.RUNRACE}} -yes -name search ".task"
       - cmd:
-         go run -race main.go -yes -exact search ".TASK"
+         go {{.RUNRACE}} -yes -exact search ".TASK"
       - cmd:
-         go run -race main.go -yes search ".TASK"
+         go {{.RUNRACE}} -yes search ".TASK"
       - cmd:
-         go run -race main.go -yes search ".7Z"
+         go {{.RUNRACE}} -yes search ".7Z"
 
   databaseCmds:
     silent: false
     cmds:
       - cmd:
          go {{.RUNRACE}} db
+      - cmd: # cleanup
+         go {{.RUNRACE}} -yes rm {{.USERDST}}
+        ignore_error: true
+      - cmd: # up
+         go {{.RUNRACE}} up {{.USERDST}}
       - cmd:
          go {{.RUNRACE}} -yes rm {{.USERDST}}
-      # - cmd:
-      #    go run -race main.go up {{.USERDST}}
-      # - cmd:
-      #    go run -race main.go rm {{.USERDST}}
-      # - cmd:
-      #    go run -race main.go up+ {{.USERDST}}
-      # - cmd:
-      #    go run -race main.go ls {{.USERDST}}
-      # - cmd:
-      #    go run -race main.go rm {{.USERDST}}
+      - cmd: # double-up and ls
+         go {{.RUNRACE}} up {{.USERDST}}
+      - cmd:
+         go {{.RUNRACE}} up {{.USERDST}}
+      - cmd:
+         go {{.RUNRACE}} ls {{.USERDST}}
+      - cmd: # cleanup
+         go {{.RUNRACE}} -yes rm {{.USERDST}}
+
       # todo: backup, up+, ls , export, rm, ls, import, ls, rm
       # todo: backup, clean, etc
 
       # - cmd:
-      #    go run -race main.go rm {{.USERDST}}
+      #    go {{.RUNRACE}} rm {{.USERDST}}
+  exportCmds:
+    silent: false
+    cmds:
+      - cmd:
+         go {{.RUNRACE}} db
+      # - cmd:
+      #    go {{.RUNRACE}} backup
+      - cmd:
+         go {{.RUNRACE}} export # no feedback
+        ignore_error: true
+      - cmd:
+         go {{.RUNRACE}} export thisisaninvaliddatabasebucket
+        ignore_error: true
+      - cmd:
+         go {{.RUNRACE}} export thisisaninvaliddatabasebucket thisisaninvaliddatabasebucket_1
+        ignore_error: true
+      - cmd:
+         go {{.RUNRACE}} up {{.USERDST}}
+      - cmd:
+         # TODO: create the ability to export to a supplied path, so we can test importing
+         go {{.RUNRACE}} -quiet export {{.USERDST}}
+      - cmd:
+         go {{.RUNRACE}} mv
+        ignore_error: true
+      - cmd:
+         go {{.RUNRACE}} mv {{.USERDST}}
+        ignore_error: true
+      - cmd:
+         go {{.RUNRACE}} mv thisisaninvaliddatabasebucket thisisaninvaliddatabasebucket_1
+        ignore_error: true
+      - cmd:
+         go {{.RUNRACE}} mv {{.USERDST}} {{.USERDST}}
+        ignore_error: true
+      - cmd:
+         go {{.RUNRACE}} -yes mv {{.USERDST}} {{.USERDST}}📁zxcv
+      - cmd:
+         go {{.RUNRACE}} db
+      - cmd:
+         go {{.RUNRACE}} -yes rm {{.USERDST}}📁zxcv
+
   one:
     silent: false
     cmds:
       - task: makeTmp
-      - task: databaseCmds
+      - task: exportCmds
+      #- task: databaseCmds
       #- task: dupeFile
       #- task: dupeCmds
       #- task: searchCmds

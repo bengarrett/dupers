@@ -40,10 +40,10 @@ const (
 )
 
 func tasks(selection string, a cmd.Aliases, c dupe.Config, f cmd.Flags) error {
-
 	// Move this to its own func
 	switch selection {
-	case task.Dupe_:
+	case
+		task.Dupe_:
 		// TODO: defer this out of switch
 		var err error
 		c.Parser.DB, err = database.OpenRead()
@@ -53,38 +53,39 @@ func tasks(selection string, a cmd.Aliases, c dupe.Config, f cmd.Flags) error {
 		defer c.Parser.DB.Close()
 
 		return task.Dupe(&c, &f, false, flag.Args()...)
-	case task.Search_:
+	case
+		task.Search_:
 		return task.Search(&f, false, flag.Args()...)
-	case task.Database_, task.DB_:
+	case
+		task.Database_, task.DB_:
 		// no open database needed?
 		// TODO: use readonly?
-		return task.Database(&c, *f.Yes, flag.Args()...)
-	case task.Backup_,
+		return task.Database(nil, &c, *f.Yes, flag.Args()...)
+	case
+		task.Backup_,
 		task.Clean_,
 		task.Export_,
 		task.Import_,
-		task.LS_,
-		task.MV_:
+		task.LS_:
 
-		var err error
-		c.Parser.DB, err = database.OpenRead() // TODO: split case between openread and openwrite and no need for db
+		db, err := database.OpenRead()
 		if err != nil {
 			return err
 		}
 		defer c.Parser.DB.Close()
-
-		return task.Database(&c, *f.Yes, flag.Args()...)
-	case task.RM_,
+		return task.Database(db, &c, *f.Yes, flag.Args()...)
+	case
+		task.MV_,
+		task.RM_,
 		task.Up_,
 		task.UpPlus_:
-		var err error
-		c.Parser.DB, err = database.OpenWrite()
+
+		db, err := database.OpenWrite()
 		if err != nil {
 			return err
 		}
-		defer c.Parser.DB.Close()
-
-		return task.Database(&c, *f.Yes, flag.Args()...)
+		defer db.Close()
+		return task.Database(db, &c, *f.Yes, flag.Args()...)
 	default:
 		unknown(selection)
 	}

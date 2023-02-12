@@ -20,6 +20,7 @@ import (
 	"github.com/bengarrett/dupers/internal/task/internal/search"
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
+	bolt "go.etcd.io/bbolt"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
@@ -78,45 +79,44 @@ func Directories() error {
 }
 
 // Database parses the commands that interact with the database.
-// TODO drop c.Parser.DB
-func Database(c *dupe.Config, assumeYes bool, args ...string) error {
-	if c == nil {
-		c = new(dupe.Config)
-	}
-	if x, err := database.Check(); err != nil {
-		return err
-	} else {
-		fmt.Printf("X -> %+v", x)
-	}
+// TODO: move assumeYes into Config
+func Database(db *bolt.DB, c *dupe.Config, assumeYes bool, args ...string) error {
 	if len(args) == 0 {
 		return ErrCmd
 	}
 	buckets := [2]string{}
 	copy(buckets[:], args)
-	switch args[0] {
+	if c == nil {
+		c = new(dupe.Config)
+	}
+	quiet := c.Quiet
+	if _, err := database.Check(); err != nil {
+		return err
+	}
+	selection := args[0]
+	switch selection {
 	case Backup_:
-		return backupDB(c.Quiet)
+		return backupDB(quiet)
 	case Clean_:
-		return cleanupDB(c)
+		return cleanupDB(db, c)
 	case DB_, Database_:
-		s, err := database.Info()
+		s, err := database.Info(db)
 		if err != nil {
 			out.ErrCont(err)
 		}
 		fmt.Fprintln(os.Stdout, s)
 	case Export_:
-		bucket.Export(c.DB, c.Quiet, buckets)
+		bucket.Export(db, quiet, buckets)
 	case Import_:
-		bucket.Import(c.Parser.DB, c.Quiet, assumeYes, buckets)
+		bucket.Import(db, quiet, assumeYes, buckets)
 	case LS_:
-		fmt.Println("------- LS")
-		return bucket.List(c.Parser.DB, c.Quiet, buckets)
+		return bucket.List(db, quiet, buckets)
 	case MV_:
 		buckets := [3]string{}
 		copy(buckets[:], args)
 		bucket.Move(c, assumeYes, buckets)
 	case RM_:
-		return bucket.Remove(c.Parser.DB, c.Quiet, assumeYes, buckets)
+		return bucket.Remove(db, quiet, assumeYes, buckets)
 	case Up_:
 		bucket.Rescan(c, false, buckets)
 	case UpPlus_:
@@ -302,14 +302,14 @@ func backupDB(quiet bool) error {
 }
 
 // cleanupDB cleans and compacts the database.
-func cleanupDB(c *dupe.Config) error {
-	if err := database.Clean(c.Parser.DB, c.Quiet, c.Debug); err != nil {
+func cleanupDB(db *bolt.DB, c *dupe.Config) error {
+	if err := database.Clean(db, c.Quiet, c.Debug); err != nil {
 		if b := errors.Is(err, database.ErrClean); !b {
 			return err
 		}
 		out.ErrCont(err)
 	}
-	if err := database.Compact(c.Debug); err != nil {
+	if err := database.Compact(db, c.Debug); err != nil {
 		if b := errors.Is(err, database.ErrCompact); !b {
 			return err
 		}

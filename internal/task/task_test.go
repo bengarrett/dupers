@@ -64,7 +64,7 @@ func TestDatabase(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := task.Database(tt.args.c, false, tt.args.cmd); (err != nil) != tt.wantErr {
+			if err := task.Database(nil, tt.args.c, false, tt.args.cmd); (err != nil) != tt.wantErr {
 				t.Errorf("Database() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

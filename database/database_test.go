@@ -117,9 +117,14 @@ func TestCompact(t *testing.T) {
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
+	db, err := mock.TestDB()
+	if err != nil {
+		t.Error(err)
+	}
+	defer db.Close()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := database.Compact(false); (err != nil) != tt.wantErr {
+			if err := database.Compact(db, false); (err != nil) != tt.wantErr {
 				if !errors.Is(err, database.ErrCompact) {
 					t.Errorf("Compact() error = %v, wantErr %t", err, tt.wantErr)
 					return
@@ -390,7 +395,12 @@ func TestInfo(t *testing.T) {
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
-	info, err := database.Info()
+	db, err := mock.TestDB()
+	if err != nil {
+		t.Error(err)
+	}
+	defer db.Close()
+	info, err := database.Info(db)
 	if err != nil {
 		t.Errorf("Info() returned an error = %v", err)
 	}
@@ -410,6 +420,7 @@ func TestRename(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	defer db.Close()
 	color.Enable = false
 	t.Run("rename", func(t *testing.T) {
 		if err := database.Rename(db, mock.Bucket2(), mock.Bucket1()); err == nil {

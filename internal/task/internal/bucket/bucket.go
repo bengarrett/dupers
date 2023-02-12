@@ -72,6 +72,9 @@ func Export(db *bolt.DB, quiet bool, args [2]string) {
 	s := fmt.Sprintf("%s %s\n", color.Secondary.Sprint("Bucket name:"), color.Debug.Sprint(name))
 	s += fmt.Sprintf("The exported bucket file is at: %s", exp)
 	out.Response(s, quiet)
+	if quiet {
+		fmt.Fprintln(os.Stdout, exp)
+	}
 }
 
 // Import a CSV file into the database.

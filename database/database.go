@@ -165,7 +165,13 @@ func Clean(db *bolt.DB, quiet, debug bool, buckets ...string) error {
 			continue
 		}
 		cleaner := bucket.Cleaner{
-			Name: abs, Debug: debug, Quiet: quiet, Items: cnt, Total: total, Finds: finds, Errs: errs,
+			Name:  abs,
+			Debug: debug,
+			Quiet: quiet,
+			Items: cnt,
+			Total: total,
+			Finds: finds,
+			Errs:  errs,
 		}
 		cnt, finds, errs, err = cleaner.Clean(db)
 		if err != nil {
@@ -220,9 +226,11 @@ func cleaner(db *bolt.DB, debug bool, buckets []string) ([]string, error) {
 }
 
 // Compact the database by reclaiming internal space.
-func Compact(debug bool) error {
+func Compact(db *bolt.DB, debug bool) error {
+	if db == nil {
+		return bolt.ErrDatabaseNotOpen
+	}
 	out.DPrint(debug, "running database compact")
-
 	// active database
 	src, err := DB()
 	if err != nil {
@@ -230,14 +238,7 @@ func Compact(debug bool) error {
 	}
 	// make a temporary database
 	tmp := filepath.Join(os.TempDir(), backup())
-	// open both databases
-	srcDB, err := bolt.Open(src, PrivateFile, write())
-	if err != nil {
-		return err
-	}
-	out.DPrint(debug, "opened original database: "+src)
-	defer srcDB.Close()
-
+	// open target database
 	tmpDB, err := bolt.Open(tmp, PrivateFile, write())
 	if err != nil {
 		return err
@@ -247,7 +248,7 @@ func Compact(debug bool) error {
 
 	// compress and copy the results to the temporary database
 	out.DPrint(debug, "compress and copy databases")
-	if errComp := bolt.Compact(tmpDB, srcDB, 0); errComp != nil {
+	if errComp := bolt.Compact(tmpDB, db, 0); errComp != nil {
 		return errComp
 	}
 	if debug {
@@ -264,8 +265,8 @@ func Compact(debug bool) error {
 		s2 := fmt.Sprintf("new database:      %d bytes, %s", tm.Size(), tm.Name())
 		out.DPrint(debug, s2)
 	}
-	if err = srcDB.Close(); err != nil {
-		out.ErrFatal(err)
+	if err = db.Close(); err != nil {
+		return err
 	}
 	cp, err := CopyFile(tmp, src)
 	if err != nil {
@@ -435,7 +436,10 @@ func Create(path string) error {
 }
 
 // Info returns a printout of the buckets and their statistics.
-func Info() (string, error) {
+func Info(db *bolt.DB) (string, error) {
+	if db == nil {
+		return "", bolt.ErrDatabaseNotOpen
+	}
 	path, err := DB()
 	if err != nil {
 		return "", err
@@ -463,7 +467,7 @@ func Info() (string, error) {
 	}
 	fmt.Fprintln(w)
 	var bucketsB int
-	w, bucketsB, err = info(w, path)
+	w, bucketsB, err = info(db, w, path)
 	if err != nil {
 		fmt.Fprintln(w)
 		fmt.Fprintf(w, "\tDatabase error:\t%s", err.Error())
@@ -480,7 +484,10 @@ func Info() (string, error) {
 	return b.String(), nil
 }
 
-func info(w *tabwriter.Writer, name string) (*tabwriter.Writer, int, error) {
+func info(db *bolt.DB, w *tabwriter.Writer, name string) (*tabwriter.Writer, int, error) {
+	if db == nil {
+		return nil, 0, bolt.ErrDatabaseNotOpen
+	}
 	type (
 		vals struct {
 			items int
@@ -488,12 +495,6 @@ func info(w *tabwriter.Writer, name string) (*tabwriter.Writer, int, error) {
 		}
 		item map[string]vals
 	)
-
-	db, err := bolt.Open(name, PrivateFile, read())
-	if err != nil {
-		return w, 0, err
-	}
-	defer db.Close()
 
 	ro := color.Green.Sprint("OK")
 	if !db.IsReadOnly() {
