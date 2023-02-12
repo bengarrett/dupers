@@ -63,7 +63,6 @@ func tasks(selection string, a cmd.Aliases, c dupe.Config, f cmd.Flags) error {
 		task.Clean_,
 		task.Database_, task.DB_,
 		task.Export_,
-		task.Import_,
 		task.LS_:
 		db, err := database.OpenRead()
 		if err != nil {
@@ -72,6 +71,7 @@ func tasks(selection string, a cmd.Aliases, c dupe.Config, f cmd.Flags) error {
 		defer db.Close()
 		return task.Database(db, &c, *f.Yes, flag.Args()...)
 	case
+		task.Import_,
 		task.MV_,
 		task.RM_,
 		task.Up_,
