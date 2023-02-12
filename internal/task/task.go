@@ -93,7 +93,6 @@ func Database(c *dupe.Config, assumeYes bool, args ...string) error {
 	copy(buckets[:], args)
 	switch args[0] {
 	case Backup_:
-		fmt.Printf("%+v\n\n", c)
 		return backupDB(c.Quiet)
 	case Clean_:
 		return cleanupDB(c)
@@ -300,8 +299,6 @@ func backupDB(quiet bool) error {
 }
 
 // cleanupDB cleans and compacts the database.
-// c *dupe.Config
-// db *bolt.DB, quiet, debug bool
 func cleanupDB(c *dupe.Config) error {
 	if err := database.Clean(c.Parser.DB, c.Quiet, c.Debug); err != nil {
 		if b := errors.Is(err, database.ErrClean); !b {
@@ -331,7 +328,8 @@ func checkDupePaths(c *dupe.Config, assumeYes bool) (code int) {
 		if errors.Is(err, os.ErrNotExist) {
 			return 1
 		}
-		return 2
+		const otherErr = 2
+		return otherErr
 	}
 	// handle any problems
 	p := message.NewPrinter(language.English)

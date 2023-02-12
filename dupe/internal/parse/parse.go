@@ -95,7 +95,6 @@ func (p *Parser) SetAllBuckets(db *bolt.DB) error {
 func (p *Parser) SetBuckets(names ...string) error {
 	var errs error
 	for _, name := range names {
-
 		n, err := filepath.Abs(name)
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("%w: %s", err, n))

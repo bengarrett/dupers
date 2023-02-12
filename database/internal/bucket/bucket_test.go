@@ -152,7 +152,6 @@ func TestStat(t *testing.T) {
 }
 
 func TestTotal(t *testing.T) {
-
 	db, err := mock.TestDB()
 	if err != nil {
 		t.Error(err)

@@ -60,9 +60,7 @@ var (
 	ErrZeroByte = errors.New("database is a zero byte file")
 )
 
-var (
-	TestMode = false //nolint:gochecknoglobals
-)
+var TestMode = false //nolint:gochecknoglobals
 
 // Abs returns an absolute representation of the named bucket.
 func Abs(name string) (string, error) {
@@ -583,8 +581,8 @@ func List(db *bolt.DB, bucket string) (Lists, error) {
 	return lists, nil
 }
 
-// Rename the named bucket in the database to use a new directory path.
-func Rename(name, new string) error {
+// Rename the named bucket in the database to use a new, target directory path.
+func Rename(name, target string) error {
 	db, err := OpenWrite()
 	if err != nil {
 		return err
@@ -595,7 +593,7 @@ func Rename(name, new string) error {
 		if b == nil {
 			return bolt.ErrBucketNotFound
 		}
-		ren, errRen := tx.CreateBucket([]byte(new))
+		ren, errRen := tx.CreateBucket([]byte(target))
 		if errRen != nil {
 			return errRen
 		}

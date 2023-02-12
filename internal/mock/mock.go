@@ -180,7 +180,6 @@ func Read(name string) (sum [32]byte, err error) {
 // Note: If this test fails under Windows, try running `go test ./...` after closing VS Code.
 // https://github.com/electron-userland/electron-builder/issues/3666
 func TestOpen() error {
-
 	if err := TestRemove(); err != nil {
 		return err
 	}

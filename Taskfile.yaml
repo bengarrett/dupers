@@ -5,7 +5,7 @@ version: '3'
 
 vars:
   FILE: ./test/files_to_check/qziD6WMRvPyk
-  ABSDST: "{{.USER_WORKING_DIR}}/.task"
+  USERDST: "{{.USER_WORKING_DIR}}/.task"
   DST: ./.task/
   DST2: ./task-number-2/
   DST3: ./task-number-three/
@@ -73,6 +73,16 @@ tasks:
       - cmd:
          rm --force --recursive --verbose {{.DST}}
         ignore_error: true
+  cloneTmp:
+    silent: false
+    cmds:
+      - cmd:
+         cp --no-clobber --no-dereference {{.FILE}} {{.DST}}/random-duplicate-file.tmp
+      - cmd:
+         cp --no-clobber --no-dereference {{.FILE}} {{.DST}}/random_duplicate#file📁with+unicode.tmp
+      # - cmd:
+      #    go run -race main.go up {{.DST}} # TODO fails
+
   dupeFile:
     silent: false
     cmds:
@@ -80,40 +90,114 @@ tasks:
          go run -race main.go dupe {{.FILE}} {{.DST}}
       - cmd:
          go run -race main.go -fast dupe {{.FILE}} {{.DST}}
-  dupeClone:
+  dupeCmds:
+    silent: false
+    cmds:
+      # - cmd:
+      #    go run -race main.go -yes dupe {{.TEST}} {{.USERDST}}
+      # - cmd:
+      #    go run -race main.go -yes -fast dupe {{.TEST}} {{.USERDST}}/
+      # - cmd:
+      #    go run -race main.go -yes dupe {{.TEST}} {{.DST}}
+      # - cmd:
+      #    go run -race main.go dupe {{.TEST}}xx {{.DST}}
+      #   ignore_error: true # the cmds with ignore_error should always fail
+      # - cmd:
+      #    go run -race main.go -fast dupe xx{{.TEST}} {{.DST}}
+      #   ignore_error: true
+      # - cmd:
+      #    go run -race main.go -yes dupe {{.TEST}} {{.DST2}} {{.DST3}}
+      #   ignore_error: true
+      # - cmd:
+      #    go run -race main.go -yes dupe {{.TEST}} {{.DST2}} {{.DST3}} {{.DST}}
+      #   ignore_error: true
+      # - cmd:
+      #    go run -race main.go -yes dupe {{.TEST}} {{.DST}} {{.DST2}} {{.DST3}}
+      #   ignore_error: true
+      - cmd:
+         go run -race main.go -yes dupe {{.DST}} # this scans all buckets, maybe make a note or a prompt? or change behavior
+         # THIS SHOULD NOT BE running debug
+      - task: cloneTmp
+      - cmd:
+         go run -race main.go -yes dupe {{.DST}}  # this is also returning debug info, clean is only in READONLY mode
+      - cmd:
+         go run -race main.go -yes -fast dupe {{.DST}}
+      # TODO commands -fast, -delete -delete+ -sensen flags
+
+  searchCmds:
     silent: false
     cmds:
       - cmd:
-         go run -race main.go -yes dupe {{.TEST}} {{.ABSDST}}
+         go run -race main.go -yes search
         ignore_error: true
       - cmd:
-         go run -race main.go -yes -fast dupe {{.TEST}} {{.ABSDST}}/
-        ignore_error: true
+         go run -race main.go -yes search asinglelineoftextwithoutspaces 
       - cmd:
-         go run -race main.go -yes dupe {{.TEST}} {{.DST}}
-        ignore_error: true
+         go run -race main.go -yes search 'a single line of text with spaces'
       - cmd:
-         go run -race main.go dupe {{.TEST}}xx {{.DST}}
-        ignore_error: true
+         go run -race main.go -yes search "a single line of text with spaces"
+      - task: cloneTmp
       - cmd:
-         go run -race main.go -fast dupe xx{{.TEST}} {{.DST}}
-        ignore_error: true
+         go run -race main.go -yes search with+unicode
       - cmd:
-         go run -race main.go -yes dupe {{.TEST}} {{.DST2}} {{.DST3}}
-        ignore_error: true
+         go run -race main.go -yes search "with+unicode"
       - cmd:
-         go run -race main.go -yes dupe {{.TEST}} {{.DST2}} {{.DST3}} {{.DST}}
-        ignore_error: true
-      - cmd: # TODO: note this behaves different to the prior command
-         go run -race main.go -yes dupe {{.TEST}} {{.DST}} {{.DST2}} {{.DST3}}
-        ignore_error: true
+         go run -race main.go -yes search "WiTh+UnIcOdE"
+      - cmd:
+         go run -race main.go -yes search file📁with # move emoji to .task/
+      - cmd:
+         go run -race main.go -yes -name search file📁with
+      - cmd:
+         go run -race main.go -yes -name -exact search file📁with
+      - cmd:
+         go run -race main.go -yes search ".task"
+      - cmd:
+         go run -race main.go -yes -name search ".task"
+      - cmd:
+         go run -race main.go -yes -exact search ".TASK"
+      - cmd:
+         go run -race main.go -yes search ".TASK"
+      - cmd:
+         go run -race main.go -yes search ".7Z"
+
+  databaseCmds:
+    silent: false
+    cmds:
+      - cmd:
+         go run -race main.go db
+      - cmd:
+         go run -race main.go ls
+      - cmd:
+         go run -race main.go rm {{.USERDST}}
+      - cmd:
+         go run -race main.go up {{.USERDST}}
+      - cmd:
+         go run -race main.go rm {{.USERDST}}
+      - cmd:
+         go run -race main.go up+ {{.USERDST}}
+      - cmd:
+         go run -race main.go ls {{.USERDST}}
+      - cmd:
+         go run -race main.go rm {{.USERDST}}
+      # todo: backup, up+, ls , export, rm, ls, import, ls, rm
+      # todo: backup, clean, etc
+
+      # - cmd:
+      #    go run -race main.go rm {{.USERDST}}
   one:
     silent: false
     cmds:
       - task: makeTmp
+      - task: databaseCmds
       #- task: dupeFile
-      - task: dupeClone
+      #- task: dupeCmds
+      #- task: searchCmds
       #- task: removeTmp
+  lint:
+    silent: false
+    cmds:
+      - cmd: gofumpt -w .
+      - cmd: golangci-lint run
   
 # 
 # 

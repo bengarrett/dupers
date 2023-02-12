@@ -117,8 +117,6 @@ func Lookup(c *dupe.Config, f *cmd.Flags) error {
 		buckets = append(buckets, string(b))
 	}
 
-	fmt.Println(" >>> ", buckets)
-
 	if !*f.Lookup && len(buckets) > 0 {
 		c.DPrint("non-fast mode, database cleanup.")
 		if err := database.Clean(c.Parser.DB, c.Quiet, c.Debug, buckets...); err != nil {
@@ -143,7 +141,6 @@ func lookup(db *bolt.DB, c *dupe.Config) error {
 	fastErr := false
 	for _, bucket := range c.All() {
 		if i, err := c.SetCompares(db, bucket); err != nil {
-			fmt.Println("---------------> OOPS")
 			out.ErrCont(err)
 		} else if i > 0 {
 			continue

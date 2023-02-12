@@ -68,7 +68,7 @@ func DatabaseHelp(w io.Writer) {
 
 // DupeHelp creates the dupe command help.
 func DupeHelp(w io.Writer) {
-	f := flag.Flag{}
+	var f flag.Flag
 	const danger = "(!)"
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, color.Primary.Sprint("Dupe command:"))
@@ -86,7 +86,7 @@ func DupeHelp(w io.Writer) {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "  Options:")
 	if flag.Lookup(cmd.Fast_) != nil {
-		//fmt.Fprintln(w, "-----------------------------------------------------------------------------80|")
+		// fmt.Fprintln(w, "-----------------------------------------------------------------------------80|")
 		f = *flag.Lookup(cmd.Fast_)
 		fmt.Fprintf(w, "    -%s, -%s\t%s\n", f.Name[:1], f.Name, f.Usage)
 		f = *flag.Lookup(cmd.Delete_)
@@ -139,7 +139,7 @@ func ProgramOpts(w io.Writer) {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "  Usage:")
 	if flag.Lookup(cmd.Mono_) != nil {
-		f := flag.Flag{}
+		var f flag.Flag
 		f = *flag.Lookup(cmd.Mono_)
 		fmt.Fprintf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
 		f = *flag.Lookup(cmd.Quiet_)
@@ -156,7 +156,7 @@ func ProgramOpts(w io.Writer) {
 
 // Search creates the search command help.
 func SearchHelp(w io.Writer) {
-	f := flag.Flag{}
+	var f flag.Flag
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, color.Primary.Sprint("Search command:"))
 	fmt.Fprintln(w, "  Lookup a file or a directory name in the database.")
