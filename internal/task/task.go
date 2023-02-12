@@ -306,6 +306,9 @@ func backupDB(quiet bool) error {
 	if err != nil {
 		return err
 	}
+	if quiet {
+		fmt.Fprintln(os.Stdout, name)
+	}
 	s := fmt.Sprintf("A new copy of the database (%s) is at: %s",
 		humanize.Bytes(uint64(writ)), name)
 	out.Response(s, quiet)

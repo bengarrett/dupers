@@ -84,13 +84,19 @@ tasks:
       - task: test-dupe
       - task: test-file
       - task: test-search
-      - task: clean-and-backup
+      - task: test-clean
+      - task: test-backup
   test-backup:
-    desc: runs the database clean and backup commands
+    desc: runs the database backup command
+    silent: false
+    cmds:
+      - task: backups
+  test-clean:
+    desc: runs the compact and clean database command
     silent: false
     cmds:
       - task: make-tmp
-      - task: clean-and-backup
+      - task: clean-buckets
   test-export:
     desc: runs both the export and import commands
     silent: false
@@ -269,16 +275,25 @@ tasks:
       - go {{.RUNRACE}} -yes rm {{.USERDST}}
       - go {{.RUNRACE}} up+ {{.USERDST}}
       - go {{.RUNRACE}} -yes rm {{.USERDST}}
-  clean-and-backup:
+  clean-buckets:
      silent: false
      internal: true
      cmds:
       - task: pre-export-import
       - go {{.RUNRACE}} db
-      - go {{.RUNRACE}} clean
+      - go {{.RUNRACE}} -quiet clean
       - go {{.RUNRACE}} db
-      - go {{.RUNRACE}} -quiet backup
+  backups:
+     silent: false
+     internal: true
+     cmds:
+      - task: pre-export-import
       - go {{.RUNRACE}} -yes rm {{.USERDST}}
+      - ls -l {{.EXPORTPATH}}
+      - defer: rm {{.EXPORTPATH}}
+     vars:
+       EXPORTPATH: # export the bucket and store the generated filename to EXPORTPATH
+         sh: go {{.RUNRACE}} -quiet backup {{.USERDST}}
   pre-export-import:
     silent: true
     internal: true

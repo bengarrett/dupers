@@ -40,7 +40,6 @@ const (
 )
 
 func tasks(selection string, a cmd.Aliases, c dupe.Config, f cmd.Flags) error {
-	// Move this to its own func
 	switch selection {
 	case task.Dupe_:
 		db, err := database.OpenRead()
@@ -113,7 +112,6 @@ func main() {
 	selection := strings.ToLower(flag.Args()[0])
 	c.DPrint("command selection: " + selection)
 	if err := tasks(selection, a, c, f); err != nil {
-		// TODO: print for bolt.ErrDatabaseNotOpen...
 		if errors.Is(err, database.ErrNotFound) {
 			// TODO: print errors?
 			os.Exit(0)
