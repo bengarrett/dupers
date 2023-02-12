@@ -105,9 +105,9 @@ func Database(db *bolt.DB, c *dupe.Config, assumeYes bool, args ...string) error
 		}
 		fmt.Fprintln(os.Stdout, s)
 	case Export_:
-		bucket.Export(db, quiet, buckets)
+		return bucket.Export(db, quiet, buckets)
 	case Import_:
-		bucket.Import(db, quiet, assumeYes, buckets)
+		return bucket.Import(db, quiet, assumeYes, buckets)
 	case LS_:
 		return bucket.List(db, quiet, buckets)
 	case MV_:

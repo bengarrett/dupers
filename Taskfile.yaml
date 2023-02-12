@@ -190,42 +190,42 @@ tasks:
   exportCmds:
     silent: false
     cmds:
-      - cmd:
-         go {{.RUNRACE}} db
       # - cmd:
-      #    go {{.RUNRACE}} backup
-      - cmd:
-         go {{.RUNRACE}} export # no feedback
-        ignore_error: true
-      - cmd:
-         go {{.RUNRACE}} export thisisaninvaliddatabasebucket
-        ignore_error: true
-      - cmd:
-         go {{.RUNRACE}} export thisisaninvaliddatabasebucket thisisaninvaliddatabasebucket_1
-        ignore_error: true
+      #    go {{.RUNRACE}} db
+      # # - cmd:
+      # #    go {{.RUNRACE}} backup
+      # - cmd:
+      #    go {{.RUNRACE}} export # no feedback
+      #   ignore_error: true
+      # - cmd:
+      #    go {{.RUNRACE}} export thisisaninvaliddatabasebucket
+      #   ignore_error: true
+      # - cmd:
+      #    go {{.RUNRACE}} export thisisaninvaliddatabasebucket thisisaninvaliddatabasebucket_1
+      #   ignore_error: true
       - cmd:
          go {{.RUNRACE}} up {{.USERDST}}
+      # - cmd:
+      #    # TODO: create the ability to export to a supplied path, so we can test importing
+      #    go {{.RUNRACE}} -quiet export {{.USERDST}}
+      # - cmd:
+      #    go {{.RUNRACE}} mv
+      #   ignore_error: true
+      # - cmd:
+      #    go {{.RUNRACE}} mv {{.USERDST}}
+      #   ignore_error: true
+      # - cmd:
+      #    go {{.RUNRACE}} mv thisisaninvaliddatabasebucket thisisaninvaliddatabasebucket_1
+      #   ignore_error: true
       - cmd:
-         # TODO: create the ability to export to a supplied path, so we can test importing
-         go {{.RUNRACE}} -quiet export {{.USERDST}}
-      - cmd:
-         go {{.RUNRACE}} mv
+         go {{.RUNRACE}} -yes mv {{.USERDST}} {{.USERDST}}
         ignore_error: true
-      - cmd:
-         go {{.RUNRACE}} mv {{.USERDST}}
-        ignore_error: true
-      - cmd:
-         go {{.RUNRACE}} mv thisisaninvaliddatabasebucket thisisaninvaliddatabasebucket_1
-        ignore_error: true
-      - cmd:
-         go {{.RUNRACE}} mv {{.USERDST}} {{.USERDST}}
-        ignore_error: true
-      - cmd:
-         go {{.RUNRACE}} -yes mv {{.USERDST}} {{.USERDST}}📁zxcv
-      - cmd:
-         go {{.RUNRACE}} db
-      - cmd:
-         go {{.RUNRACE}} -yes rm {{.USERDST}}📁zxcv
+      # - cmd:
+      #    go {{.RUNRACE}} -yes mv {{.USERDST}} {{.USERDST}}📁zxcv
+      # - cmd:
+      #    go {{.RUNRACE}} db
+      # - cmd:
+      #    go {{.RUNRACE}} -yes rm {{.USERDST}}📁zxcv
 
   one:
     silent: false

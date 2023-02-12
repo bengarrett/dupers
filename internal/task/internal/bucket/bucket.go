@@ -49,25 +49,27 @@ func Check(term, cmd, name string) {
 }
 
 // Export the bucket as a CSV file.
-func Export(db *bolt.DB, quiet bool, args [2]string) {
+func Export(db *bolt.DB, quiet bool, args [2]string) error {
+	if db == nil {
+		return bolt.ErrDatabaseNotOpen
+	}
 	const x = "export"
 	Check(x, x, args[1])
 	name, err := database.Abs(args[1])
 	if err != nil {
-		out.ErrFatal(err)
+		return err
 	}
 	w := os.Stdout
-	if errEx := database.Exist(db, name); errors.Is(errEx, bolt.ErrBucketNotFound) {
-		out.ErrCont(errEx)
-		fmt.Fprintf(w, "Bucket name: %s\n", name)
-		out.Example("\ndupers export <bucket name>")
-		out.ErrFatal(nil)
-	} else if errEx != nil {
-		out.ErrFatal(errEx)
+	if err := database.Exist(db, name); err != nil {
+		if errors.Is(err, bolt.ErrBucketNotFound) { // TODO: move this out to the main.go
+			fmt.Fprintf(w, "Bucket name: %s\n", name)
+			out.Example("\ndupers export <bucket name>")
+		}
+		return err
 	}
-	exp, errEx := database.CSVExport(db, name)
-	if errEx != nil {
-		out.ErrFatal(errEx)
+	exp, err := database.CSVExport(db, name)
+	if err != nil {
+		return err
 	}
 	s := fmt.Sprintf("%s %s\n", color.Secondary.Sprint("Bucket name:"), color.Debug.Sprint(name))
 	s += fmt.Sprintf("The exported bucket file is at: %s", exp)
@@ -75,6 +77,7 @@ func Export(db *bolt.DB, quiet bool, args [2]string) {
 	if quiet {
 		fmt.Fprintln(os.Stdout, exp)
 	}
+	return nil
 }
 
 // Import a CSV file into the database.
@@ -148,22 +151,19 @@ func Move(db *bolt.DB, c *dupe.Config, assumeYes bool, args [3]string) error {
 	w := os.Stdout
 	if errEx := database.Exist(db, name); errEx != nil {
 		if errors.Is(errEx, bolt.ErrBucketNotFound) {
-			fmt.Fprintf(w, "Bucket name: %s\n", name)
-			out.Example("\ndupers mv <bucket name> <new directory>")
+			fmt.Fprintf(w, "\nBucket name: %s\n", name)
+			out.Example("dupers mv <bucket name> <new directory>")
 		}
-		return errEx
+		return fmt.Errorf("%w: %s", errEx, name)
 	}
 	if dir == "" {
-		fmt.Fprintln(os.Stderr, "Cannot move bucket within the database as no new directory was provided.")
-		out.Example(fmt.Sprintf("\ndupers mv %s <new directory>", b))
+		fmt.Fprintln(os.Stderr, "\nCannot move bucket within the database as no new directory was provided.")
+		out.Example(fmt.Sprintf("dupers mv %s <new directory>", b))
 		return ErrNewName
 	}
 	newName, err := database.Abs(dir)
 	if err != nil {
 		return err
-	}
-	if newName == "" {
-		return ErrNewName
 	}
 	if !c.Quiet {
 		fmt.Fprintf(w, "%s\t%s\n%s\t%s\n",
@@ -175,6 +175,10 @@ func Move(db *bolt.DB, c *dupe.Config, assumeYes bool, args [3]string) error {
 		}
 	}
 	if err := database.Rename(db, name, newName); err != nil {
+		if errors.Is(err, database.ErrSameNames) {
+			fmt.Fprintln(os.Stderr, "\nCannot move the bucket to the same directory as its current directory.")
+			out.Example(fmt.Sprintf("dupers mv %s <new directory>\n", b))
+		}
 		return err
 	}
 	return nil

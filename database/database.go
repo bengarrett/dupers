@@ -53,11 +53,12 @@ const (
 )
 
 var (
-	ErrClean    = errors.New("database has nothing to clean")
-	ErrCompact  = errors.New("database compression has not reduced the size")
-	ErrEmpty    = errors.New("database is empty and contains no items")
-	ErrNotFound = errors.New("database file does not exist")
-	ErrZeroByte = errors.New("database is a zero byte file")
+	ErrClean     = errors.New("database has nothing to clean")
+	ErrCompact   = errors.New("database compression has not reduced the size")
+	ErrEmpty     = errors.New("database is empty and contains no items")
+	ErrNotFound  = errors.New("database file does not exist")
+	ErrSameNames = errors.New("bucket target is the same as the bucket name")
+	ErrZeroByte  = errors.New("database is a zero byte file")
 )
 
 var TestMode = false //nolint:gochecknoglobals
@@ -586,6 +587,9 @@ func List(db *bolt.DB, bucket string) (Lists, error) {
 func Rename(db *bolt.DB, name, target string) error {
 	if db == nil {
 		return bolt.ErrDatabaseNotOpen
+	}
+	if name == target {
+		return ErrSameNames
 	}
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(name))
