@@ -330,7 +330,7 @@ func TestIsEmpty(t *testing.T) {
 			t.Errorf("IsEmpty() = %v, want nil", err)
 		}
 		// test & use remove bucket, leaving the db empty
-		if err1 := database.RM(mock.Bucket1()); err1 != nil {
+		if err1 := database.RM(db, mock.Bucket1()); err1 != nil {
 			fmt.Fprintln(os.Stderr, err1)
 		}
 		// test empty db
@@ -406,18 +406,22 @@ func TestRename(t *testing.T) {
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
+	db, err := mock.TestDB()
+	if err != nil {
+		t.Error(err)
+	}
 	color.Enable = false
 	t.Run("rename", func(t *testing.T) {
-		if err := database.Rename(mock.Bucket2(), mock.Bucket1()); err == nil {
+		if err := database.Rename(db, mock.Bucket2(), mock.Bucket1()); err == nil {
 			t.Error("Rename() bucket2 to bucket1 error = nil, want error")
 		}
-		if err := database.Rename("", ""); err == nil {
+		if err := database.Rename(db, "", ""); err == nil {
 			t.Error("Rename() empty buckets error = nil, want error")
 		}
-		if err := database.Rename(mock.Bucket1(), ""); err == nil {
+		if err := database.Rename(db, mock.Bucket1(), ""); err == nil {
 			t.Error("Rename() empty new bucket error = nil, want error")
 		}
-		if err := database.Rename("", mock.Bucket2()); err == nil {
+		if err := database.Rename(db, "", mock.Bucket2()); err == nil {
 			t.Error("Rename() empty bucket error = nil, want error")
 		}
 	})

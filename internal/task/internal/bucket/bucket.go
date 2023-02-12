@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -171,7 +170,7 @@ func Move(c *dupe.Config, assumeYes bool, args [3]string) {
 			return
 		}
 	}
-	if err := database.Rename(name, newName); err != nil {
+	if err := database.Rename(c.DB, name, newName); err != nil {
 		out.ErrFatal(err)
 	}
 }
@@ -181,24 +180,14 @@ func Remove(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
 	if db == nil {
 		return bolt.ErrBucketNotFound
 	}
-	Check("remove", drm, args[1])
-	name, err := database.Abs(args[1])
+	bucket := args[1]
+	Check("remove", drm, bucket)
+	name, err := database.Abs(bucket)
 	if err != nil {
-		out.ErrFatal(err)
+		return err
 	}
 	items, err := database.Count(db, name)
-	if errors.Is(err, bolt.ErrBucketNotFound) {
-		// fallback Abs check
-		name, err = filepath.Abs(args[1])
-		if err != nil {
-			return err
-		}
-		items, err = database.Count(db, name)
-		if errors.Is(err, bolt.ErrBucketNotFound) {
-			notFound(db, name, err)
-			return nil
-		}
-	} else if err != nil {
+	if err != nil {
 		return err
 	}
 	if !quiet {
@@ -210,26 +199,26 @@ func Remove(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
 			return nil
 		}
 	}
-	rmBucket(db, name, args[1])
+	if err := rmBucket(db, name, bucket); err != nil {
+		return err
+	}
 	s := fmt.Sprintf("Removed bucket from the database: '%s'\n", name)
 	out.Response(s, quiet)
 	return nil
 }
 
-func rmBucket(db *bolt.DB, name, retry string) {
-	err := database.RM(name)
-	if err == nil {
-		return
-	}
+func rmBucket(db *bolt.DB, name, retry string) error {
+	err := database.RM(db, name)
 	if errors.Is(err, bolt.ErrBucketNotFound) {
 		// retry with the original argument
-		if err1 := database.RM(retry); err1 != nil {
+		if err1 := database.RM(db, retry); err1 != nil {
 			if errors.Is(err1, bolt.ErrBucketNotFound) {
 				notFound(db, name, err1)
 			}
-			out.ErrFatal(err1)
+			return err
 		}
 	}
+	return err
 }
 
 func notFound(db *bolt.DB, name string, err error) {

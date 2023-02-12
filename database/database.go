@@ -582,12 +582,10 @@ func List(db *bolt.DB, bucket string) (Lists, error) {
 }
 
 // Rename the named bucket in the database to use a new, target directory path.
-func Rename(name, target string) error {
-	db, err := OpenWrite()
-	if err != nil {
-		return err
+func Rename(db *bolt.DB, name, target string) error {
+	if db == nil {
+		return bolt.ErrDatabaseNotOpen
 	}
-	defer db.Close()
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(name))
 		if b == nil {
@@ -607,12 +605,10 @@ func Rename(name, target string) error {
 }
 
 // RM removes the named bucket from the database.
-func RM(name string) error {
-	db, err := OpenWrite()
-	if err != nil {
-		return err
+func RM(db *bolt.DB, name string) error {
+	if db == nil {
+		return bolt.ErrDatabaseNotOpen
 	}
-	defer db.Close()
 	return db.Update(func(tx *bolt.Tx) error {
 		if b := tx.Bucket([]byte(name)); b == nil {
 			return bolt.ErrBucketNotFound

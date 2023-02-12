@@ -39,6 +39,58 @@ const (
 	homepage = "https://github.com/bengarrett/dupers"
 )
 
+func tasks(selection string, a cmd.Aliases, c dupe.Config, f cmd.Flags) error {
+
+	// Move this to its own func
+	switch selection {
+	case task.Dupe_:
+		// TODO: defer this out of switch
+		var err error
+		c.Parser.DB, err = database.OpenRead()
+		if err != nil {
+			return err
+		}
+		defer c.Parser.DB.Close()
+
+		return task.Dupe(&c, &f, false, flag.Args()...)
+	case task.Search_:
+		return task.Search(&f, false, flag.Args()...)
+	case task.Database_, task.DB_:
+		// no open database needed?
+		// TODO: use readonly?
+		return task.Database(&c, *f.Yes, flag.Args()...)
+	case task.Backup_,
+		task.Clean_,
+		task.Export_,
+		task.Import_,
+		task.LS_,
+		task.MV_:
+
+		var err error
+		c.Parser.DB, err = database.OpenRead() // TODO: split case between openread and openwrite and no need for db
+		if err != nil {
+			return err
+		}
+		defer c.Parser.DB.Close()
+
+		return task.Database(&c, *f.Yes, flag.Args()...)
+	case task.RM_,
+		task.Up_,
+		task.UpPlus_:
+		var err error
+		c.Parser.DB, err = database.OpenWrite()
+		if err != nil {
+			return err
+		}
+		defer c.Parser.DB.Close()
+
+		return task.Database(&c, *f.Yes, flag.Args()...)
+	default:
+		unknown(selection)
+	}
+	return fmt.Errorf("%w: %q", ErrCmd, selection)
+}
+
 func main() {
 	a, c, f := cmd.Aliases{}, dupe.Config{}, cmd.Flags{}
 	c.SetTimer()
@@ -65,47 +117,16 @@ func main() {
 
 	selection := strings.ToLower(flag.Args()[0])
 	c.DPrint("command selection: " + selection)
-
-	switch selection {
-	case task.Dupe_:
-		// TODO: defer this out of switch
-		var err error
-		c.Parser.DB, err = database.OpenRead()
-		if err != nil {
-			out.ErrFatal(err)
+	if err := tasks(selection, a, c, f); err != nil {
+		if errors.Is(err, database.ErrNotFound) {
+			// TODO: print errors?
+			os.Exit(0)
 		}
-		defer c.Parser.DB.Close()
-
-		if err := task.Dupe(&c, &f, false, flag.Args()...); err != nil {
-			out.ErrFatal(err)
+		if errors.Is(err, database.ErrZeroByte) {
+			// TODO: print errors?
+			os.Exit(1)
 		}
-	case task.Search_:
-		if err := task.Search(&f, false, flag.Args()...); err != nil {
-			out.ErrFatal(err)
-		}
-	case
-		task.Database_,
-		task.DB_,
-		task.Backup_,
-		task.Clean_,
-		task.Export_,
-		task.Import_,
-		task.LS_,
-		task.MV_,
-		task.RM_,
-		task.Up_,
-		task.UpPlus_:
-		if err := task.Database(&c, *f.Yes, flag.Args()...); err != nil {
-			if errors.Is(err, database.ErrNotFound) {
-				os.Exit(0)
-			}
-			if errors.Is(err, database.ErrZeroByte) {
-				os.Exit(1)
-			}
-			out.ErrFatal(err)
-		}
-	default:
-		unknown(selection)
+		out.ErrFatal(err)
 	}
 }
 

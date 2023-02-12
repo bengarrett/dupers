@@ -83,8 +83,10 @@ func Database(c *dupe.Config, assumeYes bool, args ...string) error {
 	if c == nil {
 		c = new(dupe.Config)
 	}
-	if _, err := database.Check(); err != nil {
+	if x, err := database.Check(); err != nil {
 		return err
+	} else {
+		fmt.Printf("X -> %+v", x)
 	}
 	if len(args) == 0 {
 		return ErrCmd
@@ -107,6 +109,7 @@ func Database(c *dupe.Config, assumeYes bool, args ...string) error {
 	case Import_:
 		bucket.Import(c.Parser.DB, c.Quiet, assumeYes, buckets)
 	case LS_:
+		fmt.Println("------- LS")
 		return bucket.List(c.Parser.DB, c.Quiet, buckets)
 	case MV_:
 		buckets := [3]string{}

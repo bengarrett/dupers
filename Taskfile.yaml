@@ -14,6 +14,7 @@ vars:
   CHK: ./test/files_to_check/*
   B1: ./test/bucket1/*
   B2: ./test/bucket2/*
+  RUNRACE: run -race main.go
 
 tasks:
   race:
@@ -164,21 +165,19 @@ tasks:
     silent: false
     cmds:
       - cmd:
-         go run -race main.go db
+         go {{.RUNRACE}} db
       - cmd:
-         go run -race main.go ls
-      - cmd:
-         go run -race main.go rm {{.USERDST}}
-      - cmd:
-         go run -race main.go up {{.USERDST}}
-      - cmd:
-         go run -race main.go rm {{.USERDST}}
-      - cmd:
-         go run -race main.go up+ {{.USERDST}}
-      - cmd:
-         go run -race main.go ls {{.USERDST}}
-      - cmd:
-         go run -race main.go rm {{.USERDST}}
+         go {{.RUNRACE}} -yes rm {{.USERDST}}
+      # - cmd:
+      #    go run -race main.go up {{.USERDST}}
+      # - cmd:
+      #    go run -race main.go rm {{.USERDST}}
+      # - cmd:
+      #    go run -race main.go up+ {{.USERDST}}
+      # - cmd:
+      #    go run -race main.go ls {{.USERDST}}
+      # - cmd:
+      #    go run -race main.go rm {{.USERDST}}
       # todo: backup, up+, ls , export, rm, ls, import, ls, rm
       # todo: backup, clean, etc
 
