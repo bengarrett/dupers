@@ -353,9 +353,9 @@ func checkDupePaths(c *dupe.Config, assumeYes bool) error {
 	fmt.Fprint(w, "Directory to check:")
 	fmt.Fprintln(w)
 	if buckets == 0 {
-		fmt.Fprintf(w, " %s ", c.ToCheck())
+		fmt.Fprintf(w, " %s ", c.GetSource())
 	} else {
-		fmt.Fprintf(w, " %s ", color.Warn.Sprint(c.ToCheck()))
+		fmt.Fprintf(w, " %s ", color.Warn.Sprint(c.GetSource()))
 	}
 	fmt.Fprintf(w, "(%s)", color.Info.Sprintf("%s files", p.Sprint(files)))
 	fmt.Fprintln(w)

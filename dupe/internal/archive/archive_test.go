@@ -13,6 +13,13 @@ import (
 	"github.com/bengarrett/dupers/internal/mock"
 )
 
+const (
+	bucket1 = "../../../test/bucket1/"
+	file1   = "../../../test/bucket1/0vlLaUEvzAWP"
+	file2   = "../../../test/bucket1/GwejJkMzs3yP"
+	file7z  = "../../../test/randomfiles.7z"
+)
+
 func TestExtension(t *testing.T) {
 	const xz = ".xz"
 	tests := []struct {
@@ -111,13 +118,13 @@ func TestConfig_WalkArchiver(t *testing.T) {
 		wantErr bool
 	}{
 		{"empty", args{""}, true},
+		{"non-exist", args{"this-directory-does-not-exist"}, true},
+		{"file", args{parse.Bucket(mock.Item1())}, false},
 		{"bucket1", args{parse.Bucket(mock.Bucket1())}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := dupe.Config{
-				Test: true,
-			}
+			c := dupe.Config{Test: true}
 			if err := c.WalkArchiver(db, tt.args.name); (err != nil) != tt.wantErr {
 				t.Errorf("Config.WalkArchiver() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -128,22 +135,35 @@ func TestConfig_WalkArchiver(t *testing.T) {
 func TestConfigRead7Zip(t *testing.T) {
 	c := dupe.Config{Test: true, Quiet: false, Debug: true}
 	type args struct {
-		bucket string
+		bucket parse.Bucket
 		name   string
 	}
 	tests := []struct {
-		name string
-		args args
+		name    string
+		args    args
+		wantErr bool
 	}{
-		{"empty", args{}},
-		{"7z", args{mock.Bucket1(), mock.SevenZip}},
+		//{"empty", args{}, true},
+		// {"file", args{file2, ""}, true},
+		// {"file+bucket", args{file2, bucket1}, true},
+		// {"dir", args{bucket1, ""}, true},
+		// {"7Z no bucket", args{"", file7z}, true},
+		{"7Z", args{parse.Bucket(mock.Bucket1()), file7z}, false},
 	}
 	if err := mock.TestOpen(); err != nil {
 		t.Error(err)
 	}
+	db, err := mock.TestDB()
+	if err != nil {
+		t.Error(err)
+	}
+	defer db.Close()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c.Read7Zip(nil, tt.args.bucket, tt.args.name)
+			err := c.Read7Zip(db, tt.args.bucket, tt.args.name)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Read7Zip error = %v, want %v: %v", (err != nil), tt.wantErr, err)
+			}
 		})
 	}
 	if err := mock.TestRemove(); err != nil {

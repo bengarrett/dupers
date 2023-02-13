@@ -13,9 +13,10 @@ import (
 )
 
 const (
-	bucket1 = "../../../test/bucket1"
+	bucket1 = "../../../test/bucket1/"
 	file1   = "../../../test/bucket1/0vlLaUEvzAWP"
 	file2   = "../../../test/bucket1/GwejJkMzs3yP"
+	sensen  = "../../../test/sensen/"
 	// checksums created from sha256sum <filename>.
 	hash0 = "0000000000000000000000000000000000000000000000000000000000000000"
 	hash1 = "1a1d76a3187ccee147e6c807277273afbad5d2680f5eadf1012310743e148f22"
@@ -145,16 +146,23 @@ func TestExecutable(t *testing.T) {
 		t.Error(err)
 	}
 	tests := []struct {
-		name string
-		root string
-		want bool
+		name    string
+		root    string
+		want    bool
+		wantErr bool
 	}{
-		{"test dir", d, false},
+		{"test dir", d, false, false},
+		{"test a file", file1, false, true},
+		{"test dir with an exe", sensen, true, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := parse.Executable(tt.root); got != tt.want {
+			got, gotErr := parse.Executable(tt.root)
+			if got != tt.want {
 				t.Errorf("Executable() = %v, want %v", got, tt.want)
+			}
+			if (gotErr != nil) != tt.wantErr {
+				t.Errorf("Executable() error = %v, want %v", (gotErr != nil), tt.wantErr)
 			}
 		})
 	}
@@ -210,7 +218,7 @@ func Test_SetSource(t *testing.T) {
 		t.Errorf("SetSource(%v) returned the error: %v", bucket1, err)
 	}
 	t.Run("test set", func(t *testing.T) {
-		if s := c.Source; s == "" {
+		if s := c.GetSource(); s == "" {
 			t.Errorf("SetSource() got = %v, want the absolute path of: %v", s, bucket1)
 		}
 	})

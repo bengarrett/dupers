@@ -22,9 +22,9 @@ import (
 )
 
 type (
-	Bucket    string
-	Checksum  [32]byte
-	Checksums map[Checksum]string
+	Bucket    string              // Bucket is a database table named as an absolute directory path.
+	Checksum  [32]byte            // Checksum is a SHA-1 hash file value.
+	Checksums map[Checksum]string // Checksums is a collection of SHA-1 hash file values.
 )
 
 const (
@@ -33,11 +33,10 @@ const (
 )
 
 type Scanner struct {
-	Buckets []Bucket  // Buckets to lookup.
 	Sources []string  // Sources to compare, either directories or files.
-	Source  string    // Source directory or file to compare.
+	Buckets []Bucket  // Buckets to lookup.
 	Compare Checksums // Compare hashes fetched from the database or file system.
-	Files   int       // Files scan and process counter.
+	Files   int       // Files counter of the totals scanned and processed.
 	timer   time.Time
 }
 
@@ -46,34 +45,10 @@ func (p *Scanner) All() []Bucket {
 	return p.Buckets
 }
 
-// Compares the number of items contained in c.compare.
+// Compares returns the number of items in the Compare Scanner.
 func (p *Scanner) Compares() int {
 	return len(p.Compare)
 }
-
-// OpenRead opens the Bolt database for reading.
-// func (p *Scanner) OpenRead() {
-// 	if p.DB != nil {
-// 		return
-// 	}
-// 	db, err := database.OpenRead()
-// 	if err != nil {
-// 		out.ErrFatal(err)
-// 	}
-// 	p.DB = db
-// }
-
-// OpenWrite opens the Bolt database for reading and writing.
-// func (p *Scanner) OpenWrite() {
-// 	if p.DB != nil {
-// 		return
-// 	}
-// 	db, err := database.OpenWrite()
-// 	if err != nil {
-// 		out.ErrFatal(err)
-// 	}
-// 	p.DB = db
-// }
 
 // SetAllBuckets sets all the database buckets for use with the dupe or search commands.
 func (p *Scanner) SetAllBuckets(db *bolt.DB) error {
@@ -112,7 +87,7 @@ func (p *Scanner) SetBuckets(names ...string) error {
 	return nil
 }
 
-// SetCompares fetches items from the named bucket and sets them to p.Compare.
+// SetCompares fetches item names an checksums from the named bucket and stores them in the Compare Scanner.
 func (p *Scanner) SetCompares(db *bolt.DB, name Bucket) (int, error) {
 	if db == nil {
 		return 0, bolt.ErrDatabaseNotOpen
@@ -135,6 +110,14 @@ func (p *Scanner) SetTimer() {
 	p.timer = time.Now()
 }
 
+// GetSource returns the directory or file to check.
+func (p *Scanner) GetSource() string {
+	if len(p.Sources) == 0 {
+		return ""
+	}
+	return p.Sources[0]
+}
+
 // SetSource sets the named string as the directory or file to check.
 func (p *Scanner) SetSource(name string) error {
 	n, err := filepath.Abs(name)
@@ -144,7 +127,11 @@ func (p *Scanner) SetSource(name string) error {
 	if _, err := os.Stat(n); err != nil {
 		return err
 	}
-	p.Source = n
+	if len(p.Sources) == 0 {
+		p.Sources = append(p.Sources, n)
+		return nil
+	}
+	p.Sources[0] = n
 	return nil
 }
 
@@ -155,11 +142,6 @@ func (p *Scanner) PrintBuckets() string {
 		s = append(s, string(b))
 	}
 	return strings.Join(s, " ")
-}
-
-// ToCheck returns the directory or file to check.
-func (p *Scanner) ToCheck() string {
-	return p.Source
 }
 
 // Timer returns the time taken since the process timer was instigated.
@@ -239,6 +221,7 @@ func Read(name string) (Checksum, error) {
 	return c, nil
 }
 
+// Marker uses ANSI color to highlight the term contained in the filepath.
 func Marker(file database.Filepath, term string, exact bool) string {
 	s := string(file)
 	switch {
@@ -272,7 +255,7 @@ func matchBuckets(m *database.Matches) (string, []string) {
 }
 
 // Executable returns true if the root directory contains an MS-DOS or Windows program file.
-func Executable(root string) bool {
+func Executable(root string) (bool, error) {
 	bin := false
 	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -289,9 +272,9 @@ func Executable(root string) bool {
 		}
 		return nil
 	}); err != nil {
-		out.ErrCont(err)
+		return false, err
 	}
-	return bin
+	return bin, nil
 }
 
 // program returns true if the named file uses an MS-DOS or Windows program file extension.

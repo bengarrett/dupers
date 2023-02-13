@@ -105,8 +105,10 @@ func TestConfig_Clean(t *testing.T) {
 		t.Errorf("CopyFile should have written %d bytes, but wrote %d", written, i)
 	}
 	// make empty test dir
-	c.Source = filepath.Dir(rmDst)
-	dir := filepath.Join(c.Source, "empty directory placeholder")
+	if err := c.SetSource(filepath.Dir(rmDst)); err != nil {
+		t.Error(err)
+	}
+	dir := filepath.Join(c.GetSource(), "empty directory placeholder")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Error(err)
 	}
@@ -229,7 +231,9 @@ func TestRemoves(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	c.Source = abs
+	if err := c.SetSource(abs); err != nil {
+		t.Error(err)
+	}
 	c.Sources = append(c.Sources, srcs)
 	s, err := c.Removes(false)
 	if err != nil {

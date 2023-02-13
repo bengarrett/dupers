@@ -180,22 +180,19 @@ func Read(name string) (sum [32]byte, err error) {
 // Note: If this test fails under Windows, try running `go test ./...` after closing VS Code.
 // https://github.com/electron-userland/electron-builder/issues/3666
 func TestOpen() error {
-	if err := TestRemove(); err != nil {
-		return err
-	}
-
+	// if err := TestRemove(); err != nil {
+	// 	return err
+	// }
 	path, err := Name()
 	if err != nil {
 		return err
 	}
-
 	db, err := bolt.Open(path, PrivateFile, nil)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
-
-	if err := db.Update(func(tx *bolt.Tx) error {
+	return db.Update(func(tx *bolt.Tx) error {
 		// delete any existing buckets from the mock database
 		if err := tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 			return tx.DeleteBucket(name)
@@ -212,11 +209,7 @@ func TestOpen() error {
 			return err
 		}
 		return b.Put([]byte(Item1()), sum256[:])
-	}); err != nil {
-		return err
-	}
-
-	return db.Close()
+	})
 }
 
 func TestDB() (*bolt.DB, error) {
