@@ -177,7 +177,7 @@ func walkCheck(db *bolt.DB, c *dupe.Config, assumeYes bool, args ...string) erro
 		if err := c.SetAllBuckets(db); err != nil {
 			return err
 		}
-		c.DPrint(fmt.Sprintf("use all buckets: %s", c.PrintBuckets()))
+		c.DPrint(fmt.Sprintf("use all buckets: %s", c.BucketS()))
 		return nil
 	}
 	if err := c.SetBuckets(buckets...); err != nil {
@@ -186,7 +186,7 @@ func walkCheck(db *bolt.DB, c *dupe.Config, assumeYes bool, args ...string) erro
 	if err := checkDupePaths(c, assumeYes); err != nil {
 		return err
 	}
-	c.DPrint(fmt.Sprintf("use buckets: %s", c.PrintBuckets()))
+	c.DPrint(fmt.Sprintf("use buckets: %s", c.BucketS()))
 	return nil
 }
 
@@ -362,7 +362,7 @@ func checkDupePaths(c *dupe.Config, assumeYes bool) error {
 	fmt.Fprintln(w)
 	fmt.Fprintf(w, "%s to lookup, for finding duplicates:", verb)
 	fmt.Fprintln(w)
-	fmt.Fprintf(w, " %s ", c.PrintBuckets())
+	fmt.Fprintf(w, " %s ", c.BucketS())
 	if buckets == 0 {
 		fmt.Fprintf(w, "(%s)", color.Danger.Sprintf("%s files", p.Sprint(buckets)))
 		fmt.Fprintln(w)

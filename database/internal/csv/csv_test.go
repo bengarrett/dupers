@@ -44,7 +44,7 @@ func TestBucket(t *testing.T) {
 }
 
 func TestChecker(t *testing.T) {
-	openBin, err := os.Open(mock.Item1())
+	openBin, err := os.Open(mock.Item(1))
 	if err != nil {
 		t.Error(err)
 	}

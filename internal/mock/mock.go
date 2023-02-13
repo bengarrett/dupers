@@ -27,6 +27,8 @@ const (
 	test2    = "test/bucket2"
 	SevenZip = "test/randomfiles.7z"
 	source1  = "/0vlLaUEvzAWP"
+	source2  = "/3a9dnxgSVEnJ"
+	source3  = "/12wZkDDR9CQ0"
 	dbName   = "dupers.db"
 	dbPath   = "dupers"
 	win      = "windows"
@@ -107,9 +109,18 @@ func Export1() string {
 	return f
 }
 
-// Item1 returns the absolute path of test source file 1.
-func Item1() string {
-	path := filepath.Join(Bucket1(), source1)
+// Item returns the absolute path of test source file item.
+func Item(item int) string {
+	elem := ""
+	switch item {
+	case 1:
+		elem = source1
+	case 2:
+		elem = source2
+	case 3:
+		elem = source3
+	}
+	path := filepath.Join(Bucket1(), elem)
 	b, err := filepath.Abs(path)
 	if err != nil {
 		log.Fatal(err)
@@ -175,14 +186,22 @@ func Read(name string) (sum [32]byte, err error) {
 	return sum, nil
 }
 
+// Database creates, opens and returns the mock database.
+func Database() (*bolt.DB, error) {
+	if err := Delete(); err != nil {
+		return nil, err
+	}
+	if err := Create(); err != nil {
+		return nil, err
+	}
+	return DB()
+}
+
 // TestOpen creates and opens the mock database, the test 1 bucket and adds the source 1 file.
 // The mock database is closed after the update.
 // Note: If this test fails under Windows, try running `go test ./...` after closing VS Code.
 // https://github.com/electron-userland/electron-builder/issues/3666
-func TestOpen() error {
-	// if err := TestRemove(); err != nil {
-	// 	return err
-	// }
+func Create() error {
 	path, err := Name()
 	if err != nil {
 		return err
@@ -204,15 +223,20 @@ func TestOpen() error {
 		if err != nil {
 			return err
 		}
-		sum256, err := Read(Item1())
-		if err != nil {
-			return err
+		for i := 1; i < 3; i++ {
+			sum256, err := Read(Item(i))
+			if err != nil {
+				return err
+			}
+			if err := b.Put([]byte(Item(i)), sum256[:]); err != nil {
+				return err
+			}
 		}
-		return b.Put([]byte(Item1()), sum256[:])
+		return nil
 	})
 }
 
-func TestDB() (*bolt.DB, error) {
+func DB() (*bolt.DB, error) {
 	path, err := Name()
 	if err != nil {
 		return nil, err
@@ -225,8 +249,8 @@ func TestDB() (*bolt.DB, error) {
 	return db, nil
 }
 
-// TestRemove deletes the mock database.
-func TestRemove() error {
+// Delete the mock database.
+func Delete() error {
 	path, err := Name()
 	if err != nil {
 		return err

@@ -69,7 +69,7 @@ func (p *Scanner) SetAllBuckets(db *bolt.DB) error {
 func (p *Scanner) SetBuckets(names ...string) error {
 	var errs error
 	for _, name := range names {
-		n, err := filepath.Abs(name)
+		n, err := filepath.Abs(string(name))
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("%w: %s", err, n))
 			continue
@@ -135,8 +135,8 @@ func (p *Scanner) SetSource(name string) error {
 	return nil
 }
 
-// PrintBuckets returns a list of buckets used by the database.
-func (p *Scanner) PrintBuckets() string {
+// BucketS returns a list of buckets used by the database.
+func (p *Scanner) BucketS() string {
 	s := make([]string, 0, len(p.All()))
 	for _, b := range p.All() {
 		s = append(s, string(b))

@@ -15,9 +15,6 @@ import (
 
 func init() { //nolint:gochecknoinits
 	database.TestMode = true
-	if err := mock.TestOpen(); err != nil {
-		log.Panic(err)
-	}
 }
 
 func TestBackup(t *testing.T) {
@@ -90,10 +87,7 @@ func TestCopyFile(t *testing.T) {
 
 func TestCSVExport(t *testing.T) {
 	color.Enable = false
-	if err := mock.TestOpen(); err != nil {
-		log.Panic(err)
-	}
-	DB, err := mock.TestDB()
+	DB, err := mock.Database()
 	if err != nil {
 		log.Panic(err)
 	}
@@ -117,7 +111,7 @@ func TestCSVExport(t *testing.T) {
 
 func TestImport(t *testing.T) {
 	color.Enable = false
-	DB, err := mock.TestDB()
+	DB, err := mock.Database()
 	if err != nil {
 		log.Panic(err)
 	}
@@ -148,7 +142,7 @@ func TestImport(t *testing.T) {
 
 func TestScanner(t *testing.T) {
 	color.Enable = false
-	openBin, err := os.Open(mock.Item1())
+	openBin, err := os.Open(mock.Item(1))
 	if err != nil {
 		t.Error(err)
 	}
@@ -190,7 +184,7 @@ func TestScanner(t *testing.T) {
 
 func TestCSVImport(t *testing.T) {
 	color.Enable = false
-	DB, err := mock.TestDB()
+	DB, err := mock.Database()
 	if err != nil {
 		log.Panic(err)
 	}

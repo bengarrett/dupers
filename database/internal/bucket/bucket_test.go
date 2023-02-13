@@ -11,11 +11,7 @@ import (
 )
 
 func TestCleaner_Clean(t *testing.T) {
-	if err := mock.TestOpen(); err != nil {
-		t.Error(err)
-		return
-	}
-	db, err := mock.TestDB()
+	db, err := mock.Database()
 	if err != nil {
 		t.Error(err)
 	}
@@ -84,15 +80,7 @@ func TestAbs(t *testing.T) {
 }
 
 func TestCount(t *testing.T) {
-	if err := mock.TestRemove(); err != nil {
-		t.Error(err)
-		return
-	}
-	if err := mock.TestOpen(); err != nil {
-		t.Error(err)
-		return
-	}
-	db, err := mock.TestDB()
+	db, err := mock.Database()
 	if err != nil {
 		t.Error(err)
 		return
@@ -152,7 +140,7 @@ func TestStat(t *testing.T) {
 }
 
 func TestTotal(t *testing.T) {
-	db, err := mock.TestDB()
+	db, err := mock.Database()
 	if err != nil {
 		t.Error(err)
 	}

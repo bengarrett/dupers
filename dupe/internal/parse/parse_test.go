@@ -32,31 +32,9 @@ func ExamplePrint() {
 	// Output: ../../../test/bucket1/0vlLaUEvzAWP
 }
 
-// func TestParser_OpenRead(t *testing.T) {
-// 	p := parse.Scanner{}
-// 	p.OpenRead()
-// 	defer p.DB.Close()
-// 	if p.DB == nil {
-// 		t.Error("DB should not be nil")
-// 	}
-// }
-
-// func TestParser_OpenWrite(t *testing.T) {
-// 	p := parse.Scanner{}
-// 	p.OpenWrite()
-// 	defer p.DB.Close()
-// 	if p.DB == nil {
-// 		t.Error("DB should not be nil")
-// 	}
-// }
-
 func TestSetBuckets(t *testing.T) {
 	database.TestMode = true
-	err := mock.TestOpen()
-	if err != nil {
-		t.Error(err)
-	}
-	db, err := mock.TestDB()
+	db, err := mock.Database()
 	if err != nil {
 		t.Error(err)
 	}
@@ -66,7 +44,7 @@ func TestSetBuckets(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	const expected = 1
+	const expected = 2
 	if l := len(p.All()); l != expected {
 		t.Errorf("Expected %d, got %d", expected, l)
 	}
@@ -81,7 +59,7 @@ func TestTimer(t *testing.T) {
 }
 
 func TestParser_SetCompares(t *testing.T) {
-	db, err := mock.TestDB()
+	db, err := mock.Database()
 	if err != nil {
 		t.Error(err)
 	}
@@ -96,8 +74,8 @@ func TestParser_SetCompares(t *testing.T) {
 		wantErr bool
 	}{
 		{"empty", args{}, 0, true},
-		// {"mock1", args{mock.Bucket1()}, 26, false},
-		// {"mock2", args{mock.Bucket2()}, 4, false},
+		{"mock1", args{mock.Bucket1()}, 4, false},
+		{"mock2", args{mock.Bucket2()}, 0, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -152,7 +130,7 @@ func TestExecutable(t *testing.T) {
 		wantErr bool
 	}{
 		{"test dir", d, false, false},
-		{"test a file", file1, false, true},
+		{"test a file", file1, false, false},
 		{"test dir with an exe", sensen, true, false},
 	}
 	for _, tt := range tests {
@@ -206,7 +184,7 @@ func Test_SetBucket(t *testing.T) {
 		}
 	})
 	t.Run("print", func(t *testing.T) {
-		if s := i.PrintBuckets(); s != bucket1 {
+		if s := i.BucketS(); s != bucket1 {
 			t.Errorf("SetBuckets() got = %v, want %v", s, bucket1)
 		}
 	})

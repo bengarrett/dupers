@@ -2,7 +2,6 @@
 package archive_test
 
 import (
-	"log"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -33,18 +32,12 @@ func TestExtension(t *testing.T) {
 		{"caps", strings.ToUpper(xz), archive.MimeXZ},
 		{"no dot", "xz", xz},
 	}
-	if err := mock.TestOpen(); err != nil {
-		t.Error(err)
-	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := archive.Extension(tt.find); got != tt.want {
 				t.Errorf("extension() = %v, want %v", got, tt.want)
 			}
 		})
-	}
-	if err := mock.TestRemove(); err != nil {
-		log.Fatal(err)
 	}
 }
 
@@ -101,14 +94,11 @@ func TestMIME(t *testing.T) {
 }
 
 func TestConfig_WalkArchiver(t *testing.T) {
-	err := mock.TestOpen()
+	db, err := mock.Database()
 	if err != nil {
 		t.Error(err)
 	}
-	db, err := mock.TestDB()
-	if err != nil {
-		t.Error(err)
-	}
+	defer db.Close()
 	type args struct {
 		name parse.Bucket
 	}
@@ -119,7 +109,7 @@ func TestConfig_WalkArchiver(t *testing.T) {
 	}{
 		{"empty", args{""}, true},
 		{"non-exist", args{"this-directory-does-not-exist"}, true},
-		{"file", args{parse.Bucket(mock.Item1())}, false},
+		{"file", args{parse.Bucket(mock.Item(1))}, false},
 		{"bucket1", args{parse.Bucket(mock.Bucket1())}, false},
 	}
 	for _, tt := range tests {
@@ -143,17 +133,14 @@ func TestConfigRead7Zip(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		//{"empty", args{}, true},
-		// {"file", args{file2, ""}, true},
-		// {"file+bucket", args{file2, bucket1}, true},
-		// {"dir", args{bucket1, ""}, true},
-		// {"7Z no bucket", args{"", file7z}, true},
+		{"empty", args{}, true},
+		{"file", args{file2, ""}, true},
+		{"file+bucket", args{file2, bucket1}, true},
+		{"dir", args{bucket1, ""}, true},
+		{"7Z no bucket", args{"", file7z}, true},
 		{"7Z", args{parse.Bucket(mock.Bucket1()), file7z}, false},
 	}
-	if err := mock.TestOpen(); err != nil {
-		t.Error(err)
-	}
-	db, err := mock.TestDB()
+	db, err := mock.Database()
 	if err != nil {
 		t.Error(err)
 	}
@@ -165,8 +152,5 @@ func TestConfigRead7Zip(t *testing.T) {
 				t.Errorf("Read7Zip error = %v, want %v: %v", (err != nil), tt.wantErr, err)
 			}
 		})
-	}
-	if err := mock.TestRemove(); err != nil {
-		log.Fatal(err)
 	}
 }

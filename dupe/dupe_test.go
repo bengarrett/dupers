@@ -129,7 +129,7 @@ func TestConfig_Status(t *testing.T) {
 
 func TestConfig_WalkDirs(t *testing.T) {
 	c := dupe.Config{Test: true, Debug: true}
-	db, err := mock.TestDB()
+	db, err := mock.Database()
 	if err != nil {
 		t.Error(err)
 	}
@@ -144,7 +144,7 @@ func TestConfig_WalkDirs(t *testing.T) {
 
 func TestConfig_WalkDir(t *testing.T) {
 	c := dupe.Config{Test: true, Debug: true}
-	db, err := mock.TestDB()
+	db, err := mock.Database()
 	if err != nil {
 		t.Error(err)
 	}
@@ -152,7 +152,7 @@ func TestConfig_WalkDir(t *testing.T) {
 	if err := c.WalkDir(db, ""); err == nil {
 		t.Errorf("Config.WalkDir() should return an error with an empty Config.")
 	}
-	f := mock.Item1()
+	f := mock.Item(1)
 	err = c.WalkDir(db, parse.Bucket(f))
 	if err != nil {
 		t.Errorf("Config.WalkDir(%s) should skip files.", f)
@@ -244,7 +244,7 @@ func TestRemoves(t *testing.T) {
 
 func TestChecksum(t *testing.T) {
 	c := dupe.Config{Test: true, Quiet: false, Debug: true}
-	db, err := mock.TestDB()
+	db, err := mock.Database()
 	if err != nil {
 		t.Error(err)
 	}
@@ -329,7 +329,7 @@ func mirrorDir(src, dst string) error {
 
 func TestConfig_WalkArchiver(t *testing.T) {
 	c := dupe.Config{Test: true, Quiet: false, Debug: true}
-	db, err := mock.TestDB()
+	db, err := mock.Database()
 	if err != nil {
 		t.Error(err)
 	}
