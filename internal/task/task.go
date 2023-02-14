@@ -100,7 +100,7 @@ func Database(db *bolt.DB, c *dupe.Config, assumeYes bool, args ...string) error
 	case DB_, Database_:
 		s, err := database.Info(db)
 		if err != nil {
-			out.ErrCont(err)
+			out.StderrCR(err)
 		}
 		fmt.Fprintln(os.Stdout, s)
 	case Export_:
@@ -204,7 +204,7 @@ func walkScan(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
 		return err
 	}
 	if !c.Quiet {
-		fmt.Fprint(os.Stdout, out.RMLine())
+		fmt.Fprint(os.Stdout, out.EraseLine())
 	}
 	// print the found dupes
 	s, err := c.Print()
@@ -324,7 +324,7 @@ func cleanupDB(db *bolt.DB, c *dupe.Config) error {
 		if b := errors.Is(err, database.ErrClean); !b {
 			return err
 		}
-		out.ErrCont(err)
+		out.StderrCR(err)
 	}
 	if err := database.Compact(db, c.Debug); err != nil {
 		if b := errors.Is(err, database.ErrCompact); !b {
@@ -375,7 +375,7 @@ func checkDupePaths(c *dupe.Config, assumeYes bool) error {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "The bucket to lookup is to be stored in the database,")
 	color.Warn.Println(" but the \"Directory to check\" is not.")
-	if !out.YN("Is this what you want", assumeYes, out.No) {
+	if !out.AskYN("Is this what you want", assumeYes, out.No) {
 		return nil
 	}
 	return nil

@@ -221,7 +221,7 @@ func Home() string {
 	h, err := os.UserHomeDir()
 	if err != nil {
 		if h, err = os.Getwd(); err != nil {
-			out.ErrCont(err)
+			out.StderrCR(err)
 		}
 	}
 	return h

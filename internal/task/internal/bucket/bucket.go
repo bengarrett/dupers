@@ -39,7 +39,7 @@ func Check(term, cmd, name string) {
 	if name != "" {
 		return
 	}
-	out.ErrCont(ErrDatabaseName)
+	out.StderrCR(ErrDatabaseName)
 	fmt.Fprintf(os.Stderr, "Cannot %s the bucket as no bucket name was provided.\n", term)
 	if cmd == dmv {
 		out.Example(fmt.Sprintf("\ndupers %s <bucket name> <new directory>", cmd))
@@ -171,7 +171,7 @@ func Move(db *bolt.DB, c *dupe.Config, assumeYes bool, args [3]string) error {
 			color.Secondary.Sprint("Bucket name:"), color.Debug.Sprint(name),
 			"New name:", color.Debug.Sprint(newName))
 		fmt.Fprintln(w, "Renames the database bucket, but this does not make changes to the file system.")
-		if !out.YN("Rename bucket", assumeYes, out.No) {
+		if !out.AskYN("Rename bucket", assumeYes, out.No) {
 			return nil
 		}
 	}
@@ -205,7 +205,7 @@ func Remove(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
 		fmt.Fprintf(w, "%s\t%s\n", color.Secondary.Sprint("Bucket:"), color.Debug.Sprint(name))
 		p := message.NewPrinter(language.English)
 		fmt.Fprintf(w, "%s\t%s\n", color.Secondary.Sprint("Items:"), color.Debug.Sprint(p.Sprint(items)))
-		if !out.YN("Remove this bucket", assumeYes, out.No) {
+		if !out.AskYN("Remove this bucket", assumeYes, out.No) {
 			return nil
 		}
 	}
@@ -232,7 +232,7 @@ func rmBucket(db *bolt.DB, name, retry string) error {
 }
 
 func notFound(db *bolt.DB, name string, err error) {
-	out.ErrCont(err)
+	out.StderrCR(err)
 	w := os.Stdout
 	fmt.Fprintf(w, "Bucket to remove: %s\n", color.Danger.Sprint(name))
 	buckets, err2 := database.All(db)

@@ -104,14 +104,14 @@ func Check() (int64, error) {
 	w := os.Stdout
 	i, err1 := os.Stat(path)
 	if os.IsNotExist(err1) {
-		out.ErrCont(ErrNotFound)
+		out.StderrCR(ErrNotFound)
 		fmt.Fprintf(w, "\n%s\nThe database will be located at: %s\n", NotFound, path)
 		return 0, ErrNotFound // 0
 	} else if err1 != nil {
 		return 0, err
 	}
 	if i.Size() == 0 {
-		out.ErrCont(ErrZeroByte)
+		out.StderrCR(ErrZeroByte)
 		s := "This error occures when dupers cannot save any data to the file system."
 		fmt.Fprintf(w, "\n%s\nThe database is located at: %s\n", s, path)
 		return 0, ErrZeroByte // 1
@@ -314,7 +314,7 @@ func compare(db *bolt.DB, ignoreCase, pathBase bool, term []byte, buckets ...str
 	for _, bucket := range checked {
 		abs, err := AbsB(bucket)
 		if err != nil {
-			out.ErrCont(err)
+			out.StderrCR(err)
 		}
 		if err = db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket(abs)

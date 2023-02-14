@@ -334,7 +334,7 @@ func (c *Config) Removes(assumeYes bool) (string, error) {
 		fmt.Fprintf(w, "%s %s\n", color.Secondary.Sprint("Target directory:"), color.Debug.Sprint(root))
 		fmt.Fprintln(w, "Delete everything in the target directory, except for directories"+
 			"\ncontaining unique Windows or MS-DOS programs and assets?")
-		if input := out.YN("Please confirm", assumeYes, out.Nil); !input {
+		if input := out.AskYN("Please confirm", assumeYes, out.Nil); !input {
 			os.Exit(0)
 		}
 		fmt.Fprintln(w)
@@ -379,7 +379,7 @@ func (c *Config) WalkDirs(db *bolt.DB) error {
 		if err := c.WalkDir(db, bucket); err != nil {
 			if errors.Is(errors.Unwrap(err), ErrPathNoFound) &&
 				errors.Is(database.Exist(db, s), bolt.ErrBucketNotFound) {
-				out.ErrCont(err)
+				out.StderrCR(err)
 				continue
 			}
 			return err
@@ -487,7 +487,7 @@ func (c *Config) WalkSource() error {
 		return nil
 	}
 	if err := c.walkSource(root); err != nil {
-		out.ErrCont(fmt.Errorf("item has a problem: %w", err))
+		out.StderrCR(fmt.Errorf("item has a problem: %w", err))
 		return nil
 	}
 	c.DPrint("directories dupe check: " + strings.Join(c.Sources, " "))
@@ -555,7 +555,7 @@ func (c *Config) init(db *bolt.DB) error {
 	for i, b := range c.All() {
 		abs, err := database.Abs(string(b))
 		if err != nil {
-			out.ErrCont(err)
+			out.StderrCR(err)
 			c.All()[i] = ""
 
 			continue
@@ -625,7 +625,7 @@ func matchItem(match string) string {
 func printRM(path string, err error) string {
 	if err != nil {
 		e := fmt.Errorf("could not remove: %w", err)
-		out.ErrCont(e)
+		out.StderrCR(e)
 		return ""
 	}
 	return fmt.Sprintf("%s: %s", color.Secondary.Sprint("removed"), path)
@@ -652,7 +652,7 @@ func removes(root string, files []fs.DirEntry) string {
 		}
 		path := filepath.Join(root, item.Name())
 		if exe, err := parse.Executable(path); err != nil {
-			out.ErrCont(err)
+			out.StderrCR(err)
 			continue
 		} else if exe {
 			continue
@@ -794,7 +794,7 @@ func (c *Config) WalkArchiver(db *bolt.DB, name parse.Bucket) error {
 		}
 		err = c.walkThread(db, parse.Bucket(root), path)
 		if err != nil {
-			out.ErrCont(err)
+			out.StderrCR(err)
 		}
 		return nil
 	})
@@ -859,7 +859,7 @@ func (c *Config) listItems(db *bolt.DB, bucket string) error {
 	c.DPrint("list bucket items: " + bucket)
 	abs, err := database.AbsB(bucket)
 	if err != nil {
-		out.ErrCont(err)
+		out.StderrCR(err)
 	}
 	if err = db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(abs)
@@ -904,14 +904,14 @@ func (c *Config) Read7Zip(db *bolt.DB, b parse.Bucket, name string) error {
 		}
 		rc, err := f.Open()
 		if err != nil {
-			out.ErrAppend(err)
+			out.Stderr(err)
 			continue
 		}
 		defer rc.Close()
 		cnt++
 		buf, h := make([]byte, oneMb), sha256.New()
 		if _, err := io.CopyBuffer(h, rc, buf); err != nil {
-			out.ErrAppend(err)
+			out.Stderr(err)
 			continue
 		}
 		var sum parse.Checksum
@@ -948,19 +948,19 @@ func (c *Config) Read(db *bolt.DB, b parse.Bucket, name, mimeExt string) error {
 	}
 	f, err := archiver.ByExtension(strings.ToLower(lookup))
 	if err != nil {
-		out.ErrCont(err)
+		out.StderrCR(err)
 		return nil
 	}
 	switch archive.Supported(f) {
 	case true:
 		w, ok := f.(archiver.Walker)
 		if !ok {
-			out.ErrCont(fmt.Errorf("%w: %s: %s", archive.ErrType, lookup, name))
+			out.StderrCR(fmt.Errorf("%w: %s: %s", archive.ErrType, lookup, name))
 			return nil
 		}
 		cnt, err = c.readWalk(db, b, name, cnt, w)
 		if err != nil {
-			out.ErrAppend(err)
+			out.Stderr(err)
 		}
 	default:
 		color.Warn.Printf("Unsupported archive: '%s'\n", name)
@@ -992,13 +992,13 @@ func (c *Config) readWalk(db *bolt.DB, b parse.Bucket, archive string, cnt int, 
 		}
 		buf, h := make([]byte, oneMb), sha256.New()
 		if _, err := io.CopyBuffer(h, f, buf); err != nil {
-			out.ErrAppend(err)
+			out.Stderr(err)
 			return nil
 		}
 		var sum parse.Checksum
 		copy(sum[:], h.Sum(nil))
 		if err := c.update(db, b, path, sum); err != nil {
-			out.ErrAppend(err)
+			out.Stderr(err)
 		}
 		cnt++
 		return nil

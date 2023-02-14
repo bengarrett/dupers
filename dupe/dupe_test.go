@@ -196,7 +196,7 @@ func TestPrintWalk(t *testing.T) {
 	s := strings.TrimSpace(dupe.PrintWalk(false, &c))
 	want := ""
 	if runtime.GOOS != dupe.WinOS {
-		want = out.EraseLine + "\r"
+		want = out.Eraser + "\r"
 	}
 	want += "Scanning 0 files"
 	if s != want {
@@ -206,7 +206,7 @@ func TestPrintWalk(t *testing.T) {
 	s = strings.TrimSpace(dupe.PrintWalk(false, &c))
 	want = ""
 	if runtime.GOOS != dupe.WinOS {
-		want = out.EraseLine + "\r"
+		want = out.Eraser + "\r"
 	}
 	want += "Scanning 15 files"
 	if s != want {
@@ -215,7 +215,7 @@ func TestPrintWalk(t *testing.T) {
 	s = strings.TrimSpace(dupe.PrintWalk(true, &c))
 	want = ""
 	if runtime.GOOS != dupe.WinOS {
-		want = out.EraseLine + "\r"
+		want = out.Eraser + "\r"
 	}
 	want += "Looking up 15 items"
 	if s != want {

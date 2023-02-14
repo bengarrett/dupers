@@ -18,37 +18,35 @@ import (
 type YND uint
 
 const (
-	// Nil does not set a default value.
-	Nil YND = iota
-	// Yes sets the default value.
-	Yes
-	// No sets the default value.
-	No
+	Nil YND = iota // Nil does not set a default value.
+	Yes            // Yes sets the default value.
+	No             // No sets the default value.
 )
 
 // Mode for the current processing count.
 type Mode uint
 
 const (
-	// Check returns Checking items.
-	Check Mode = iota
-	// Look returns Looking up items.
-	Look
-	// Scan returns Scanning files.
-	Scan
-	// Read returns Reading items.
-	Read
+	Check Mode = iota // Check returns Checking items.
+	Look              // Look returns Looking up items.
+	Scan              // Scan returns Scanning files.
+	Read              // Read returns Reading items.
+)
 
-	// ANSI control code to erase the current line in stdout.
-	EraseLine = "\u001b[2K"
-	cr        = "\r"
-	winOS     = "windows"
+const (
+	Eraser      = "\u001b[2K" // Erase is an ANSI control code to erase the current line in stdout.
+	CursorUp    = "\x1b[1A"   // CursorUp is an ANSI control to move the cursor up one line.
+	MatchPrefix = "\n  ⤷\t"   // MatchPrefix is the prefix that's applied to dupe matches.
 
-	MatchPrefix = "\n  ⤷\t"
+	cr    = "\r"
+	winOS = "windows"
 )
 
 // DPrint prints the string to a newline.
 func DPrint(debug bool, s string) {
+	if !debug {
+		return
+	}
 	fmt.Fprintf(os.Stdout, "∙%s\n", s)
 }
 
@@ -62,18 +60,19 @@ func EnterKey() byte {
 	return lf
 }
 
-// ErrAppend appends the error to the current line in stdout.
-func ErrAppend(err error) {
+// Stderr formats and prints the err to stderr.
+func Stderr(err error) {
 	if err == nil {
 		return
 	}
 
 	s := strings.ToLower(err.Error())
-	fmt.Fprint(os.Stderr, color.Warn.Sprintf("%s.\n", strings.TrimSpace(s)))
+	fmt.Fprint(os.Stderr, color.Warn.Sprintf("%s.", strings.TrimSpace(s)))
+	fmt.Fprintln(os.Stderr)
 }
 
-// ErrCont prints the error.
-func ErrCont(err error) {
+// StderrCR formats and prints the err to current line of  stderr.
+func StderrCR(err error) {
 	if err == nil {
 		return
 	}
@@ -84,10 +83,9 @@ func ErrCont(err error) {
 
 	switch {
 	case strings.HasPrefix(s, nf):
-		color.Info.Printf("%s\n",
-			strings.Replace(s, nf, "New database bucket:", 1))
+		fmt.Fprintln(os.Stdout, color.Info.Sprintf("%s\n",
+			strings.Replace(s, nf, "New database bucket:", 1)))
 		return
-
 	case strings.HasPrefix(s, "bucket not found"):
 		s = "bucket does not exist"
 	}
@@ -110,7 +108,7 @@ func Example(cmd string) {
 		return
 	}
 
-	color.Debug.Println(cmd)
+	fmt.Fprintln(os.Stdout, color.Debug.Sprint(cmd))
 }
 
 // Response prints the string when quiet is false.
@@ -119,17 +117,16 @@ func Response(s string, quiet bool) {
 		return
 	}
 
-	w := os.Stdout
-	fmt.Fprintf(w, "%s\n", s)
+	fmt.Fprintf(os.Stdout, "%s\n", s)
 }
 
-// RMLine uses ANSI to erase the current line in stdout.
-func RMLine() string {
+// EraseLine uses ANSI to erase the current line in stdout.
+func EraseLine() string {
 	if runtime.GOOS == winOS {
 		return ""
 	}
 
-	return fmt.Sprintf("%s%s", EraseLine, cr)
+	return fmt.Sprintf("%s%s", Eraser, cr)
 }
 
 // Status prints out the current file or item processing count.
@@ -137,6 +134,9 @@ func Status(count, total int, m Mode) string {
 	// to significantly improved terminal performance
 	// only update the status every 1000th count
 	const mod, ten = 1000, 10
+	if count < 0 || total <= 0 {
+		return ""
+	}
 	if count != total && count > mod {
 		if count < mod*2 {
 			// between 1000-2000, update every 100th count
@@ -170,7 +170,7 @@ func Status(count, total int, m Mode) string {
 	if runtime.GOOS != winOS {
 		// erasing the line makes for a less flickering counter.
 		// not all Windows terminals support ANSI controls.
-		pre = EraseLine + pre
+		pre = Eraser + pre
 	}
 
 	switch m {
@@ -187,15 +187,15 @@ func Status(count, total int, m Mode) string {
 	return ""
 }
 
-// YN prints the question to stdout and prompts for a yes or no reply.
+// AskYN prints the question to stdout and prompts for a yes or no reply.
 // The prompt will loop unless a y or n value is given or Ctrl-C is pressed.
-func YN(question string, assumeYes bool, recommend YND) bool {
-	const no, yes, cursorUp = "n", "y", "\x1b[1A"
+func AskYN(question string, assumeYes bool, recommend YND) bool {
+	const no, yes = "n", "y"
 
 	w := os.Stdout
-	p, def := ynDefine(recommend)
-	prompt := fmt.Sprintf("\r%s?%s[%s]: ", question, def, p)
-	fmt.Fprintf(w, "%s", prompt)
+	prompt, suffix := recommend.Define()
+	ask := fmt.Sprintf("\r%s?%s[%s]: ", question, prompt, suffix)
+	fmt.Fprintf(w, "%s", ask)
 	if assumeYes {
 		fmt.Fprintln(w, yes)
 		return true
@@ -217,10 +217,10 @@ func YN(question string, assumeYes bool, recommend YND) bool {
 		if b == EnterKey() {
 			switch recommend {
 			case Yes:
-				fmt.Fprintf(w, "%s%s%s\n", cursorUp, prompt, "y")
+				fmt.Fprintf(w, "%s%s%s\n", CursorUp, ask, "y")
 				return true
 			case No:
-				fmt.Fprintf(w, "%s%s%s\n", cursorUp, prompt, "n")
+				fmt.Fprintf(w, "%s%s%s\n", CursorUp, ask, "n")
 				return false
 			case Nil:
 				continue
@@ -229,21 +229,19 @@ func YN(question string, assumeYes bool, recommend YND) bool {
 	}
 }
 
-func ynDefine(recommend YND) (p string, def string) {
-	p, def = "", " "
-
-	switch recommend {
+func (y YND) Define() (string, string) {
+	prompt, suffix := "", ""
+	switch y {
 	case Nil:
-		p = "Y/N"
+		prompt = "Y/N"
 	case Yes:
-		p = "Y/n"
-		def = " (default: yes) "
+		prompt = "Y/n"
+		suffix = " (default: yes) "
 	case No:
-		p = "N/y"
-		def = " (default: no) "
+		prompt = "N/y"
+		suffix = " (default: no) "
 	}
-
-	return p, def
+	return prompt, suffix
 }
 
 // Prompt prints the question to stdout and prompts for a string reply.

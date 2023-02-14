@@ -25,7 +25,7 @@ func CmdErr(l int, test bool) error {
 		return nil
 	}
 	w := os.Stdout
-	out.ErrCont(ErrSearch)
+	out.StderrCR(ErrSearch)
 	fmt.Fprintln(w, "A search expression can be a partial or complete filename,")
 	fmt.Fprintln(w, "or a partial or complete directory.")
 	out.Example("\ndupers search <search expression> [optional, directories to search]")
@@ -69,11 +69,11 @@ func Compare(db *bolt.DB, f *cmd.Flags, term string, buckets []string, test bool
 // Error parses the errors from search compares.
 func Error(err error, test bool) error {
 	if errors.Is(err, database.ErrEmpty) {
-		out.ErrCont(err)
+		out.StderrCR(err)
 		return nil
 	}
 	if errors.Is(err, bolt.ErrBucketNotFound) {
-		out.ErrCont(err)
+		out.StderrCR(err)
 		fmt.Fprintln(os.Stdout, "\nTo add this directory to the database, run:")
 		dir := err.Error()
 		if errors.Unwrap(err) == nil {

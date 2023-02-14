@@ -125,7 +125,7 @@ func main() {
 // unknownExit prints the command is unknown helper error and exits.
 func unknownExit(s string) {
 	w := os.Stderr
-	out.ErrCont(ErrCmd)
+	out.StderrCR(ErrCmd)
 	fmt.Fprintf(w, "Command: '%s'", s)
 	fmt.Fprintln(w)
 	fmt.Fprintln(w)
@@ -173,7 +173,7 @@ func about(quiet bool) string {
 	const width = 45
 	exe, err := cmd.Self()
 	if err != nil {
-		out.ErrCont(err)
+		out.StderrCR(err)
 	}
 	w := new(bytes.Buffer)
 	if !quiet {

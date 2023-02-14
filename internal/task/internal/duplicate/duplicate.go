@@ -72,7 +72,7 @@ func Cleanup(c *dupe.Config, f *cmd.Flags) error {
 func CmdErr(args, buckets, minArgs int, test bool) {
 	w := os.Stdout
 	if args < minArgs {
-		out.ErrCont(ErrNoArgs)
+		out.StderrCR(ErrNoArgs)
 		fmt.Fprintln(w, "\nThe dupe command requires a directory or file to check.")
 		if runtime.GOOS == winOS {
 			fmt.Fprintln(w, "The optional bucket can be one or more directories or drive letters.")
@@ -136,7 +136,7 @@ func Lookup(db *bolt.DB, c *dupe.Config, f *cmd.Flags) error {
 	if !*f.Lookup && len(buckets) > 0 {
 		c.DPrint("non-fast mode, database cleanup.")
 		if err := database.Clean(db, c.Quiet, c.Debug, buckets...); err != nil {
-			out.ErrCont(err)
+			out.StderrCR(err)
 		}
 	}
 	if *f.Lookup {
@@ -156,7 +156,7 @@ func lookup(db *bolt.DB, c *dupe.Config) error {
 	fastErr := false
 	for _, bucket := range c.All() {
 		if i, err := c.SetCompares(db, bucket); err != nil {
-			out.ErrCont(err)
+			out.StderrCR(err)
 		} else if i > 0 {
 			continue
 		}
