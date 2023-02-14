@@ -8,10 +8,10 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/bengarrett/dupers/dupe"
 	"github.com/bengarrett/dupers/internal/cmd"
 	"github.com/bengarrett/dupers/internal/out"
 	"github.com/bengarrett/dupers/pkg/database"
+	"github.com/bengarrett/dupers/pkg/dupe"
 	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"
 )

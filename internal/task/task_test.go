@@ -4,10 +4,10 @@ package task_test
 import (
 	"testing"
 
-	"github.com/bengarrett/dupers/dupe"
 	"github.com/bengarrett/dupers/internal/cmd"
 	"github.com/bengarrett/dupers/internal/task"
 	"github.com/bengarrett/dupers/pkg/database"
+	"github.com/bengarrett/dupers/pkg/dupe"
 )
 
 func TestHelp(t *testing.T) {

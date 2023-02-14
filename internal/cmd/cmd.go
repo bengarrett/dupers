@@ -10,8 +10,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/bengarrett/dupers/dupe"
 	"github.com/bengarrett/dupers/internal/out"
+	"github.com/bengarrett/dupers/pkg/dupe"
 	"github.com/gookit/color"
 )
 

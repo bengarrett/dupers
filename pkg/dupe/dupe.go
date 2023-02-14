@@ -14,10 +14,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bengarrett/dupers/dupe/internal/archive"
-	"github.com/bengarrett/dupers/dupe/internal/parse"
 	"github.com/bengarrett/dupers/internal/out"
 	"github.com/bengarrett/dupers/pkg/database"
+	"github.com/bengarrett/dupers/pkg/dupe/internal/archive"
+	"github.com/bengarrett/dupers/pkg/dupe/internal/parse"
 	"github.com/bodgit/sevenzip"
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"

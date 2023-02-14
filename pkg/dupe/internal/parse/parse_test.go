@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/bengarrett/dupers/dupe/internal/parse"
 	"github.com/bengarrett/dupers/internal/mock"
 	"github.com/bengarrett/dupers/pkg/database"
+	"github.com/bengarrett/dupers/pkg/dupe/internal/parse"
 	"github.com/gookit/color"
 )
 
