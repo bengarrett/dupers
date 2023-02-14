@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/bengarrett/dupers/database/internal/bucket"
 	"github.com/bengarrett/dupers/internal/mock"
+	"github.com/bengarrett/dupers/pkg/database/internal/bucket"
 	bolt "go.etcd.io/bbolt"
 )
 

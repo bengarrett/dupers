@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bengarrett/dupers/database/internal/csv"
 	"github.com/bengarrett/dupers/internal/mock"
+	"github.com/bengarrett/dupers/pkg/database/internal/csv"
 )
 
 func mockDir() string {
