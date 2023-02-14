@@ -156,6 +156,15 @@ func (f *Flags) Aliases(a *Aliases, c *dupe.Config) dupe.Config {
 		*f.Debug = true
 		c.Debug = true
 	}
+	if *a.Quiet || *f.Quiet {
+		*f.Quiet = true
+		c.Quiet = true
+	}
+	if *a.Yes || *f.Yes {
+		*f.Yes = true
+		c.Yes = true
+	}
+	// command flags
 	if *a.Exact {
 		*f.Exact = true
 	}
@@ -170,13 +179,6 @@ func (f *Flags) Aliases(a *Aliases, c *dupe.Config) dupe.Config {
 	}
 	if *a.Mono {
 		*f.Mono = true
-	}
-	if *a.Quiet || *f.Quiet {
-		*f.Quiet = true
-		c.Quiet = true
-	}
-	if *a.Yes {
-		*f.Yes = true
 	}
 	if *a.Version {
 		*f.Version = true

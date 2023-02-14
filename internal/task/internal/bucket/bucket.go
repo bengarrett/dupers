@@ -139,7 +139,7 @@ func List(db *bolt.DB, quiet bool, args [2]string) error {
 }
 
 // Move renames a bucket by duplicating it to a new bucket location.
-func Move(db *bolt.DB, c dupe.Config, assumeYes bool, args [3]string) error {
+func Move(db *bolt.DB, c *dupe.Config, assumeYes bool, args [3]string) error {
 	if db == nil {
 		return bolt.ErrDatabaseNotOpen
 	}
@@ -248,7 +248,7 @@ func notFound(db *bolt.DB, name string, err error) {
 }
 
 // Rescan the bucket for changes with the file system.
-func Rescan(db *bolt.DB, c dupe.Config, archives bool, args [2]string) error {
+func Rescan(db *bolt.DB, c *dupe.Config, archives bool, args [2]string) error {
 	if db == nil {
 		return bolt.ErrDatabaseNotOpen
 	}

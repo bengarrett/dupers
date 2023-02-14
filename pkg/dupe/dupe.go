@@ -47,10 +47,10 @@ var (
 
 // Config options.
 type Config struct {
-	Debug     bool // Debug spams technobabble to stdout.
-	Quiet     bool // Quiet the feedback sent to stdout.
-	AssumeYes bool
-	Test      bool // Test toggles the internal unit test mode.
+	Debug bool // Debug spams technobabble to stdout.
+	Quiet bool // Quiet the feedback sent to stdout.
+	Yes   bool // Yes is assumed for all user questions and prompts.
+	Test  bool // Test toggles the internal unit test mode.
 	parse.Scanner
 }
 

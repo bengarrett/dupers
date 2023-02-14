@@ -189,14 +189,15 @@ func Status(count, total int, m Mode) string {
 
 // AskYN prints the question to stdout and prompts for a yes or no reply.
 // The prompt will loop unless a y or n value is given or Ctrl-C is pressed.
-func AskYN(question string, assumeYes bool, recommend YN) bool {
+// alwaysYes will display the question but automatically input "y" onbehalf of the user.
+func AskYN(question string, alwaysYes bool, recommend YN) bool {
 	const no, yes = "n", "y"
 
 	w := os.Stdout
 	prompt, suffix := recommend.Define()
 	ask := fmt.Sprintf("\r%s?%s[%s]: ", question, prompt, suffix)
 	fmt.Fprintf(w, "%s", ask)
-	if assumeYes {
+	if alwaysYes {
 		fmt.Fprintln(w, yes)
 		return true
 	}

@@ -39,7 +39,7 @@ const (
 	homepage = "https://github.com/bengarrett/dupers"
 )
 
-func tasks(selection string, a cmd.Aliases, c dupe.Config, f cmd.Flags) error {
+func tasks(selection string, a cmd.Aliases, c *dupe.Config, f cmd.Flags) error {
 	switch selection {
 	case task.Dupe_:
 		db, err := database.OpenRead()
@@ -47,7 +47,7 @@ func tasks(selection string, a cmd.Aliases, c dupe.Config, f cmd.Flags) error {
 			return err
 		}
 		defer db.Close()
-		return task.Dupe(db, &c, &f, false, flag.Args()...)
+		return task.Dupe(db, c, &f, false, flag.Args()...)
 	case task.Search_:
 		db, err := database.OpenRead()
 		if err != nil {
@@ -66,7 +66,7 @@ func tasks(selection string, a cmd.Aliases, c dupe.Config, f cmd.Flags) error {
 			return err
 		}
 		defer db.Close()
-		return task.Database(db, c, *f.Yes, flag.Args()...)
+		return task.Database(db, c, flag.Args()...)
 	case
 		task.Import_,
 		task.MV_,
@@ -78,7 +78,7 @@ func tasks(selection string, a cmd.Aliases, c dupe.Config, f cmd.Flags) error {
 			return err
 		}
 		defer db.Close()
-		return task.Database(db, c, *f.Yes, flag.Args()...)
+		return task.Database(db, c, flag.Args()...)
 	default:
 		unknownExit(selection)
 	}
@@ -111,7 +111,7 @@ func main() {
 
 	selection := strings.ToLower(flag.Args()[0])
 	c.DPrint("command selection: " + selection)
-	if err := tasks(selection, a, c, f); err != nil {
+	if err := tasks(selection, a, &c, f); err != nil {
 		if errors.Is(err, database.ErrNotFound) {
 			os.Exit(0)
 		}
