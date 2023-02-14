@@ -15,12 +15,12 @@ import (
 )
 
 // YND is the YN default value to use when there is no input given.
-type YND uint
+type YN uint
 
 const (
-	Nil YND = iota // Nil does not set a default value.
-	Yes            // Yes sets the default value.
-	No             // No sets the default value.
+	Nil YN = iota // Nil does not set a default value.
+	Yes           // Yes sets the default value.
+	No            // No sets the default value.
 )
 
 // Mode for the current processing count.
@@ -189,7 +189,7 @@ func Status(count, total int, m Mode) string {
 
 // AskYN prints the question to stdout and prompts for a yes or no reply.
 // The prompt will loop unless a y or n value is given or Ctrl-C is pressed.
-func AskYN(question string, assumeYes bool, recommend YND) bool {
+func AskYN(question string, assumeYes bool, recommend YN) bool {
 	const no, yes = "n", "y"
 
 	w := os.Stdout
@@ -229,7 +229,7 @@ func AskYN(question string, assumeYes bool, recommend YND) bool {
 	}
 }
 
-func (y YND) Define() (string, string) {
+func (y YN) Define() (string, string) {
 	prompt, suffix := "", ""
 	switch y {
 	case Nil:
