@@ -15,11 +15,11 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/bengarrett/dupers/database"
 	"github.com/bengarrett/dupers/dupe"
 	"github.com/bengarrett/dupers/internal/cmd"
 	"github.com/bengarrett/dupers/internal/out"
 	"github.com/bengarrett/dupers/internal/task"
+	"github.com/bengarrett/dupers/pkg/database"
 	"github.com/carlmjohnson/versioninfo"
 	"github.com/gookit/color"
 )

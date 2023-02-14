@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bengarrett/dupers/database/internal/bucket"
-	"github.com/bengarrett/dupers/database/internal/csv"
 	"github.com/bengarrett/dupers/internal/out"
+	"github.com/bengarrett/dupers/pkg/database/internal/bucket"
+	"github.com/bengarrett/dupers/pkg/database/internal/csv"
 	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"
 	"golang.org/x/text/language"

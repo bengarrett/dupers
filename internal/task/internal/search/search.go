@@ -7,9 +7,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/bengarrett/dupers/database"
 	"github.com/bengarrett/dupers/internal/cmd"
 	"github.com/bengarrett/dupers/internal/out"
+	"github.com/bengarrett/dupers/pkg/database"
 	bolt "go.etcd.io/bbolt"
 )
 

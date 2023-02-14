@@ -4,8 +4,8 @@ package search_test
 import (
 	"testing"
 
-	"github.com/bengarrett/dupers/database"
 	"github.com/bengarrett/dupers/internal/task/internal/search"
+	"github.com/bengarrett/dupers/pkg/database"
 	bolt "go.etcd.io/bbolt"
 )
 

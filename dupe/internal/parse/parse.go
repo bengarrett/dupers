@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bengarrett/dupers/database"
 	"github.com/bengarrett/dupers/internal/out"
+	"github.com/bengarrett/dupers/pkg/database"
 	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"
 )
