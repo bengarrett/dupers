@@ -94,6 +94,14 @@ func TestMIME(t *testing.T) {
 }
 
 func TestConfig_WalkArchiver(t *testing.T) {
+	bucket1, err := mock.Bucket(1)
+	if err != nil {
+		t.Error(err)
+	}
+	item1, err := mock.Item(1)
+	if err != nil {
+		t.Error(err)
+	}
 	db, err := mock.Database()
 	if err != nil {
 		t.Error(err)
@@ -109,8 +117,8 @@ func TestConfig_WalkArchiver(t *testing.T) {
 	}{
 		{"empty", args{""}, true},
 		{"non-exist", args{"this-directory-does-not-exist"}, true},
-		{"file", args{parse.Bucket(mock.Item(1))}, false},
-		{"bucket1", args{parse.Bucket(mock.Bucket1())}, false},
+		{"file", args{parse.Bucket(item1)}, false},
+		{"bucket1", args{parse.Bucket(bucket1)}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -123,6 +131,10 @@ func TestConfig_WalkArchiver(t *testing.T) {
 }
 
 func TestConfigRead7Zip(t *testing.T) {
+	bucket1, err := mock.Bucket(1)
+	if err != nil {
+		t.Error(err)
+	}
 	c := dupe.Config{Test: true, Quiet: false, Debug: true}
 	type args struct {
 		bucket parse.Bucket
@@ -136,9 +148,9 @@ func TestConfigRead7Zip(t *testing.T) {
 		{"empty", args{}, true},
 		{"file", args{file2, ""}, true},
 		{"file+bucket", args{file2, bucket1}, true},
-		{"dir", args{bucket1, ""}, true},
+		{"dir", args{parse.Bucket(bucket1), ""}, true},
 		{"7Z no bucket", args{"", file7z}, true},
-		{"7Z", args{parse.Bucket(mock.Bucket1()), file7z}, false},
+		{"7Z", args{parse.Bucket(bucket1), file7z}, false},
 	}
 	db, err := mock.Database()
 	if err != nil {

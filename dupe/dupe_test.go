@@ -128,13 +128,17 @@ func TestConfig_Status(t *testing.T) {
 }
 
 func TestConfig_WalkDirs(t *testing.T) {
+	bucket1, err := mock.Bucket(1)
+	if err != nil {
+		t.Error(err)
+	}
 	c := dupe.Config{Test: true, Debug: true}
 	db, err := mock.Database()
 	if err != nil {
 		t.Error(err)
 	}
 	defer db.Close()
-	if err := c.SetBuckets(mock.Bucket1()); err != nil {
+	if err := c.SetBuckets(bucket1); err != nil {
 		t.Error(err)
 	}
 	if err := c.WalkDirs(db); err != nil {
@@ -143,6 +147,14 @@ func TestConfig_WalkDirs(t *testing.T) {
 }
 
 func TestConfig_WalkDir(t *testing.T) {
+	bucket1, err := mock.Bucket(1)
+	if err != nil {
+		t.Error(err)
+	}
+	item1, err := mock.Item(1)
+	if err != nil {
+		t.Error(err)
+	}
 	c := dupe.Config{Test: true, Debug: true}
 	db, err := mock.Database()
 	if err != nil {
@@ -152,24 +164,26 @@ func TestConfig_WalkDir(t *testing.T) {
 	if err := c.WalkDir(db, ""); err == nil {
 		t.Errorf("Config.WalkDir() should return an error with an empty Config.")
 	}
-	f := mock.Item(1)
-	err = c.WalkDir(db, parse.Bucket(f))
+	err = c.WalkDir(db, parse.Bucket(item1))
 	if err != nil {
-		t.Errorf("Config.WalkDir(%s) should skip files.", f)
+		t.Errorf("Config.WalkDir(%s) should skip files.", item1)
 	}
-	b := mock.Bucket1()
-	err = c.WalkDir(db, parse.Bucket(b))
+	err = c.WalkDir(db, parse.Bucket(bucket1))
 	if err != nil {
-		t.Errorf("Config.WalkDir(%s) returned the error: %v", b, err)
+		t.Errorf("Config.WalkDir(%s) returned the error: %v", bucket1, err)
 	}
 }
 
 func TestConfig_WalkSource(t *testing.T) {
+	bucket2, err := mock.Bucket(2)
+	if err != nil {
+		t.Error(err)
+	}
 	c := dupe.Config{}
 	if err := c.WalkSource(); err == nil {
 		t.Errorf("Config.WalkSource() should return an error with an empty Config.")
 	}
-	if err := c.SetSource(mock.Bucket2()); err != nil {
+	if err := c.SetSource(bucket2); err != nil {
 		t.Errorf("Config.SetSource() returned an error: %v", err)
 	}
 	if err := c.WalkSource(); err != nil {
@@ -243,6 +257,10 @@ func TestRemoves(t *testing.T) {
 }
 
 func TestChecksum(t *testing.T) {
+	bucket1, err := mock.Bucket(1)
+	if err != nil {
+		t.Error(err)
+	}
 	c := dupe.Config{Test: true, Quiet: false, Debug: true}
 	db, err := mock.Database()
 	if err != nil {
@@ -264,8 +282,8 @@ func TestChecksum(t *testing.T) {
 		wantErr bool
 	}{
 		{"empty", args{}, true},
-		{"invalid path", args{"abcde", mock.Bucket1()}, true},
-		{"okay", args{file, mock.Bucket1()}, false},
+		{"invalid path", args{"abcde", bucket1}, true},
+		{"okay", args{file, bucket1}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -328,6 +346,10 @@ func mirrorDir(src, dst string) error {
 }
 
 func TestConfig_WalkArchiver(t *testing.T) {
+	bucket1, err := mock.Bucket(1)
+	if err != nil {
+		t.Error(err)
+	}
 	c := dupe.Config{Test: true, Quiet: false, Debug: true}
 	db, err := mock.Database()
 	if err != nil {
@@ -344,7 +366,7 @@ func TestConfig_WalkArchiver(t *testing.T) {
 	}{
 		{"empty", args{}, true},
 		{"invalid", args{"abcdef"}, true},
-		{"okay", args{mock.Bucket1()}, false},
+		{"okay", args{bucket1}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

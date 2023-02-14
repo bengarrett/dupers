@@ -27,6 +27,7 @@ require (
 require (
 	github.com/carlmjohnson/versioninfo v0.22.4
 	github.com/mholt/archiver/v3 v3.5.1
+	github.com/stretchr/testify v1.8.1
 )
 
 require (
@@ -34,8 +35,11 @@ require (
 	github.com/bodgit/plumbing v1.3.0 // indirect
 	github.com/bodgit/windows v1.0.1 // indirect
 	github.com/connesc/cipherio v0.2.1 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/klauspost/compress v1.15.15 // indirect
 	github.com/klauspost/pgzip v1.2.5 // indirect
 	github.com/pierrec/lz4/v4 v4.1.17 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

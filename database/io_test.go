@@ -87,19 +87,23 @@ func TestCopyFile(t *testing.T) {
 
 func TestCSVExport(t *testing.T) {
 	color.Enable = false
+	bucket1, err := mock.Bucket(1)
+	if err != nil {
+		t.Error(err)
+	}
 	DB, err := mock.Database()
 	if err != nil {
 		log.Panic(err)
 	}
 	defer DB.Close()
 	t.Run("csv export", func(t *testing.T) {
-		gotName, err := database.CSVExport(DB, mock.Bucket1())
+		gotName, err := database.CSVExport(DB, bucket1)
 		if err != nil {
 			t.Errorf("Backup() error = %v, want nil", err)
 			return
 		}
 		if gotName == "" {
-			t.Errorf("Backup() gotName = \"\", want %s", mock.Bucket1())
+			t.Errorf("Backup() gotName = \"\", want %s", bucket1)
 		}
 		if gotName != "" {
 			if err := os.Remove(gotName); err != nil {
@@ -111,9 +115,13 @@ func TestCSVExport(t *testing.T) {
 
 func TestImport(t *testing.T) {
 	color.Enable = false
+	exp1, err := mock.Export(1)
+	if err != nil {
+		t.Error(err)
+	}
 	DB, err := mock.Database()
 	if err != nil {
-		log.Panic(err)
+		t.Error(err)
 	}
 	defer DB.Close()
 	r, err := database.Import(DB, "", nil)
@@ -123,7 +131,7 @@ func TestImport(t *testing.T) {
 	if err == nil {
 		t.Errorf("Import(empty) expect error, not nil")
 	}
-	openCSV, err := os.Open(mock.Export1())
+	openCSV, err := os.Open(exp1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -142,12 +150,20 @@ func TestImport(t *testing.T) {
 
 func TestScanner(t *testing.T) {
 	color.Enable = false
-	openBin, err := os.Open(mock.Item(1))
+	item1, err := mock.Item(1)
+	if err != nil {
+		t.Error(err)
+	}
+	exp1, err := mock.Export(1)
+	if err != nil {
+		t.Error(err)
+	}
+	openBin, err := os.Open(item1)
 	if err != nil {
 		t.Error(err)
 	}
 	defer openBin.Close()
-	openCSV, err := os.Open(mock.Export1())
+	openCSV, err := os.Open(exp1)
 	if err != nil {
 		t.Error(err)
 	}

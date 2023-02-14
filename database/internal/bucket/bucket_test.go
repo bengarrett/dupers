@@ -11,6 +11,10 @@ import (
 )
 
 func TestCleaner_Clean(t *testing.T) {
+	bucket1, err := mock.Bucket(1)
+	if err != nil {
+		t.Error(err)
+	}
 	db, err := mock.Database()
 	if err != nil {
 		t.Error(err)
@@ -35,9 +39,9 @@ func TestCleaner_Clean(t *testing.T) {
 	}{
 		{"empty", fields{}, false, 0, 0},
 		{"defaults", fields{DB: db}, false, 0, 1},
-		{"okay", fields{DB: db, Name: mock.Bucket1()}, true, 0, 0},
-		{"debug", fields{DB: db, Name: mock.Bucket1(), Debug: true}, true, 0, 0},
-		{"quiet", fields{DB: db, Name: mock.Bucket1(), Quiet: true}, true, 0, 0},
+		{"okay", fields{DB: db, Name: bucket1}, true, 0, 0},
+		{"debug", fields{DB: db, Name: bucket1, Debug: true}, true, 0, 0},
+		{"quiet", fields{DB: db, Name: bucket1, Quiet: true}, true, 0, 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -80,6 +84,14 @@ func TestAbs(t *testing.T) {
 }
 
 func TestCount(t *testing.T) {
+	bucket1, err := mock.Bucket(1)
+	if err != nil {
+		t.Error(err)
+	}
+	bucket2, err := mock.Bucket(2)
+	if err != nil {
+		t.Error(err)
+	}
 	db, err := mock.Database()
 	if err != nil {
 		t.Error(err)
@@ -99,8 +111,8 @@ func TestCount(t *testing.T) {
 		{"empty", args{}, false, true},
 		{"no bucket", args{db: db}, false, true},
 		{"bad bucket", args{"abc", db}, false, true},
-		{"404", args{mock.Bucket2(), db}, false, true},
-		{"okay", args{mock.Bucket1(), db}, true, false},
+		{"404", args{bucket2, db}, false, true},
+		{"okay", args{bucket1, db}, true, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

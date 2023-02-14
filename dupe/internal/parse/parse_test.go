@@ -59,6 +59,14 @@ func TestTimer(t *testing.T) {
 }
 
 func TestParser_SetCompares(t *testing.T) {
+	bucket1, err := mock.Bucket(1)
+	if err != nil {
+		t.Error(err)
+	}
+	bucket2, err := mock.Bucket(2)
+	if err != nil {
+		t.Error(err)
+	}
 	db, err := mock.Database()
 	if err != nil {
 		t.Error(err)
@@ -74,8 +82,8 @@ func TestParser_SetCompares(t *testing.T) {
 		wantErr bool
 	}{
 		{"empty", args{}, 0, true},
-		{"mock1", args{mock.Bucket1()}, 4, false},
-		{"mock2", args{mock.Bucket2()}, 0, true},
+		{"mock1", args{bucket1}, 4, false},
+		{"mock2", args{bucket2}, 0, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
