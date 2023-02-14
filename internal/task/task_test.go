@@ -50,7 +50,7 @@ func TestDupe(t *testing.T) {
 
 func TestDatabase(t *testing.T) {
 	type args struct {
-		c   *dupe.Config
+		c   dupe.Config
 		cmd string
 	}
 	tests := []struct {

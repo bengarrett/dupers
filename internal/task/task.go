@@ -78,15 +78,12 @@ func Directories() error {
 
 // Database parses the commands that interact with the database.
 // TODO: move assumeYes into Config
-func Database(db *bolt.DB, c *dupe.Config, assumeYes bool, args ...string) error {
+func Database(db *bolt.DB, c dupe.Config, assumeYes bool, args ...string) error {
 	if len(args) == 0 {
 		return ErrCommand
 	}
 	buckets := [2]string{}
 	copy(buckets[:], args)
-	if c == nil {
-		c = new(dupe.Config)
-	}
 	quiet := c.Quiet
 	if _, err := database.Check(); err != nil {
 		return err
@@ -319,7 +316,7 @@ func backupDB(quiet bool) error {
 }
 
 // cleanupDB cleans and compacts the database.
-func cleanupDB(db *bolt.DB, c *dupe.Config) error {
+func cleanupDB(db *bolt.DB, c dupe.Config) error {
 	if err := database.Clean(db, c.Quiet, c.Debug); err != nil {
 		if b := errors.Is(err, database.ErrClean); !b {
 			return err

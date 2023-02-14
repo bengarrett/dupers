@@ -66,7 +66,7 @@ func tasks(selection string, a cmd.Aliases, c dupe.Config, f cmd.Flags) error {
 			return err
 		}
 		defer db.Close()
-		return task.Database(db, &c, *f.Yes, flag.Args()...)
+		return task.Database(db, c, *f.Yes, flag.Args()...)
 	case
 		task.Import_,
 		task.MV_,
@@ -78,7 +78,7 @@ func tasks(selection string, a cmd.Aliases, c dupe.Config, f cmd.Flags) error {
 			return err
 		}
 		defer db.Close()
-		return task.Database(db, &c, *f.Yes, flag.Args()...)
+		return task.Database(db, c, *f.Yes, flag.Args()...)
 	default:
 		unknownExit(selection)
 	}
