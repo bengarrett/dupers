@@ -2,167 +2,112 @@
 package archive_test
 
 import (
-	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/bengarrett/dupers/internal/mock"
 	"github.com/bengarrett/dupers/pkg/dupe"
 	"github.com/bengarrett/dupers/pkg/dupe/internal/archive"
 	"github.com/bengarrett/dupers/pkg/dupe/internal/parse"
-)
-
-const (
-	bucket1 = "../../../test/bucket1/"
-	file1   = "../../../test/bucket1/0vlLaUEvzAWP"
-	file2   = "../../../test/bucket1/GwejJkMzs3yP"
-	file7z  = "../../../test/randomfiles.7z"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestExtension(t *testing.T) {
-	const xz = ".xz"
-	tests := []struct {
-		name string
-		find string
-		want string
-	}{
-		{"empty", "", ""},
-		{"xz1", xz, archive.MimeXZ},
-		{"xz2", archive.MimeXZ, xz},
-		{"caps", strings.ToUpper(xz), archive.MimeXZ},
-		{"no dot", "xz", xz},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := archive.Extension(tt.find); got != tt.want {
-				t.Errorf("extension() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	s := archive.Extension("")
+	assert.Equal(t, "", s)
+
+	s = archive.Extension(".7Z")
+	assert.Equal(t, archive.Mime7z, s)
+
+	s = archive.Extension(archive.Mime7z)
+	assert.Equal(t, s, archive.Ext7z)
+
+	s = archive.Extension(".tar.bz2")
+	assert.Equal(t, archive.MimeTar, s)
 }
 
 func TestReadMIME(t *testing.T) {
-	dir, err := filepath.Abs("../../../test")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	tests := []struct {
-		name     string
-		filename string
-		wantMime string
-		wantErr  bool
-	}{
-		{"empty", "", "", true},
-		{"text file", filepath.Join(dir, "randomfiles.txt"), "", true},
-		{"7z", filepath.Join(dir, "randomfiles.7z"), archive.Mime7z, false},
-		{"xz", filepath.Join(dir, "randomfiles.tar.xz"), archive.MimeXZ, true},
-		{"zip", filepath.Join(dir, "randomfiles.zip"), archive.MimeZip, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotMime, err := archive.ReadMIME(tt.filename)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ReadMIME() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if gotMime != tt.wantMime {
-				t.Errorf("ReadMIME() gotMime = %v, want %v", gotMime, tt.wantMime)
-			}
-		})
-	}
-}
 
-func TestMIME(t *testing.T) {
-	tests := []struct {
-		name     string
-		filename string
-		wantMime string
-	}{
-		{"empty", "", ""},
-		{"text", "file.txt", ""},
-		{"zip", "file.zip", archive.MimeZip},
+	mime, err := archive.ReadMIME("")
+	assert.NotNil(t, err)
+	assert.Equal(t, "", mime)
+
+	mime, err = archive.ReadMIME(mock.NoSuchFile)
+	assert.NotNil(t, err)
+	assert.Equal(t, "", mime)
+
+	// test unsupported file types
+	unsupported := []string{"txt", "xz"}
+	for _, ext := range unsupported {
+		s, err := mock.Extension(ext)
+		assert.Nil(t, err)
+		assert.NotEqual(t, "", s)
+		_, err = archive.ReadMIME(s)
+		assert.NotNil(t, err)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotMime := archive.MIME(tt.filename)
-			if gotMime != tt.wantMime {
-				t.Errorf("IsExtension() gotMime = %v, want %v", gotMime, tt.wantMime)
-			}
-		})
+
+	// test supported archives
+	supported := []string{"7z", "zip"}
+	for _, ext := range supported {
+		s, err := mock.Extension(ext)
+		assert.Nil(t, err)
+		assert.NotEqual(t, "", s)
+		mime, err = archive.ReadMIME(s)
+		assert.Nil(t, err)
+		assert.Contains(t, mime, "application/")
 	}
 }
 
 func TestConfig_WalkArchiver(t *testing.T) {
-	bucket1, err := mock.Bucket(1)
-	if err != nil {
-		t.Error(err)
-	}
-	item1, err := mock.Item(1)
-	if err != nil {
-		t.Error(err)
-	}
+	c := dupe.Config{Test: true}
+
+	err := c.WalkArchiver(nil, "")
+	assert.NotNil(t, err)
+
 	db, err := mock.Database()
-	if err != nil {
-		t.Error(err)
-	}
+	assert.Nil(t, err)
 	defer db.Close()
-	type args struct {
-		name parse.Bucket
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{"empty", args{""}, true},
-		{"non-exist", args{"this-directory-does-not-exist"}, true},
-		{"file", args{parse.Bucket(item1)}, false},
-		{"bucket1", args{parse.Bucket(bucket1)}, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := dupe.Config{Test: true}
-			if err := c.WalkArchiver(db, tt.args.name); (err != nil) != tt.wantErr {
-				t.Errorf("Config.WalkArchiver() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
+
+	err = c.WalkArchiver(db, "")
+	assert.NotNil(t, err)
+
+	err = c.WalkArchiver(db, mock.NoSuchFile)
+	assert.NotNil(t, err)
+
+	item1, err := mock.Item(1)
+	assert.Nil(t, err)
+	err = c.WalkArchiver(db, parse.Bucket(item1))
+	assert.Nil(t, err)
+
+	bucket1, err := mock.Bucket(1)
+	assert.Nil(t, err)
+	err = c.WalkArchiver(db, parse.Bucket(bucket1))
+	assert.Nil(t, err)
 }
 
 func TestConfigRead7Zip(t *testing.T) {
-	bucket1, err := mock.Bucket(1)
-	if err != nil {
-		t.Error(err)
-	}
-	c := dupe.Config{Test: true, Quiet: false, Debug: true}
-	type args struct {
-		bucket parse.Bucket
-		name   string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{"empty", args{}, true},
-		{"file", args{file2, ""}, true},
-		{"file+bucket", args{file2, bucket1}, true},
-		{"dir", args{parse.Bucket(bucket1), ""}, true},
-		{"7Z no bucket", args{"", file7z}, true},
-		{"7Z", args{parse.Bucket(bucket1), file7z}, false},
-	}
+	c := dupe.Config{Test: true, Quiet: false, Debug: false}
+
+	err := c.Read7Zip(nil, "", "")
+	assert.NotNil(t, err)
+
 	db, err := mock.Database()
-	if err != nil {
-		t.Error(err)
-	}
+	assert.Nil(t, err)
 	defer db.Close()
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := c.Read7Zip(db, tt.args.bucket, tt.args.name)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Read7Zip error = %v, want %v: %v", (err != nil), tt.wantErr, err)
-			}
-		})
-	}
+
+	err = c.Read7Zip(db, "", "")
+	assert.NotNil(t, err)
+
+	bucket1, err := mock.Bucket(1)
+	assert.Nil(t, err)
+
+	err = c.Read7Zip(db, parse.Bucket(bucket1), "")
+	assert.NotNil(t, err)
+
+	z7, err := mock.Extension("7z")
+	assert.Nil(t, err)
+	err = c.Read7Zip(db, parse.Bucket(z7), "")
+	assert.NotNil(t, err)
+
+	err = c.Read7Zip(db, parse.Bucket(bucket1), z7)
+	assert.Nil(t, err)
 }

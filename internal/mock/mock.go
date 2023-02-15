@@ -20,9 +20,10 @@ import (
 )
 
 const (
-	PrivateFile fs.FileMode = 0o600
-	PrivateDir  fs.FileMode = 0o700
-	SevenZip                = "test/randomfiles.7z"
+	PrivateFile fs.FileMode = 0o600                 // PrivateFile mode means only the owner has read/write access.
+	PrivateDir  fs.FileMode = 0o700                 // PrivateDir mode means only the owner has read/write/dir access.
+	SevenZip                = "test/randomfiles.7z" //
+	NoSuchFile              = "qwertryuiop"         // NoSuchFile is a mock, non-existent file.
 
 	filename = "dupers.db"
 	subdir   = "dupers-mock"
@@ -32,17 +33,25 @@ const (
 )
 
 var (
-	ErrBucket   = errors.New("mock bucket number does not exist")
-	ErrExport   = errors.New("mock export number does not exist")
-	ErrItem     = errors.New("mock item number does not exist")
-	ErrLockedDB = errors.New("mock database is locked by the Windows filesystem")
-	ErrNoRoot   = errors.New("could not determine the root directory")
+	ErrBucket    = errors.New("mock bucket number does not exist")
+	ErrExport    = errors.New("mock export number does not exist")
+	ErrExtension = errors.New("mock file for extension does not exist")
+	ErrItem      = errors.New("mock item number does not exist")
+	ErrLockedDB  = errors.New("mock database is locked by the Windows filesystem")
+	ErrNoRoot    = errors.New("could not determine the root directory")
 )
 
 var sources = map[int]string{
 	0: "/0vlLaUEvzAWP",
 	1: "/3a9dnxgSVEnJ",
 	2: "/12wZkDDR9CQ0",
+}
+
+var extensions = map[string]string{
+	"7z":  "/randomfiles.7z",
+	"xz":  "/randomfiles.tar.xz",
+	"txt": "/randomfiles.txt",
+	"zip": "/randomfiles.zip",
 }
 
 // RootDir returns the root directory of the program's source code.
@@ -120,6 +129,21 @@ func Item(i int) (string, error) {
 		return "", err
 	}
 	path := filepath.Join(bucket1, elem)
+	f, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+
+	return f, nil
+}
+
+// Extension returns the absolute path of a test file based on an extension.
+func Extension(ext string) (string, error) {
+	elem, ok := extensions[ext]
+	if !ok {
+		return "", ErrExtension
+	}
+	path := filepath.Join(RootDir(), "test", elem)
 	f, err := filepath.Abs(path)
 	if err != nil {
 		return "", err

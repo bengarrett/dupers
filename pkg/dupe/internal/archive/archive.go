@@ -28,7 +28,7 @@ const (
 	MimeZ    = "application/zstd"                  // Zstandard type.
 	MimeZip  = "application/zip"                   // ZIP type.
 
-	Ext7z = ".7z" // 7-Zip file extension.
+	Ext7z = ".7z" // Ext7z is the 7-Zip file extension.
 )
 
 var (
@@ -40,7 +40,7 @@ var (
 func Extension(find string) string {
 	// mime types refer to data types and do not contain encoding information
 	// * mime not detected by h2non/filetype
-	ext := map[string]string{
+	exts := map[string]string{
 		Ext7z:      Mime7z,
 		".bz2":     MimeBZ2,
 		".gz":      MimeGZ,   // gzip
@@ -65,17 +65,17 @@ func Extension(find string) string {
 		".zip":     MimeZip,
 		".zst":     MimeZ, // Zstandard (zstd)*
 	}
-	f := strings.ToLower(find)
-	for k, v := range ext {
-		if k == f {
-			return v
+	lfind := strings.ToLower(find)
+	for ext, mime := range exts {
+		if ext == lfind {
+			return mime
 		}
-		if v == f {
-			return k
+		if mime == lfind {
+			return ext
 		}
 		if !strings.HasPrefix(find, ".") {
-			if k == fmt.Sprintf(".%s", f) {
-				return k
+			if ext == fmt.Sprintf(".%s", lfind) {
+				return ext
 			}
 		}
 	}

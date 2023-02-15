@@ -62,7 +62,6 @@ func TestNamedDB(t *testing.T) {
 	stat, err = os.Stat(file)
 	assert.Nil(t, err)
 	assert.NotNil(t, stat)
-
 }
 
 func TestDatabase(t *testing.T) {
@@ -79,4 +78,18 @@ func TestOpen(t *testing.T) {
 	defer db.Close()
 	assert.NotEqual(t, "", db.Path())
 	assert.NotEqual(t, "", db.String())
+}
+
+func TestExtension(t *testing.T) {
+	ext, err := mock.Extension("")
+	assert.NotNil(t, err)
+	assert.Equal(t, "", ext)
+
+	ext, err = mock.Extension("arc")
+	assert.NotNil(t, err)
+	assert.Equal(t, "", ext)
+
+	ext, err = mock.Extension("7z")
+	assert.Nil(t, err)
+	assert.Contains(t, ext, "randomfiles.7z")
 }
