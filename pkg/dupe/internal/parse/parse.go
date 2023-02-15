@@ -40,6 +40,8 @@ type Scanner struct {
 	timer   time.Time
 }
 
+var ErrNoSource = errors.New("cannot set an empty source")
+
 // All buckets returned as a slice.
 func (p *Scanner) All() []Bucket {
 	return p.Buckets
@@ -67,8 +69,21 @@ func (p *Scanner) SetAllBuckets(db *bolt.DB) error {
 
 // SetBuckets adds the bucket name to a list of buckets.
 func (p *Scanner) SetBuckets(names ...string) error {
+	// find returns true if n exists in p.Buckets
+	find := func(n string) bool {
+		for _, x := range p.Buckets {
+			if n == string(x) {
+				return true
+			}
+		}
+		return false
+	}
+
 	var errs error
 	for _, name := range names {
+		if name == "" {
+			continue
+		}
 		n, err := filepath.Abs(string(name))
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("%w: %s", err, n))
@@ -78,8 +93,10 @@ func (p *Scanner) SetBuckets(names ...string) error {
 			errs = errors.Join(errs, fmt.Errorf("%w: %s", err, n))
 			continue
 		}
-
-		p.Buckets = append(p.Buckets, Bucket(name))
+		if find(n) {
+			continue
+		}
+		p.Buckets = append(p.Buckets, Bucket(n))
 	}
 	if errs != nil {
 		return errs
@@ -120,6 +137,9 @@ func (p *Scanner) GetSource() string {
 
 // SetSource sets the named string as the directory or file to check.
 func (p *Scanner) SetSource(name string) error {
+	if name == "" {
+		return ErrNoSource
+	}
 	n, err := filepath.Abs(name)
 	if err != nil {
 		return err

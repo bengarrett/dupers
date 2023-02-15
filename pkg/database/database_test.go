@@ -17,10 +17,6 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func init() { //nolint:gochecknoinits
-	database.TestMode = true
-}
-
 const (
 	testSrc = "../test/files_to_check/ppFlTD6QQYlS"
 	testDst = "../test/tmp/ppFlTD6QQYlS"

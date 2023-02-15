@@ -6,7 +6,6 @@ import (
 
 	"github.com/bengarrett/dupers/internal/cmd"
 	"github.com/bengarrett/dupers/internal/task"
-	"github.com/bengarrett/dupers/pkg/database"
 	"github.com/bengarrett/dupers/pkg/dupe"
 )
 
@@ -19,8 +18,6 @@ func TestHelp(t *testing.T) {
 }
 
 func TestDupe(t *testing.T) {
-	const tester = true
-	database.TestMode = tester
 	type args struct {
 		c    *dupe.Config
 		f    *cmd.Flags
@@ -41,7 +38,7 @@ func TestDupe(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := task.Dupe(nil, tt.args.c, tt.args.f, tester, tt.args.args...); (err != nil) != tt.wantErr {
+			if err := task.Dupe(nil, tt.args.c, tt.args.f, true, tt.args.args...); (err != nil) != tt.wantErr {
 				t.Errorf("Dupe() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

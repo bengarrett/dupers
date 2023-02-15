@@ -61,8 +61,6 @@ var (
 	ErrZeroByte  = errors.New("database is a zero byte file")
 )
 
-var TestMode = false //nolint:gochecknoglobals
-
 // Abs returns an absolute representation of the named bucket.
 func Abs(name string) (string, error) {
 	return bucket.Abs(name)
@@ -392,9 +390,6 @@ func DB() (string, error) {
 		}
 	}
 	dir = filepath.Join(dir, subdir)
-	if TestMode {
-		dir = filepath.Join(dir, "test")
-	}
 	// create database directory if it doesn't exist
 	if _, err = os.Stat(dir); os.IsNotExist(err) {
 		if errMk := os.MkdirAll(dir, PrivateDir); errMk != nil {

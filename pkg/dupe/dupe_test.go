@@ -200,24 +200,7 @@ func TestRemoves(t *testing.T) {
 	err = c.SetSource(tmpDir)
 	assert.Nil(t, err)
 
-	// make 25 subdirectories with the naming syntax "mock-dir-XX"
-	n := 0
-	dest := ""
-	for n < 25 {
-		n++
-		name := filepath.Join(tmpDir, fmt.Sprintf("mock-dir-%d", n))
-		err = os.MkdirAll(name, mock.PrivateDir)
-		assert.Nil(t, err)
-		if n == 16 {
-			dest = name
-		}
-	}
-	// copy a fake .exe file to dest
-	item, err := mock.Item(1)
-	assert.Nil(t, err)
-	assert.NotEqual(t, "", item)
-
-	i, err := database.CopyFile(item, filepath.Join(dest, "some-pretend-windows-app.exe"))
+	i, err := mock.SensenTmp()
 	assert.Nil(t, err)
 	assert.Equal(t, int64(20), i)
 

@@ -5,6 +5,7 @@ package mock
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -23,13 +24,12 @@ const (
 	PrivateFile fs.FileMode = 0o600                 // PrivateFile mode means only the owner has read/write access.
 	PrivateDir  fs.FileMode = 0o700                 // PrivateDir mode means only the owner has read/write/dir access.
 	SevenZip                = "test/randomfiles.7z" //
-	NoSuchFile              = "qwertryuiop"         // NoSuchFile is a mock, non-existent file.
-
-	filename = "dupers.db"
-	subdir   = "dupers-mock"
-	win      = "windows"
-	oneKb    = 1024
-	oneMb    = oneKb * oneKb
+	NoSuchFile              = "qwertryuiop"         // NoSuchFile is a non-existent filename.
+	filename                = "dupers.db"           // filename of the mock database.
+	subdir                  = "dupers-mock"         // subdir is the sub-directory within config that houses the mock database.
+	win                     = "windows"
+	oneKb                   = 1024
+	oneMb                   = oneKb * oneKb
 )
 
 var (
@@ -45,6 +45,12 @@ var sources = map[int]string{
 	0: "/0vlLaUEvzAWP",
 	1: "/3a9dnxgSVEnJ",
 	2: "/12wZkDDR9CQ0",
+}
+
+var checksums = map[int]string{
+	0: "1a1d76a3187ccee147e6c807277273afbad5d2680f5eadf1012310743e148f22",
+	1: "1bdd103eace1a58d2429d447ac551030a9da424056d2d89a77b1366a04f1f1cc",
+	2: "c5f338d4057fb107793032de91b264707c3c27bf9970687a78a080a4bf095c26",
 }
 
 var extensions = map[string]string{
@@ -198,12 +204,21 @@ func Create() (string, error) {
 		}); err != nil {
 			return err
 		}
-		// create the new mock bucket
+		// create the new mock bucket #1
 		bucket1, err := Bucket(1)
 		if err != nil {
 			return err
 		}
 		b, err := tx.CreateBucket([]byte(bucket1))
+		if err != nil {
+			return fmt.Errorf("%w: create bucket: %s", err, bucket1)
+		}
+		// create the new, but empty mock bucket #2
+		bucket2, err := Bucket(2)
+		if err != nil {
+			return err
+		}
+		_, err = tx.CreateBucket([]byte(bucket2))
 		if err != nil {
 			return fmt.Errorf("%w: create bucket: %s", err, bucket1)
 		}
@@ -236,14 +251,17 @@ func Read(name string) (sum [32]byte, err error) {
 	}
 	defer f.Close()
 
-	buf, h := make([]byte, oneMb), sha256.New()
+	buf := make([]byte, oneMb)
+	h := sha256.New()
 	if _, err := io.CopyBuffer(h, f, buf); err != nil {
 		return [32]byte{}, err
 	}
 
-	copy(sum[:], h.Sum(nil))
+	// copy(sum[:], h.Sum(nil))
 
-	return sum, nil
+	// x := [32]byte(h.Sum(nil))
+
+	return [32]byte(h.Sum(nil)), nil
 }
 
 // Database creates, opens and returns the mock database.
@@ -294,6 +312,7 @@ func Delete() error {
 	return nil
 }
 
+// MirrorTmp recursively copies the directory content of src into the hidden tmp mock directory.
 func MirrorTmp(src string) error {
 	const dirAllAccess fs.FileMode = 0o777
 	from, err := filepath.Abs(src)
@@ -325,6 +344,7 @@ func MirrorTmp(src string) error {
 	})
 }
 
+// RemoveTmp deletes the hidden tmp mock directory and returns the number of files deleted.
 func RemoveTmp() (int, error) {
 	tmpDir, err := TempDir()
 	if err != nil {
@@ -345,4 +365,50 @@ func RemoveTmp() (int, error) {
 		return 0, err
 	}
 	return count, os.RemoveAll(tmpDir)
+}
+
+// SensenTmp generates 25 subdirectories within the hidden tmp mock directory,
+// and copies a mock Windows/DOS .exe program file into one.
+// The returned int is the number of bytes copied.
+func SensenTmp() (int64, error) {
+	tmpDir, err := TempDir()
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	dest := ""
+	for n < 25 {
+		n++
+		name := filepath.Join(tmpDir, fmt.Sprintf("mock-dir-%d", n))
+		if err = os.MkdirAll(name, PrivateDir); err != nil {
+			return 0, err
+		}
+		if n == 16 {
+			dest = name
+		}
+	}
+	item, err := Item(1)
+	if err != nil {
+		return 0, err
+	}
+	return database.CopyFile(item, filepath.Join(dest, "some-pretend-windows-app.exe"))
+}
+
+// Sum compares b against the expected SHA-256 binary checksum of the test source file item.
+func Sum(item int, b [32]byte) (bool, error) {
+	if item >= len(checksums) || item < 0 {
+		return false, ErrItem
+	}
+	if checksums[item] == hex.EncodeToString(b[:]) {
+		return true, nil
+	}
+	return false, nil
+}
+
+// ItemSum returns the SHA-256 binary checksum of the test source file item.
+func ItemSum(item int) (string, error) {
+	if item >= len(checksums) || item < 0 {
+		return "", ErrItem
+	}
+	return checksums[item], nil
 }

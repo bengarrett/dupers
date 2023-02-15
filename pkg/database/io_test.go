@@ -13,10 +13,6 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func init() { //nolint:gochecknoinits
-	database.TestMode = true
-}
-
 func TestBackup(t *testing.T) {
 	color.Enable = false
 	tests := []struct {
