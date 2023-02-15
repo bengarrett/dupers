@@ -5,6 +5,7 @@ package dupe_test
 import (
 	"bytes"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -308,4 +309,52 @@ func TestConfig_CheckPaths(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 24, files, "unexpected file count")
 	assert.Equal(t, 12, buckets, "unexpected bucket count")
+}
+
+func TestMatch(t *testing.T) {
+	s := dupe.Match("", "")
+	assert.Equal(t, "", s)
+
+	const item = "some-pretend-file"
+	tmpDir, err := mock.TempDir()
+	assert.Nil(t, err)
+	s = dupe.Match(tmpDir, item)
+	assert.Contains(t, s, item)
+
+	item1, err := mock.Item(1)
+	assert.Nil(t, err)
+	s = dupe.Match(tmpDir, item1)
+	assert.Contains(t, s, item1)
+}
+
+func TestSkipDir(t *testing.T) {
+	tmpDir, err := mock.TempDir()
+	assert.Nil(t, err)
+
+	info, err := os.Stat(tmpDir)
+	assert.Nil(t, err)
+	dir := fs.FileInfoToDirEntry(info)
+	err = dupe.SkipDir(dir)
+	assert.Nil(t, err)
+
+	skipDirs := []string{"node_modules", ".hidden", "__macosx"}
+	for _, elem := range skipDirs {
+		name := filepath.Join(tmpDir, elem)
+		err = os.MkdirAll(name, mock.PrivateDir)
+		assert.Nil(t, err)
+		defer os.Remove(name)
+		info, err = os.Stat(name)
+		assert.Nil(t, err)
+		dir = fs.FileInfoToDirEntry(info)
+		err = dupe.SkipDir(dir)
+		assert.NotNil(t, err)
+	}
+}
+
+func TestSkipFile(t *testing.T) {
+	skipFiles := []string{".DS_STORE", "pagefile.sys", "thumbs.db"}
+	for _, name := range skipFiles {
+		b := dupe.SkipFile(name)
+		assert.Equal(t, true, b)
+	}
 }

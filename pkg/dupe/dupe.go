@@ -115,7 +115,7 @@ func (c *Config) walkBucket(b parse.Bucket, files, buckets int) (int, error) {
 			return nil
 		}
 		c.DPrint("walking bucket item: " + path)
-		if err := skipDir(d); err != nil {
+		if err := SkipDir(d); err != nil {
 			return err
 		}
 		if !d.Type().IsRegular() {
@@ -142,7 +142,7 @@ func (c *Config) walkPath(root string) (int, error) {
 		if root == path {
 			return nil
 		}
-		if err := skipDir(d); err != nil {
+		if err := SkipDir(d); err != nil {
 			return err
 		}
 		if !d.Type().IsRegular() {
@@ -287,7 +287,7 @@ func (c *Config) Print() (string, error) {
 		}
 		finds++
 
-		fmt.Fprintln(w, match(path, l))
+		fmt.Fprintln(w, Match(path, l))
 	}
 	if finds == 0 {
 		fmt.Fprintln(w, color.Info.Sprint("\rNo duplicate files found.          "))
@@ -473,10 +473,10 @@ func (c *Config) walkDir(db *bolt.DB, root string, skip []string) error {
 		if path == root {
 			return nil
 		}
-		if err := skipDir(d); err != nil {
+		if err := SkipDir(d); err != nil {
 			return c.walkDebug(" - skipping directory", err)
 		}
-		if skipFile(d.Name()) {
+		if SkipFile(d.Name()) {
 			return c.walkDebug(" - skipping file", nil)
 		}
 		if !d.Type().IsRegular() {
@@ -539,7 +539,7 @@ func (c *Config) walkSource(root string) error {
 			return nil
 		}
 		// skip directories
-		if err := skipDir(d); err != nil {
+		if err := SkipDir(d); err != nil {
 			return err
 		}
 		// skip non-files such as symlinks
@@ -632,8 +632,11 @@ func (c *Config) skipFiles() (files []string) {
 	return files
 }
 
-// match prints 'Found duplicate match'.
-func match(path, match string) string {
+// Match prints 'Found duplicate match'.
+func Match(path, match string) string {
+	if match == "" {
+		return ""
+	}
 	s := "\n"
 	s += color.Info.Sprint("Match") +
 		":" +
@@ -642,18 +645,21 @@ func match(path, match string) string {
 	return s
 }
 
-// matchItem prints 'Found duplicate match' along with file stat info.
+// MatchItem prints 'Found duplicate match' along with file stat info.
 func matchItem(match string) string {
-	s := color.Success.Sprint(out.MatchPrefix) +
+	matches := color.Success.Sprint(out.MatchPrefix) +
 		fmt.Sprint(match)
+	if match == "" {
+		return ""
+	}
 	stat, err := os.Stat(match)
 	if err != nil {
-		return s
+		return matches
 	}
-	s += "\n    " +
+	matches += "\n    " +
 		fmt.Sprintf("\t%s, ", stat.ModTime().Format(modFmt)) +
 		humanize.Bytes(uint64(stat.Size()))
-	return s
+	return matches
 }
 
 // PrintRM prints "could not remove:".
@@ -678,7 +684,7 @@ func PrintWalk(lookup bool, c *Config) string {
 }
 
 // skipDir tells WalkDir to ignore specific system and hidden directories.
-func skipDir(d fs.DirEntry) error {
+func SkipDir(d fs.DirEntry) error {
 	if !d.IsDir() {
 		return nil
 	}
@@ -700,8 +706,8 @@ func skipDir(d fs.DirEntry) error {
 	}
 }
 
-// skipFile returns true if the file matches a known Windows or macOS system file.
-func skipFile(name string) bool {
+// SkipFile returns true if the file matches a known Windows or macOS system file.
+func SkipFile(name string) bool {
 	const macOS, windows, macOSExtension = true, true, "._"
 
 	switch strings.ToLower(name) {
@@ -794,10 +800,10 @@ func (c *Config) WalkArchiver(db *bolt.DB, name parse.Bucket) error {
 		if root == path {
 			return nil
 		}
-		if err1 := skipDir(d); err1 != nil {
+		if err1 := SkipDir(d); err1 != nil {
 			return err1
 		}
-		if skipFile(d.Name()) {
+		if SkipFile(d.Name()) {
 			return nil
 		}
 		if !d.Type().IsRegular() {
@@ -997,7 +1003,7 @@ func (c *Config) readWalk(db *bolt.DB, b parse.Bucket, archive string, cnt int, 
 		if !f.FileInfo.Mode().IsRegular() {
 			return nil
 		}
-		if skipFile(f.Name()) {
+		if SkipFile(f.Name()) {
 			return nil
 		}
 		path := filepath.Join(archive, f.Name())
