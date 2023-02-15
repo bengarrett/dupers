@@ -40,6 +40,7 @@ const (
 )
 
 func tasks(selection string, a cmd.Aliases, c *dupe.Config, f cmd.Flags) error {
+
 	switch selection {
 	case task.Dupe_:
 		db, err := database.OpenRead()

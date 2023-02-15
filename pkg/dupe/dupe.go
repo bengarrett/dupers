@@ -38,11 +38,12 @@ const (
 )
 
 var (
+	ErrNilConfig     = errors.New("config cannot be nil")
 	ErrNoNamedBucket = errors.New("a named bucket is required")
+	ErrPathEmpty     = errors.New("path is empty")
 	ErrPathIsFile    = errors.New("path is a file")
 	ErrPathExist     = errors.New("path exists in the database bucket")
 	ErrPathNoFound   = errors.New("path does not exist")
-	ErrNilConfig     = errors.New("config cannot be a nil value")
 )
 
 // Config options.
@@ -56,18 +57,22 @@ type Config struct {
 
 // DPrint prints the string to stdout whenever Config.Debug is true.
 func (c *Config) DPrint(s string) {
+	c.DWrite(os.Stdout, s)
+}
+
+// DWrite writes the string to the io.writer whenever Config.Debug is true.
+func (c *Config) DWrite(w io.Writer, s string) {
 	if !c.Debug {
 		return
 	}
-	fmt.Fprintf(os.Stdout, "∙%s\n", s)
+	fmt.Fprintf(w, "∙%s\n", s)
 }
 
-// CheckPaths counts the number of files in a directory to check and the number of buckets.
-func (c *Config) CheckPaths() (files, buckets int, err error) {
+// CheckPaths counts the number of files in a directory to check, versus the number of items in the buckets.
+func (c *Config) CheckPaths() (files, versus int, err error) {
 	c.DPrint("count the files within the paths")
 	dupeItem := c.GetSource()
 	c.DPrint("path to check: " + dupeItem)
-
 	s, err := c.CheckDir(dupeItem)
 	if err != nil {
 		return 0, 0, err
@@ -79,14 +84,14 @@ func (c *Config) CheckPaths() (files, buckets int, err error) {
 	}
 	c.DPrint(fmt.Sprintf("all buckets: %s", c.All()))
 
-	buckets = 0
+	versus = 0
 	files, err = c.walkPath(dupeItem)
 	if err != nil {
 		return 0, 0, err
 	}
 	for _, b := range c.All() {
 		var err error
-		buckets, err = c.walkBucket(b, files, buckets)
+		versus, err = c.walkBucket(b, files, versus)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
@@ -94,10 +99,10 @@ func (c *Config) CheckPaths() (files, buckets int, err error) {
 			return 0, 0, err
 		}
 	}
-	if buckets >= files/2 {
+	if versus >= files/2 {
 		c.DPrint("there seems to be too few files in the buckets")
 	}
-	return files, buckets, nil
+	return files, versus, nil
 }
 
 func (c *Config) walkBucket(b parse.Bucket, files, buckets int) (int, error) {
@@ -158,6 +163,9 @@ func (c *Config) walkPath(root string) (int, error) {
 // If it does not exist, it looks up an absolute path and returns the result.
 // If the item is a file it returns both the named file and an ErrPathIsFile error.
 func (c *Config) CheckDir(name string) (string, error) {
+	if name == "" {
+		return "", ErrPathEmpty
+	}
 	stat, err := os.Stat(name)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -310,25 +318,26 @@ func (c *Config) Remove() (string, error) {
 		}
 		c.DPrint("remove delete: " + path)
 		err = os.Remove(path)
-		fmt.Fprintln(w, printRM(path, err))
+		fmt.Fprintln(w, PrintRM(path, err))
 	}
 	return w.String(), nil
 }
 
 // Removes the directories from the source that do not contain unique MS-DOS or Windows programs.
-func (c *Config) Removes(assumeYes bool) (string, error) {
+// The strings contains the path of any undeletable files.
+func (c *Config) Removes(assumeYes bool) ([]string, error) {
 	root := c.GetSource()
 	if _, err := os.Stat(root); errors.Is(err, os.ErrNotExist) {
-		return "", fmt.Errorf("%w: %s", ErrPathNoFound, root)
+		return nil, fmt.Errorf("%w: %s", ErrPathNoFound, root)
 	} else if err != nil {
-		return "", err
+		return nil, err
 	}
 	if len(c.Sources) == 0 {
-		return "", nil
+		return nil, nil
 	}
 	files, err := os.ReadDir(root)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if !c.Test {
 		w := os.Stdout
@@ -340,7 +349,32 @@ func (c *Config) Removes(assumeYes bool) (string, error) {
 		}
 		fmt.Fprintln(w)
 	}
-	return removes(root, files), nil
+	return Removes(root, files), nil
+}
+
+// Removes directories that do not contain MS-DOS or Windows programs.
+// The strings contains the path of any undeletable files.
+func Removes(root string, files []fs.DirEntry) []string {
+	s := []string{}
+
+	for _, item := range files {
+		if !item.IsDir() {
+			continue
+		}
+		path := filepath.Join(root, item.Name())
+		exe, err := parse.Executable(path)
+		if err != nil {
+			out.StderrCR(err)
+			continue
+		}
+		if exe {
+			continue
+		}
+		if err := os.RemoveAll(path); err != nil {
+			s = append(s, path)
+		}
+	}
+	return s
 }
 
 // Status summarizes the file totals and process duration.
@@ -622,8 +656,8 @@ func matchItem(match string) string {
 	return s
 }
 
-// printRM prints "could not remove:".
-func printRM(path string, err error) string {
+// PrintRM prints "could not remove:".
+func PrintRM(path string, err error) string {
 	if err != nil {
 		e := fmt.Errorf("could not remove: %w", err)
 		out.StderrCR(e)
@@ -641,27 +675,6 @@ func PrintWalk(lookup bool, c *Config) string {
 		return out.Status(c.Files, -1, out.Look)
 	}
 	return out.Status(c.Files, -1, out.Scan)
-}
-
-// removes directories that do not contain MS-DOS or Windows programs.
-func removes(root string, files []fs.DirEntry) string {
-	w := new(bytes.Buffer)
-
-	for _, item := range files {
-		if !item.IsDir() {
-			continue
-		}
-		path := filepath.Join(root, item.Name())
-		if exe, err := parse.Executable(path); err != nil {
-			out.StderrCR(err)
-			continue
-		} else if exe {
-			continue
-		}
-		err := os.RemoveAll(path)
-		fmt.Fprintln(w, printRM(path, err))
-	}
-	return w.String()
 }
 
 // skipDir tells WalkDir to ignore specific system and hidden directories.

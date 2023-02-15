@@ -134,7 +134,7 @@ func Status(count, total int, m Mode) string {
 	// to significantly improved terminal performance
 	// only update the status every 1000th count
 	const mod, ten = 1000, 10
-	if count < 0 || total <= 0 {
+	if count == 0 || total == 0 {
 		return ""
 	}
 	if count != total && count > mod {

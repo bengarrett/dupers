@@ -3,376 +3,309 @@
 package dupe_test
 
 import (
+	"bytes"
 	"fmt"
-	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
-	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/bengarrett/dupers/internal/mock"
-	"github.com/bengarrett/dupers/internal/out"
 	"github.com/bengarrett/dupers/pkg/database"
 	"github.com/bengarrett/dupers/pkg/dupe"
 	"github.com/bengarrett/dupers/pkg/dupe/internal/parse"
 	"github.com/gookit/color"
-)
-
-const (
-	bucket0 = "../test/tmp"
-	bucket1 = "../test/bucket1"
-	bucket2 = "../test/bucket2"
-	bucket3 = "../test/sensen"
-	file1   = "../test/bucket1/0vlLaUEvzAWP"
-	file2   = "../test/bucket1/GwejJkMzs3yP"
-	rmSrc   = "../test/bucket1/mPzd5cu0Gv5j"
-	rmDst   = "../test/tmp/mPzd5cu0Gv5j"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestConfig_Print(t *testing.T) {
-	b1, _ := filepath.Abs(file1)
-	b2, _ := filepath.Abs(file2)
+	item1, err := mock.Item(1)
+	assert.Nil(t, err)
+
+	item2, err := mock.Item(2)
+	assert.Nil(t, err)
+
 	c := dupe.Config{}
-	c.Sources = []string{b1, b2}
-	sum, _ := parse.Read(b1)
+	c.Sources = []string{item1, item2}
+
+	sum, err := parse.Read(item1)
+	assert.Nil(t, err)
+
 	c.Compare = make(parse.Checksums)
-	c.Compare[sum] = file1
+	c.Compare[sum] = item1
 
 	s, err := c.Print()
-	if err != nil {
-		t.Error(err)
-	}
-	if s == "" {
-		t.Errorf("Config.Print() should have returned a result.")
-	}
+	assert.Nil(t, err)
+	assert.Contains(t, s, "No duplicate files found")
+}
+
+func copyfile(t *testing.T, i int) (string, string) {
+	item, err := mock.Item(i)
+	assert.Nil(t, err)
+	tmpdir, err := mock.TempDir()
+	assert.Nil(t, err)
+	assert.NotEqual(t, "", tmpdir)
+	dest := filepath.Join(tmpdir, "configremovefile")
+	b, err := database.CopyFile(item, dest)
+	assert.Nil(t, err)
+	const written = int64(20)
+	assert.Equal(t, written, b, "copyfile didnt write the expected number of bytes")
+	return item, dest
 }
 
 func TestConfig_Remove(t *testing.T) {
 	color.Enable = false
 	c := dupe.Config{Test: true}
-	r, err := c.Remove()
-	if err != nil {
-		t.Error(err)
-	}
-	if strings.TrimSpace(r) != "No duplicate files to remove." {
-		t.Errorf("Config.Remove() should have returned a nothing to remove message, not %q.", r)
-	}
-	// copy file
-	const written = 20
-	i, err := database.CopyFile(rmSrc, rmDst)
-	if err != nil {
-		t.Error(err)
-	}
 
-	defer os.Remove(rmDst)
-	if i != written {
-		t.Errorf("CopyFile should have written %d bytes, but wrote %d", written, i)
-	}
-	// setup mock databases
-	c.Sources = append(c.Sources, rmDst)
-	sum, err := parse.Read(rmDst)
-	if err != nil {
-		t.Error(err)
-	}
-	c.Compare = make(parse.Checksums)
-	c.Compare[sum] = rmDst
-	want := fmt.Sprintf("removed: %s", rmDst)
+	// remove nothing
 	s, err := c.Remove()
-	if err != nil {
-		t.Error(err)
-	}
-	if strings.TrimSpace(s) != want {
-		t.Errorf("Config.Remove() returned an unexpected reply: %s, want %s", s, want)
-	}
+	assert.Nil(t, err)
+	assert.Contains(t, s, "No duplicate files to remove")
+
+	// copy file
+	_, dest := copyfile(t, 1)
+	defer os.Remove(dest)
+
+	// setup mock sources
+	c.Sources = append(c.Sources, dest)
+	sum, err := parse.Read(dest)
+	assert.Nil(t, err)
+	c.Compare = make(parse.Checksums)
+	c.Compare[sum] = dest
+
+	// test remove
+	s, err = c.Remove()
+	assert.Nil(t, err)
+	assert.Contains(t, s, "removed:")
 }
 
 func TestConfig_Clean(t *testing.T) {
 	c := dupe.Config{Test: true}
-	if err := c.Clean(); err != nil {
-		t.Error(err)
-	}
-	// copy file
-	const written = 20
-	i, err := database.CopyFile(rmSrc, rmDst)
-	if err != nil {
-		t.Error(err)
-	}
+	err := c.Clean()
+	assert.Nil(t, err)
 
-	defer os.Remove(rmDst)
-	if i != written {
-		t.Errorf("CopyFile should have written %d bytes, but wrote %d", written, i)
-	}
-	// make empty test dir
-	if err := c.SetSource(filepath.Dir(rmDst)); err != nil {
-		t.Error(err)
-	}
-	dir := filepath.Join(c.GetSource(), "empty directory placeholder")
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		t.Error(err)
-	}
-	// clean
-	if err := c.Clean(); err != nil {
-		t.Error(err)
-	}
+	// copy file
+	_, dest := copyfile(t, 1)
+	defer os.Remove(dest)
+
+	// make empty dir
+	tmp, err := mock.TempDir()
+	assert.Nil(t, err)
+	c.SetSource(tmp)
+	err = os.MkdirAll(filepath.Join(tmp, "config-clean-empty-dir"), mock.PrivateDir)
+	assert.Nil(t, err)
+	err = c.Clean()
+	assert.Nil(t, err)
 }
 
 func TestConfig_Status(t *testing.T) {
 	c := dupe.Config{Test: true}
-	c.Files = 2
-	const want = "Scanned 2 files"
-	if s := strings.TrimSpace(c.Status()); !strings.Contains(s, want) {
-		t.Errorf("Config.Status() should contain %s, got %s", want, s)
-	}
+	const testVal = 321
+	c.Files = testVal
+	s := c.Status()
+	assert.Contains(t, s, fmt.Sprintf("Scanned %d files", testVal))
 }
 
 func TestConfig_WalkDirs(t *testing.T) {
-	bucket1, err := mock.Bucket(1)
-	if err != nil {
-		t.Error(err)
-	}
 	c := dupe.Config{Test: true, Debug: true}
+
+	bucket1, err := mock.Bucket(1)
+	assert.Nil(t, err)
+
 	db, err := mock.Database()
-	if err != nil {
-		t.Error(err)
-	}
+	assert.Nil(t, err)
 	defer db.Close()
-	if err := c.SetBuckets(bucket1); err != nil {
-		t.Error(err)
-	}
-	if err := c.WalkDirs(db); err != nil {
-		t.Error(err)
-	}
+
+	c.SetBuckets(bucket1)
+	assert.Nil(t, err)
+
+	err = c.WalkDirs(db)
+	assert.Nil(t, err)
 }
 
 func TestConfig_WalkDir(t *testing.T) {
+	c := dupe.Config{Test: true, Debug: false}
+
 	bucket1, err := mock.Bucket(1)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.Nil(t, err)
+
 	item1, err := mock.Item(1)
-	if err != nil {
-		t.Error(err)
-	}
-	c := dupe.Config{Test: true, Debug: true}
+	assert.Nil(t, err)
+
 	db, err := mock.Database()
-	if err != nil {
-		t.Error(err)
-	}
+	assert.Nil(t, err)
 	defer db.Close()
-	if err := c.WalkDir(db, ""); err == nil {
-		t.Errorf("Config.WalkDir() should return an error with an empty Config.")
-	}
+
+	err = c.WalkDir(db, "")
+	assert.NotNil(t, err, "WalkDir should return an error with the empty config")
+
 	err = c.WalkDir(db, parse.Bucket(item1))
-	if err != nil {
-		t.Errorf("Config.WalkDir(%s) should skip files.", item1)
-	}
+	assert.Nil(t, err, "WalkDir should ignore and skip any files")
+
 	err = c.WalkDir(db, parse.Bucket(bucket1))
-	if err != nil {
-		t.Errorf("Config.WalkDir(%s) returned the error: %v", bucket1, err)
-	}
+	assert.Nil(t, err)
 }
 
 func TestConfig_WalkSource(t *testing.T) {
-	bucket2, err := mock.Bucket(2)
-	if err != nil {
-		t.Error(err)
-	}
 	c := dupe.Config{}
-	if err := c.WalkSource(); err == nil {
-		t.Errorf("Config.WalkSource() should return an error with an empty Config.")
-	}
-	if err := c.SetSource(bucket2); err != nil {
-		t.Errorf("Config.SetSource() returned an error: %v", err)
-	}
-	if err := c.WalkSource(); err != nil {
-		t.Errorf("Config.WalkSource() returned an error: %v", err)
-	}
+
+	bucket2, err := mock.Bucket(2)
+	assert.Nil(t, err)
+
+	err = c.WalkSource()
+	assert.NotNil(t, err, "WalkSource should return an error with the empty config")
+
+	err = c.SetSource(bucket2)
+	assert.Nil(t, err)
+
+	err = c.WalkSource()
+	assert.Nil(t, err)
 }
 
 func TestPrintWalk(t *testing.T) {
 	c := dupe.Config{Test: false, Quiet: false, Debug: false}
-	s := strings.TrimSpace(dupe.PrintWalk(false, &c))
-	want := ""
-	if runtime.GOOS != dupe.WinOS {
-		want = out.Eraser + "\r"
-	}
-	want += "Scanning 0 files"
-	if s != want {
-		t.Errorf("PrintWalk() returned: %s, want %s", s, want)
-	}
+
+	s := dupe.PrintWalk(false, &c)
+	assert.Equal(t, "", s, "PrintWalk should return an empty string with the empty config")
+
 	c.Files = 15
-	s = strings.TrimSpace(dupe.PrintWalk(false, &c))
-	want = ""
-	if runtime.GOOS != dupe.WinOS {
-		want = out.Eraser + "\r"
-	}
-	want += "Scanning 15 files"
-	if s != want {
-		t.Errorf("PrintWalk() returned: %s, want %s", s, want)
-	}
-	s = strings.TrimSpace(dupe.PrintWalk(true, &c))
-	want = ""
-	if runtime.GOOS != dupe.WinOS {
-		want = out.Eraser + "\r"
-	}
-	want += "Looking up 15 items"
-	if s != want {
-		t.Errorf("PrintWalk() returned: %s, want %s", s, want)
-	}
+	s = dupe.PrintWalk(false, &c)
+	assert.Contains(t, s, "Scanning 15 files")
+
+	const lookup = true
+	s = dupe.PrintWalk(lookup, &c)
+	assert.Contains(t, s, "Looking up 15 items")
+
 	c.Quiet = true
-	s = strings.TrimSpace(dupe.PrintWalk(true, &c))
-	want = ""
-	if s != want {
-		t.Errorf("PrintWalk() returned: %s, want a blank string", s)
-	}
+	s = dupe.PrintWalk(lookup, &c)
+	assert.Equal(t, "", s, "Quiet mode should return an empty string")
 }
 
 func TestRemoves(t *testing.T) {
-	c := dupe.Config{Test: true, Quiet: false, Debug: true}
-	if err := cleanDir(bucket0); err != nil {
-		t.Error(err)
+	c := dupe.Config{Test: true, Quiet: false, Debug: false}
+
+	tmpDir, err := mock.TempDir()
+	assert.Nil(t, err)
+
+	_, err = mock.RemoveTmp()
+	assert.Nil(t, err)
+
+	bucket1, err := mock.Bucket(1)
+	assert.Nil(t, err)
+	assert.NotNil(t, bucket1)
+
+	err = mock.MirrorTmp(bucket1)
+	assert.Nil(t, err)
+
+	err = c.SetSource(tmpDir)
+	assert.Nil(t, err)
+
+	// make 25 subdirectories with the naming syntax "mock-dir-XX"
+	n := 0
+	dest := ""
+	for n < 25 {
+		n++
+		name := filepath.Join(tmpDir, fmt.Sprintf("mock-dir-%d", n))
+		err = os.MkdirAll(name, mock.PrivateDir)
+		assert.Nil(t, err)
+		if n == 16 {
+			dest = name
+		}
 	}
-	if err := mirrorDir(bucket3, bucket0); err != nil {
-		t.Error(err)
-	}
-	abs, err := filepath.Abs(bucket0)
-	if err != nil {
-		t.Error(err)
-	}
-	srcs, err := filepath.Abs(bucket2)
-	if err != nil {
-		t.Error(err)
-	}
-	if err := c.SetSource(abs); err != nil {
-		t.Error(err)
-	}
-	c.Sources = append(c.Sources, srcs)
-	s, err := c.Removes(false)
-	if err != nil {
-		t.Error(err)
-	}
-	fmt.Fprintln(os.Stdout, s)
+	// copy a fake .exe file to dest
+	item, err := mock.Item(1)
+	assert.Nil(t, err)
+	assert.NotEqual(t, "", item)
+
+	i, err := database.CopyFile(item, filepath.Join(dest, "some-pretend-windows-app.exe"))
+	assert.Nil(t, err)
+	assert.Equal(t, int64(20), i)
+
+	paths, err := c.Removes(false)
+	assert.Nil(t, err)
+	assert.Len(t, paths, 0, "removes should not return any invalid paths")
+
+	removed := 0
+	removed, err = mock.RemoveTmp()
+	assert.Nil(t, err)
+	assert.Equal(t, 25, removed)
 }
 
 func TestChecksum(t *testing.T) {
+	c := dupe.Config{Test: true, Quiet: false, Debug: false}
+
 	bucket1, err := mock.Bucket(1)
-	if err != nil {
-		t.Error(err)
-	}
-	c := dupe.Config{Test: true, Quiet: false, Debug: true}
+	assert.Nil(t, err)
+
 	db, err := mock.Database()
-	if err != nil {
-		t.Error(err)
-	}
+	assert.Nil(t, err)
 	defer db.Close()
-	file, err := filepath.Abs(file1)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	type args struct {
-		name   string
-		bucket string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{"empty", args{}, true},
-		{"invalid path", args{"abcde", bucket1}, true},
-		{"okay", args{file, bucket1}, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := c.Checksum(db, tt.args.name, tt.args.bucket); (err != nil) != tt.wantErr {
-				t.Errorf("Config.Checksum() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
 
-func cleanDir(name string) error {
-	abs, err := filepath.Abs(name)
-	if err != nil {
-		return err
-	}
-	return filepath.WalkDir(abs, func(path string, d fs.DirEntry, err error) error {
-		if path == abs {
-			return nil
-		}
-		if _, err := os.Stat(path); err != nil {
-			return err
-		}
-		fmt.Fprintln(os.Stdout, path)
-		if err := os.RemoveAll(path); err != nil {
-			log.Println(err)
-		}
-		return nil
-	})
-}
+	item, err := mock.Item(1)
+	assert.Nil(t, err)
+	assert.NotEqual(t, "", item)
 
-func mirrorDir(src, dst string) error {
-	const dirAllAccess fs.FileMode = 0o777
-	from, err := filepath.Abs(src)
-	if err != nil {
-		return err
-	}
-	to, err := filepath.Abs(dst)
-	if err != nil {
-		return err
-	}
-	return filepath.WalkDir(from, func(path string, d fs.DirEntry, err error) error {
-		if path == from {
-			return nil
-		}
-		dest := filepath.Join(to, strings.Replace(path, from, "", 1))
-		if d.IsDir() {
-			if errM := os.MkdirAll(dest, dirAllAccess); errM != nil {
-				log.Println(errM)
-			}
-			return nil
-		}
-		if !d.Type().IsRegular() {
-			return nil
-		}
-		if _, errC := database.CopyFile(path, dest); errC != nil {
-			log.Println(errC)
-		}
-		return nil
-	})
+	err = c.Checksum(nil, "", "")
+	assert.NotNil(t, err)
+
+	err = c.Checksum(db, "", "")
+	assert.NotNil(t, err)
+
+	err = c.Checksum(db, "", bucket1)
+	assert.NotNil(t, err)
+
+	err = c.Checksum(db, "qwertyuiop", bucket1)
+	assert.NotNil(t, err)
+
+	err = c.Checksum(db, item, bucket1)
+	assert.Nil(t, err)
 }
 
 func TestConfig_WalkArchiver(t *testing.T) {
+	c := dupe.Config{Test: true, Quiet: false, Debug: false}
+
 	bucket1, err := mock.Bucket(1)
-	if err != nil {
-		t.Error(err)
-	}
-	c := dupe.Config{Test: true, Quiet: false, Debug: true}
+	assert.Nil(t, err)
+
 	db, err := mock.Database()
-	if err != nil {
-		t.Error(err)
-	}
+	assert.Nil(t, err)
 	defer db.Close()
-	type args struct {
-		name string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{"empty", args{}, true},
-		{"invalid", args{"abcdef"}, true},
-		{"okay", args{bucket1}, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := c.WalkArchiver(db, parse.Bucket(tt.args.name)); (err != nil) != tt.wantErr {
-				t.Errorf("Config.WalkArchiver() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
+
+	err = c.WalkArchiver(nil, "")
+	assert.NotNil(t, err)
+
+	err = c.WalkArchiver(db, "qwertyuiop")
+	assert.NotNil(t, err)
+
+	err = c.WalkArchiver(db, parse.Bucket(bucket1))
+	assert.Nil(t, err)
+}
+
+func TestConfig_DWrite(t *testing.T) {
+	const s = "test config dwrite"
+	var c dupe.Config
+	var w bytes.Buffer
+	c.DWrite(&w, s)
+	assert.Equal(t, "", w.String())
+	c.Debug = true
+	c.DWrite(&w, s)
+	assert.Contains(t, w.String(), s)
+}
+
+func TestConfig_CheckPaths(t *testing.T) {
+	var c dupe.Config
+	files, buckets, err := c.CheckPaths()
+	assert.NotNil(t, err)
+	assert.Equal(t, 0, files, "unexpected file count")
+	assert.Equal(t, 0, buckets, "unexpected bucket count")
+
+	bucket1, err := mock.Bucket(1)
+	assert.Nil(t, err)
+	err = c.SetSource(bucket1)
+	assert.Nil(t, err)
+	err = c.SetBuckets(bucket1)
+	assert.Nil(t, err)
+	files, buckets, err = c.CheckPaths()
+	assert.Nil(t, err)
+	assert.Equal(t, 24, files, "unexpected file count")
+	assert.Equal(t, 12, buckets, "unexpected bucket count")
 }

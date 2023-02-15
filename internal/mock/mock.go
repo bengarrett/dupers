@@ -15,6 +15,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/bengarrett/dupers/pkg/database"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -35,6 +36,7 @@ var (
 	ErrExport   = errors.New("mock export number does not exist")
 	ErrItem     = errors.New("mock item number does not exist")
 	ErrLockedDB = errors.New("mock database is locked by the Windows filesystem")
+	ErrNoRoot   = errors.New("could not determine the root directory")
 )
 
 var sources = map[int]string{
@@ -44,12 +46,28 @@ var sources = map[int]string{
 }
 
 // RootDir returns the root directory of the program's source code.
+// An empty string is returned if the directory cannot be determined.
 func RootDir() string {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
 		return ""
 	}
 	return filepath.Join(filepath.Dir(file), "..", "..")
+}
+
+// TempDir returns a hidden tmp mock directory path within the
+// root directory of the program's source code.
+// If the directory doesn't exist, it is created.
+func TempDir() (string, error) {
+	root := RootDir()
+	if root == "" {
+		return "", ErrNoRoot
+	}
+	tmp := filepath.Join(root, ".tmp", "mock")
+	if err := os.MkdirAll(tmp, PrivateDir); err != nil {
+		return tmp, err
+	}
+	return tmp, nil
 }
 
 // Bucket returns the absolute path of test bucket.
@@ -250,4 +268,57 @@ func Delete() error {
 		return fmt.Errorf("%w: %s", err, path)
 	}
 	return nil
+}
+
+func MirrorTmp(src string) error {
+	const dirAllAccess fs.FileMode = 0o777
+	from, err := filepath.Abs(src)
+	if err != nil {
+		return err
+	}
+	tmpDir, err := TempDir()
+	if err != nil {
+		return err
+	}
+	return filepath.WalkDir(from, func(path string, d fs.DirEntry, err error) error {
+		if path == from {
+			return nil
+		}
+		dest := filepath.Join(tmpDir, strings.Replace(path, from, "", 1))
+		if d.IsDir() {
+			if errM := os.MkdirAll(dest, dirAllAccess); errM != nil {
+				log.Println(errM)
+			}
+			return nil
+		}
+		if !d.Type().IsRegular() {
+			return nil
+		}
+		if _, errC := database.CopyFile(path, dest); errC != nil {
+			log.Println(errC)
+		}
+		return nil
+	})
+}
+
+func RemoveTmp() (int, error) {
+	tmpDir, err := TempDir()
+	if err != nil {
+		return 0, err
+	}
+	count := 0
+	err = filepath.WalkDir(tmpDir, func(path string, d fs.DirEntry, err error) error {
+		if path == tmpDir {
+			return nil
+		}
+		if d.IsDir() {
+			return nil
+		}
+		count++
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return count, os.RemoveAll(tmpDir)
 }

@@ -45,9 +45,13 @@ func Cleanup(c *dupe.Config, f *cmd.Flags) error {
 			return err
 		}
 		fmt.Fprint(w, s)
-		s, err = c.Removes(*f.Yes)
+		removes, err := c.Removes(*f.Yes)
 		if err != nil {
 			return err
+		}
+		for _, name := range removes {
+			var err = errors.New("could not remove file")
+			dupe.PrintRM(name, err)
 		}
 		fmt.Fprint(w, s)
 		fmt.Fprint(w, c.Clean())
