@@ -59,6 +59,8 @@ var (
 	ErrNotFound  = errors.New("database file does not exist")
 	ErrSameNames = errors.New("bucket target is the same as the bucket name")
 	ErrZeroByte  = errors.New("database is a zero byte file")
+
+	ErrNoTerm = errors.New("cannot compare an empty term")
 )
 
 // Abs returns an absolute representation of the named bucket.
@@ -303,6 +305,9 @@ func CompareNoCase(db *bolt.DB, s string, buckets ...string) (*Matches, error) {
 func compare(db *bolt.DB, ignoreCase, pathBase bool, term []byte, buckets ...string) (*Matches, error) {
 	if db == nil {
 		return nil, bolt.ErrDatabaseNotOpen
+	}
+	if len(term) == 0 {
+		return nil, ErrNoTerm
 	}
 	checked, err := checker(db, buckets)
 	if err != nil {

@@ -26,8 +26,9 @@ const loops = 0
 
 var (
 	ErrImportList = errors.New("import list cannot be empty")
-	ErrFilename   = errors.New("the named file cannot be empty")
-	ErrDest       = errors.New("the destination path cannot be empty")
+	ErrNoBucket   = errors.New("the named bucket cannot be empty")
+	ErrNoFilename = errors.New("the named file cannot be empty")
+	ErrNoDest     = errors.New("the destination path cannot be empty")
 )
 
 // Backup makes a copy of the database to the named location.
@@ -57,10 +58,10 @@ func backup() string {
 // CopyFile duplicates the named file to the destination filepath.
 func CopyFile(name, dest string) (int64, error) {
 	if name == "" {
-		return 0, ErrFilename
+		return 0, ErrNoFilename
 	}
 	if dest == "" {
-		return 0, ErrDest
+		return 0, ErrNoDest
 	}
 	// read source
 	f, err := os.Open(name)
@@ -302,6 +303,9 @@ func Scanner(file *os.File) (string, *Lists, error) {
 func Usage(db *bolt.DB, name string, assumeYes bool) (string, error) {
 	if db == nil {
 		return "", bolt.ErrDatabaseNotOpen
+	}
+	if name == "" {
+		return "", ErrNoBucket
 	}
 	for {
 		path := ""

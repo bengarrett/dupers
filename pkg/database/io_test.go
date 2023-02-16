@@ -2,16 +2,13 @@
 package database_test
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/bengarrett/dupers/internal/mock"
 	"github.com/bengarrett/dupers/pkg/database"
-	"github.com/gookit/color"
 	"github.com/stretchr/testify/assert"
-	bolt "go.etcd.io/bbolt"
 )
 
 func TestBackup(t *testing.T) {
@@ -50,151 +47,131 @@ func TestCSVExport(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, "", csv)
 
-	// color.Enable = false
-	// bucket1, err := mock.Bucket(1)
-	// if err != nil {
-	// 	t.Error(err)
-	// }
-	// DB, err := mock.Database()
-	// if err != nil {
-	// 	log.Panic(err)
-	// }
-	// defer DB.Close()
-	// t.Run("csv export", func(t *testing.T) {
-	// 	gotName, err := database.CSVExport(DB, bucket1)
-	// 	if err != nil {
-	// 		t.Errorf("Backup() error = %v, want nil", err)
-	// 		return
-	// 	}
-	// 	if gotName == "" {
-	// 		t.Errorf("Backup() gotName = \"\", want %s", bucket1)
-	// 	}
-	// 	if gotName != "" {
-	// 		if err := os.Remove(gotName); err != nil {
-	// 			log.Println(err)
-	// 		}
-	// 	}
-	// })
-}
+	db, err := mock.Database()
+	assert.Nil(t, err)
+	defer db.Close()
 
-func TestImport(t *testing.T) {
+	csv, err = database.CSVExport(db, "")
+	assert.NotNil(t, err)
+	assert.Equal(t, "", csv)
 
-	color.Enable = false
-	exp1, err := mock.Export(1)
-	if err != nil {
-		t.Error(err)
-	}
-	DB, err := mock.Database()
-	if err != nil {
-		t.Error(err)
-	}
-	defer DB.Close()
-	r, err := database.Import(DB, "", nil)
-	if r != 0 {
-		t.Errorf("Import(empty) records != 0")
-	}
-	if err == nil {
-		t.Errorf("Import(empty) expect error, not nil")
-	}
-	openCSV, err := os.Open(exp1)
-	if err != nil {
-		t.Error(err)
-	}
-	defer openCSV.Close()
-	bucket, ls, err := database.Scanner(openCSV)
-	if err != nil {
-		t.Errorf("Import(csv) unexpected error, %v", err)
-	}
-	if bucket == "" {
-		t.Error("Import(csv) unexpected empty bucket name")
-	}
-	if ls == nil || len(*ls) != 26 {
-		t.Errorf("Import(csv) List is empty")
-	}
-}
+	bucket1, err := mock.Bucket(1)
+	assert.Nil(t, err)
+	assert.NotEqual(t, "", bucket1)
 
-func TestScanner(t *testing.T) {
-	color.Enable = false
-	item1, err := mock.Item(1)
-	if err != nil {
-		t.Error(err)
-	}
-	exp1, err := mock.Export(1)
-	if err != nil {
-		t.Error(err)
-	}
-	openBin, err := os.Open(item1)
-	if err != nil {
-		t.Error(err)
-	}
-	defer openBin.Close()
-	openCSV, err := os.Open(exp1)
-	if err != nil {
-		t.Error(err)
-	}
-	defer openCSV.Close()
-	tests := []struct {
-		name       string
-		file       *os.File
-		wantBucket bool
-		wantLists  int
-		wantErr    bool
-	}{
-		{"empty", nil, false, 0, true},
-		{"binary file", openBin, false, 0, true},
-		{"csv file", openCSV, true, 26, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, got1, err := database.Scanner(tt.file)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("csvScanner() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if (len(got) > 0) != tt.wantBucket {
-				t.Errorf("csvScanner() wantBucket got = %v, want %v", (len(got) > 0), tt.wantBucket)
-			}
-			if tt.wantLists == 0 && got1 != nil {
-				t.Errorf("csvScanner() got1 = %v, want nil", got1)
-			} else if tt.wantLists > 0 && len(*got1) != tt.wantLists {
-				t.Errorf("csvScanner() got1 = %v, want %v", len(*got1), tt.wantLists)
-			}
-		})
-	}
+	csv, err = database.CSVExport(db, bucket1)
+	assert.Nil(t, err)
+	assert.NotEqual(t, "", bucket1)
+
+	info, err := os.Stat(csv)
+	assert.Nil(t, err)
+	defer os.Remove(csv)
+	assert.Greater(t, info.Size(), int64(0))
 }
 
 func TestCSVImport(t *testing.T) {
-	color.Enable = false
-	DB, err := mock.Database()
-	if err != nil {
-		log.Panic(err)
+	imported, err := database.CSVImport(nil, "", false)
+	assert.NotNil(t, err)
+	assert.Equal(t, 0, imported)
+
+	db, err := mock.Database()
+	assert.Nil(t, err)
+	defer db.Close()
+
+	imported, err = database.CSVImport(db, "", false)
+	assert.NotNil(t, err)
+	assert.Equal(t, 0, imported)
+
+	imported, err = database.CSVImport(db, mock.NoSuchFile, false)
+	assert.NotNil(t, err)
+	assert.Equal(t, 0, imported)
+
+	bucket1, err := mock.Bucket(1)
+	assert.Nil(t, err)
+	assert.NotEqual(t, "", bucket1)
+
+	csv, err := database.CSVExport(db, bucket1)
+	assert.Nil(t, err)
+	assert.NotEqual(t, "", bucket1)
+	defer os.Remove(csv)
+
+	imported, err = database.CSVImport(db, csv, false)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, imported)
+}
+
+func TestImport(t *testing.T) {
+	export1, err := mock.Export(1)
+	assert.Nil(t, err)
+	assert.NotEqual(t, "", export1)
+
+	db, err := mock.Database()
+	assert.Nil(t, err)
+	defer db.Close()
+
+	imported, err := database.Import(db, "", nil)
+	assert.NotNil(t, err)
+	assert.Equal(t, 0, imported)
+
+	bucket2, err := mock.Bucket(2)
+	assert.Nil(t, err)
+	assert.NotEqual(t, "", bucket2)
+
+	imported, err = database.Import(db, database.Bucket(bucket2), nil)
+	assert.NotNil(t, err)
+	assert.Equal(t, 0, imported)
+
+	csv, err := os.Open(export1)
+	assert.Nil(t, err)
+	defer csv.Close()
+
+	bucket, ls, err := database.Scanner(csv)
+	assert.Nil(t, err)
+	assert.NotNil(t, ls)
+	assert.NotEqual(t, "", bucket)
+	const expected = 26
+	if ls != nil {
+		assert.Equal(t, len(*ls), expected)
 	}
-	defer DB.Close()
-	type args struct {
-		name string
-		db   *bolt.DB
-	}
-	tests := []struct {
-		name        string
-		args        args
-		wantRecords int
-		wantErr     bool
-	}{
-		{"invalid", args{}, 0, true},
-		{"no path", args{"", DB}, 0, true},
-		{"only file", args{os.TempDir(), DB}, 0, true},
-		{"okay", args{"../test/export-bucket1.csv", DB}, 26, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotRecords, err := database.CSVImport(tt.args.db, tt.args.name, false)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("CSVImport() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if gotRecords != tt.wantRecords {
-				t.Errorf("CSVImport() = %v, want %v", gotRecords, tt.wantRecords)
-			}
-		})
-	}
+
+	imported, err = database.Import(db, database.Bucket(bucket2), ls)
+	assert.Nil(t, err)
+	assert.Equal(t, expected, imported)
+}
+
+func TestOpenRead(t *testing.T) {
+	db, err := database.OpenRead()
+	assert.Nil(t, err)
+	defer db.Close()
+	assert.NotNil(t, db)
+	assert.Equal(t, true, db.IsReadOnly())
+}
+
+func TestOpenWrite(t *testing.T) {
+	db, err := database.OpenWrite()
+	assert.Nil(t, err)
+	defer db.Close()
+	assert.NotNil(t, db)
+	assert.Equal(t, false, db.IsReadOnly())
+}
+
+func TestUsage(t *testing.T) {
+	s, err := database.Usage(nil, "", true)
+	assert.NotNil(t, err)
+	assert.Equal(t, "", s)
+
+	db, err := mock.Database()
+	assert.Nil(t, err)
+	defer db.Close()
+
+	s, err = database.Usage(db, "", true)
+	assert.NotNil(t, err)
+	assert.Equal(t, "", s)
+
+	bucket2, err := mock.Bucket(2)
+	assert.Nil(t, err)
+	assert.NotEqual(t, "", bucket2)
+	s, err = database.Usage(db, bucket2, true)
+	assert.Nil(t, err)
+	assert.Contains(t, s, bucket2)
 }
