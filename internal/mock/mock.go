@@ -60,6 +60,15 @@ var extensions = map[string]string{
 	"zip": "/randomfiles.zip",
 }
 
+var test = "test"
+
+// CSV returns the path to a mock exported comma-separated values file.
+func CSV() string {
+	root := RootDir()
+	const csv = "export-bucket1.csv"
+	return filepath.Join(root, test, csv)
+}
+
 // RootDir returns the root directory of the program's source code.
 // An empty string is returned if the directory cannot be determined.
 func RootDir() string {
@@ -96,7 +105,7 @@ func Bucket(i int) (string, error) {
 	default:
 		return "", ErrBucket
 	}
-	path := filepath.Join(RootDir(), "test", name)
+	path := filepath.Join(RootDir(), test, name)
 	f, err := filepath.Abs(path)
 	if err != nil {
 		log.Fatal(err)
@@ -115,7 +124,7 @@ func Export(i int) (string, error) {
 		return "", ErrItem
 	}
 	filename := fmt.Sprintf("export-bucket%d.csv", i)
-	path := filepath.Join(RootDir(), "test", filename)
+	path := filepath.Join(RootDir(), test, filename)
 	f, err := filepath.Abs(path)
 	if err != nil {
 		return "", err
@@ -149,7 +158,7 @@ func Extension(ext string) (string, error) {
 	if !ok {
 		return "", ErrExtension
 	}
-	path := filepath.Join(RootDir(), "test", elem)
+	path := filepath.Join(RootDir(), test, elem)
 	f, err := filepath.Abs(path)
 	if err != nil {
 		return "", err
