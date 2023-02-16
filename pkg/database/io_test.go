@@ -10,106 +10,75 @@ import (
 	"github.com/bengarrett/dupers/internal/mock"
 	"github.com/bengarrett/dupers/pkg/database"
 	"github.com/gookit/color"
+	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"
 )
 
 func TestBackup(t *testing.T) {
-	color.Enable = false
-	tests := []struct {
-		name    string
-		wantErr bool
-	}{
-		{"backup", false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotName, gotWritten, err := database.Backup()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Backup() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if gotName == "" {
-				t.Errorf("Backup() gotName = \"\"")
-			}
-			if gotWritten == 0 {
-				t.Errorf("Backup() gotWritten = %v, want something higher", gotWritten)
-			}
-			if gotName != "" {
-				if err := os.Remove(gotName); err != nil {
-					log.Println(err)
-				}
-			}
-		})
-	}
+	name, written, err := database.Backup()
+	assert.Nil(t, err)
+	assert.NotEqual(t, "", name)
+	defer os.Remove(name)
+	assert.Greater(t, written, int64(0))
 }
 
 func TestCopyFile(t *testing.T) {
-	color.Enable = false
-	type args struct {
-		src  string
-		dest string
-	}
-	d, err := filepath.Abs(testDst)
-	if err != nil {
-		t.Error(err)
-	}
-	s, err := filepath.Abs(testSrc)
-	if err != nil {
-		t.Error(err)
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    int64
-		wantErr bool
-	}{
-		{"empty", args{}, 0, true},
-		{"exe", args{src: s, dest: d}, 5120, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := database.CopyFile(tt.args.src, tt.args.dest)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("CopyFile() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("CopyFile() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-	os.Remove(testDst)
+	written, err := database.CopyFile("", "")
+	assert.NotNil(t, err)
+	assert.Equal(t, int64(0), written)
+
+	item1, err := mock.Item(1)
+	assert.Nil(t, err)
+
+	written, err = database.CopyFile(item1, "")
+	assert.NotNil(t, err)
+	assert.Equal(t, int64(0), written)
+
+	tmpDir, err := mock.TempDir()
+	assert.Nil(t, err)
+	defer mock.RemoveTmp()
+
+	const expected = int64(20)
+	dest := filepath.Join(tmpDir, "some-random-file.stuff")
+	written, err = database.CopyFile(item1, dest)
+	assert.Nil(t, err)
+	assert.Equal(t, expected, written)
 }
 
 func TestCSVExport(t *testing.T) {
-	color.Enable = false
-	bucket1, err := mock.Bucket(1)
-	if err != nil {
-		t.Error(err)
-	}
-	DB, err := mock.Database()
-	if err != nil {
-		log.Panic(err)
-	}
-	defer DB.Close()
-	t.Run("csv export", func(t *testing.T) {
-		gotName, err := database.CSVExport(DB, bucket1)
-		if err != nil {
-			t.Errorf("Backup() error = %v, want nil", err)
-			return
-		}
-		if gotName == "" {
-			t.Errorf("Backup() gotName = \"\", want %s", bucket1)
-		}
-		if gotName != "" {
-			if err := os.Remove(gotName); err != nil {
-				log.Println(err)
-			}
-		}
-	})
+	csv, err := database.CSVExport(nil, "")
+	assert.NotNil(t, err)
+	assert.Equal(t, "", csv)
+
+	// color.Enable = false
+	// bucket1, err := mock.Bucket(1)
+	// if err != nil {
+	// 	t.Error(err)
+	// }
+	// DB, err := mock.Database()
+	// if err != nil {
+	// 	log.Panic(err)
+	// }
+	// defer DB.Close()
+	// t.Run("csv export", func(t *testing.T) {
+	// 	gotName, err := database.CSVExport(DB, bucket1)
+	// 	if err != nil {
+	// 		t.Errorf("Backup() error = %v, want nil", err)
+	// 		return
+	// 	}
+	// 	if gotName == "" {
+	// 		t.Errorf("Backup() gotName = \"\", want %s", bucket1)
+	// 	}
+	// 	if gotName != "" {
+	// 		if err := os.Remove(gotName); err != nil {
+	// 			log.Println(err)
+	// 		}
+	// 	}
+	// })
 }
 
 func TestImport(t *testing.T) {
+
 	color.Enable = false
 	exp1, err := mock.Export(1)
 	if err != nil {

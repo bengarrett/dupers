@@ -24,7 +24,11 @@ import (
 
 const loops = 0
 
-var ErrImportList = errors.New("import list is empty")
+var (
+	ErrImportList = errors.New("import list cannot be empty")
+	ErrFilename   = errors.New("the named file cannot be empty")
+	ErrDest       = errors.New("the destination path cannot be empty")
+)
 
 // Backup makes a copy of the database to the named location.
 func Backup() (name string, written int64, err error) {
@@ -52,6 +56,12 @@ func backup() string {
 
 // CopyFile duplicates the named file to the destination filepath.
 func CopyFile(name, dest string) (int64, error) {
+	if name == "" {
+		return 0, ErrFilename
+	}
+	if dest == "" {
+		return 0, ErrDest
+	}
 	// read source
 	f, err := os.Open(name)
 	if err != nil {
