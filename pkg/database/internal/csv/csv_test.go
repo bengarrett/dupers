@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -14,15 +13,6 @@ import (
 	"github.com/bengarrett/dupers/pkg/database/internal/csv"
 	"github.com/stretchr/testify/assert"
 )
-
-func mockDir() string {
-	sep := string(os.PathSeparator)
-	dir := filepath.Join("home", "me", "Downloads")
-	if runtime.GOOS == csv.WinOS {
-		return filepath.Join("C:", sep, dir)
-	}
-	return filepath.Join(sep, dir)
-}
 
 func TestBucket(t *testing.T) {
 	s := csv.Bucket("")
@@ -88,66 +78,24 @@ func TestImport(t *testing.T) {
 	assert.Equal(t, "", path)
 	assert.Equal(t, empty, s)
 
-	// const file = "someimage.png"
-	// const sum = "44dcc97a2b115c9fd51c95d6a3f2075f2f7c09067e34a33d9259cd22208bffba"
-	// //abs := strings.Join([]string{path, file}, string(os.PathSeparator))
-	// line := strings.Join([]string{sum, file}, ",")
-	// chksum, err := csv.Checksum(line)
-	// assert.Nil(t, err)
+	bucket1, err := mock.Bucket(1)
+	assert.Nil(t, err)
 
-	// bucker1, err := mock.Bucket(1)
-	// assert.Nil(t, err)
-	// s, path, err = csv.Import(line, bucker1)
-	// assert.Nil(t, err)
-	// assert.NotEqual(t, "", path)
-	// assert.Equal(t, chksum, s)
+	_, _, err = csv.Import("", bucket1)
+	assert.NotNil(t, err)
 
-	//const helloWorld = "68656c6c6f20776f726c64"
-	// 	helloWorld = "68656c6c6f20776f726c64"
-	// )
-	// path := "/home/me/downloads"
-	// if runtime.GOOS == csv.WinOS {
-	// 	path = "C:\\home\\me\\downloads"
-	// }
-	// abs := strings.Join([]string{path, file}, string(os.PathSeparator))
-	// line := strings.Join([]string{sum, file}, ",")
-	// bsum, err := csv.Checksum(sum)
-	// if err != nil {
-	// 	t.Error(err)
-	// }
-	//empty := [32]byte{}
-	// type args struct {
-	// 	line   string
-	// 	bucket string
-	// }
-	// tests := []struct {
-	// 	name     string
-	// 	args     args
-	// 	wantSum  [32]byte
-	// 	wantPath string
-	// 	wantErr  bool
-	// }{
-	// 	{"empty", args{"", ""}, empty, "", true},
-	// 	{"invalid hash", args{helloWorld, ""}, empty, "", true},
-	// 	{"invalid data", args{"invalid,csv data", path}, empty, "", true},
-	// 	{"empty path", args{sum + ",", path}, bsum, path, false},
-	// 	{"valid hash", args{line, path}, bsum, abs, false},
-	// }
-	// for _, tt := range tests {
-	// 	t.Run(tt.name, func(t *testing.T) {
-	// 		gotSum, gotPath, err := csv.Import(tt.args.line, tt.args.bucket)
-	// 		if (err != nil) != tt.wantErr {
-	// 			t.Errorf("Import() error = %v, wantErr %v", err, tt.wantErr)
-	// 			return
-	// 		}
-	// 		if !reflect.DeepEqual(gotSum, tt.wantSum) {
-	// 			t.Errorf("Import() gotSum = %v, want %v", gotSum, tt.wantSum)
-	// 		}
-	// 		if gotPath != tt.wantPath {
-	// 			t.Errorf("Import() gotPath = %v, want %v", gotPath, tt.wantPath)
-	// 		}
-	// 	})
-	// }
+	_, _, err = csv.Import(mock.NoSuchFile, bucket1)
+	assert.NotNil(t, err)
+
+	sum, err := mock.ItemSum(0)
+	assert.Nil(t, err)
+	file, err := mock.Extension("txt")
+	assert.Nil(t, err)
+	mockCSVLine := strings.Join([]string{sum, file}, ",")
+
+	_, path, err = csv.Import(mockCSVLine, bucket1)
+	assert.Nil(t, err)
+	assert.Contains(t, path, filepath.Base(file))
 }
 
 func TestPathWindows(t *testing.T) {

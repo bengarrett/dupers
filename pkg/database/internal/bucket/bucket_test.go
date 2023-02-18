@@ -2,185 +2,166 @@
 package bucket_test
 
 import (
-	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/bengarrett/dupers/internal/mock"
 	"github.com/bengarrett/dupers/pkg/database/internal/bucket"
-	bolt "go.etcd.io/bbolt"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestCleaner_Clean(t *testing.T) {
-	bucket1, err := mock.Bucket(1)
-	if err != nil {
-		t.Error(err)
-	}
+func TestParse(t *testing.T) {
+	p := bucket.Parser{}
+	items, errs, name, debug := p.Parse(nil)
+	assert.Equal(t, 0, items)
+	assert.Equal(t, 0, errs)
+	assert.Equal(t, "", name)
+	assert.Equal(t, false, debug)
+
 	db, err := mock.Database()
-	if err != nil {
-		t.Error(err)
-	}
+	assert.Nil(t, err)
 	defer db.Close()
-	type fields struct {
-		DB    *bolt.DB
-		Name  string
-		Debug bool
-		Quiet bool
-		Items int
-		Total int
-		Finds int
-		Errs  int
+
+	items, errs, name, debug = p.Parse(db)
+	assert.Equal(t, 0, items)
+	assert.Equal(t, 0, errs)
+	assert.Equal(t, "", name)
+	assert.Equal(t, true, debug)
+
+	bucket1, err := mock.Bucket(1)
+	assert.Nil(t, err)
+	p = bucket.Parser{
+		Name: bucket1,
 	}
-	tests := []struct {
-		name       string
-		fields     fields
-		wantCount  bool
-		wantFinds  int
-		wantErrors int
-	}{
-		{"empty", fields{}, false, 0, 0},
-		{"defaults", fields{DB: db}, false, 0, 1},
-		{"okay", fields{DB: db, Name: bucket1}, true, 0, 0},
-		{"debug", fields{DB: db, Name: bucket1, Debug: true}, true, 0, 0},
-		{"quiet", fields{DB: db, Name: bucket1, Quiet: true}, true, 0, 0},
+	items, errs, name, debug = p.Parse(db)
+	assert.Equal(t, 0, items)
+	assert.Equal(t, 0, errs)
+	assert.Contains(t, name, filepath.Base(bucket1))
+	assert.Equal(t, false, debug)
+
+	p = bucket.Parser{
+		Name: mock.NoSuchFile,
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &bucket.Cleaner{
-				Name:  tt.fields.Name,
-				Debug: tt.fields.Debug,
-				Quiet: tt.fields.Quiet,
-				Items: tt.fields.Items,
-				Total: tt.fields.Total,
-				Finds: tt.fields.Finds,
-				Errs:  tt.fields.Errs,
-			}
-			gotCount, gotFinds, gotErrors, _ := c.Clean(tt.fields.DB)
-			if (gotCount > 0) != tt.wantCount {
-				t.Errorf("Cleaner.Clean() gotCount = %v, want %v", gotCount, tt.wantCount)
-			}
-			if gotFinds != tt.wantFinds {
-				t.Errorf("Cleaner.Clean() gotFinds = %v, want %v", gotFinds, tt.wantFinds)
-			}
-			if gotErrors != tt.wantErrors {
-				t.Errorf("Cleaner.Clean() gotErrors = %v, want %v", gotErrors, tt.wantErrors)
-			}
-		})
+	items, errs, name, debug = p.Parse(db)
+	assert.Equal(t, 0, items)
+	assert.Equal(t, 1, errs)
+	assert.Equal(t, "", name)
+	assert.Equal(t, true, debug)
+
+	item1, err := mock.Item(1)
+	assert.Nil(t, err)
+	p = bucket.Parser{
+		Name: item1,
 	}
+	items, errs, name, debug = p.Parse(db)
+	assert.Equal(t, 0, items)
+	assert.Equal(t, 1, errs)
+	assert.Equal(t, "", name)
+	assert.Equal(t, true, debug)
+}
+
+func TestCleaner_Clean(t *testing.T) {
+	c := bucket.Cleaner{}
+	items, finds, errs, err := c.Clean(nil)
+	assert.NotNil(t, err)
+	assert.Equal(t, 0, items)
+	assert.Equal(t, 0, finds)
+	assert.Equal(t, 0, errs)
+
+	db, err := mock.Database()
+	assert.Nil(t, err)
+	defer db.Close()
+
+	items, finds, errs, err = c.Clean(db)
+	assert.Nil(t, err)
+	assert.Equal(t, 0, items)
+	assert.Equal(t, 0, finds)
+	assert.Equal(t, 1, errs)
+
+	bucket1, err := mock.Bucket(1)
+	assert.Nil(t, err)
+	c = bucket.Cleaner{
+		Name: bucket1,
+	}
+	items, finds, errs, err = c.Clean(db)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, items)
+	assert.Equal(t, 0, finds)
+	assert.Equal(t, 0, errs)
+
 }
 
 func TestAbs(t *testing.T) {
-	t.Run("no blank", func(t *testing.T) {
-		const wantErr = false
-		got, err := bucket.Abs("test")
-		if (err != nil) != wantErr {
-			t.Errorf("Abs() error = %v, wantErr %v", err, wantErr)
-			return
-		}
+	s, err := bucket.Abs("")
+	assert.NotNil(t, err)
+	assert.Equal(t, "", s)
 
-		if got == "" {
-			t.Error("Abs() returned an empty path")
-		}
-	})
+	s, err = bucket.Abs(mock.NoSuchFile)
+	assert.Nil(t, err)
+	assert.Contains(t, s, mock.NoSuchFile)
 }
 
 func TestCount(t *testing.T) {
-	bucket1, err := mock.Bucket(1)
-	if err != nil {
-		t.Error(err)
-	}
-	bucket2, err := mock.Bucket(2)
-	if err != nil {
-		t.Error(err)
-	}
+	val, err := bucket.Count(nil, "")
+	assert.NotNil(t, err)
+	assert.Equal(t, 0, val)
+
 	db, err := mock.Database()
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	assert.Nil(t, err)
 	defer db.Close()
-	type args struct {
-		name string
-		db   *bolt.DB
-	}
-	tests := []struct {
-		name      string
-		args      args
-		wantItems bool
-		wantErr   bool
-	}{
-		{"empty", args{}, false, true},
-		{"no bucket", args{db: db}, false, true},
-		{"bad bucket", args{"abc", db}, false, true},
-		{"404", args{bucket2, db}, false, true},
-		{"okay", args{bucket1, db}, true, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotItems, err := bucket.Count(tt.args.db, tt.args.name)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Count() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if (gotItems > 0) != tt.wantItems {
-				t.Errorf("Count() = %v, want %v", gotItems, tt.wantItems)
-			}
-		})
-	}
+
+	_, err = bucket.Count(db, "")
+	assert.NotNil(t, err)
+
+	_, err = bucket.Count(db, mock.NoSuchFile)
+	assert.NotNil(t, err)
+
+	bucket1, err := mock.Bucket(1)
+	assert.Nil(t, err)
+	val, err = bucket.Count(db, bucket1)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, val)
+
+	bucket2, err := mock.Bucket(2)
+	assert.Nil(t, err)
+	val, err = bucket.Count(db, bucket2)
+	assert.Nil(t, err)
+	assert.Equal(t, 0, val)
 }
 
 func TestStat(t *testing.T) {
-	type args struct {
-		name string
-	}
-	tests := []struct {
-		name      string
-		args      args
-		wantEmpty bool
-	}{
-		{"empty", args{}, true},
-		{"not found", args{"asdffdsaasdfdfa"}, true},
-		{"temp", args{os.TempDir()}, false},
-		{"current", args{"."}, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := bucket.Stat(tt.args.name, false, true); (got == "") != tt.wantEmpty {
-				t.Errorf("Stat() = %v, want empty %v", got, tt.wantEmpty)
-			}
-		})
-	}
+	s := bucket.Stat("", false, true)
+	assert.Equal(t, "", s)
+
+	bucket1, err := mock.Bucket(1)
+	assert.Nil(t, err)
+	s = bucket.Stat(bucket1, true, true)
+	assert.Equal(t, bucket1, s)
 }
 
 func TestTotal(t *testing.T) {
+	i, err := bucket.Total(nil, nil)
+	assert.NotNil(t, err)
+	assert.Equal(t, i, 0)
+
 	db, err := mock.Database()
-	if err != nil {
-		t.Error(err)
-	}
+	assert.Nil(t, err)
 	defer db.Close()
-	type args struct {
-		buckets []string
-		db      *bolt.DB
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    int
-		wantErr bool
-	}{
-		{"empty", args{}, 0, true},
-		{"no buckets", args{db: db}, 0, false},
-		{"bad buckets", args{[]string{"abc", "def"}, db}, 0, true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := bucket.Total(tt.args.db, tt.args.buckets)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Total() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("Total() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+
+	i, err = bucket.Total(db, nil)
+	assert.NotNil(t, err)
+	assert.Equal(t, i, 0)
+
+	i, err = bucket.Total(db, []string{mock.NoSuchFile})
+	assert.NotNil(t, err)
+	assert.Equal(t, i, 0)
+
+	bucket1, err := mock.Bucket(1)
+	assert.Nil(t, err)
+	bucket2, err := mock.Bucket(2)
+	assert.Nil(t, err)
+
+	i, err = bucket.Total(db, []string{bucket1, bucket2})
+	assert.Nil(t, err)
+	assert.Equal(t, 3, i)
 }

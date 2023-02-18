@@ -20,6 +20,7 @@ var (
 	ErrBucketNotDir = errors.New("bucket path is not a directory")
 	ErrBucketPath   = errors.New("directory used by the bucket does not exist on your system")
 	ErrBucketSkip   = errors.New("bucket directory does not exist")
+	ErrNilBucket    = errors.New("bucket cannot be an empty directory")
 )
 
 const query = "What bucket name do you wish to use"
@@ -129,6 +130,9 @@ func (p *Parser) Parse(db *bolt.DB) (items, errs int, name string, debug bool) {
 
 // Abs returns an absolute representation of the named bucket.
 func Abs(name string) (string, error) {
+	if name == "" {
+		return "", ErrNilBucket
+	}
 	s, err := filepath.Abs(name)
 	if err != nil {
 		return "", err
@@ -264,6 +268,9 @@ func Stat(name string, assumeYes, test bool) string {
 func Total(db *bolt.DB, buckets []string) (int, error) {
 	if db == nil {
 		return 0, bolt.ErrDatabaseNotOpen
+	}
+	if len(buckets) == 0 {
+		return 0, ErrNilBucket
 	}
 
 	count := 0
