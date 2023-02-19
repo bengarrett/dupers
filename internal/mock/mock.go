@@ -102,6 +102,8 @@ func Bucket(i int) (string, error) {
 		name = "bucket1"
 	case 2:
 		name = "bucket2"
+	case 3:
+		name = "bucket3"
 	default:
 		return "", ErrBucket
 	}

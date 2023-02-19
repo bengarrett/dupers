@@ -22,7 +22,8 @@ var (
 	ErrDatabaseName = errors.New("database has no bucket name")
 	ErrImport       = errors.New("import filepath is missing")
 	ErrNewName      = errors.New("a new directory is required")
-	ErrBucketEmpty  = errors.New("the bucket is empty with no files")
+	ErrBucketNil    = errors.New("bucket cannot be empty")
+	ErrBucketEmpty  = errors.New("bucket contains no files")
 )
 
 const (
@@ -35,18 +36,19 @@ const (
 )
 
 // Check prints the missing bucket name error.
-func Check(term, cmd, name string) {
+// If an error exists an exit code will be returned.
+func Check(term, cmd, name string) int {
 	if name != "" {
-		return
+		return 0
 	}
 	out.StderrCR(ErrDatabaseName)
 	fmt.Fprintf(os.Stderr, "Cannot %s the bucket as no bucket name was provided.\n", term)
 	if cmd == dmv {
 		out.Example(fmt.Sprintf("\ndupers %s <bucket name> <new directory>", cmd))
-		out.ErrFatal(nil)
+		return 1
 	}
 	out.Example(fmt.Sprintf("\ndupers %s <bucket name>", cmd))
-	out.ErrFatal(nil)
+	return 1
 }
 
 // Export the bucket as a CSV file.
@@ -55,7 +57,9 @@ func Export(db *bolt.DB, quiet bool, args [2]string) error {
 		return bolt.ErrDatabaseNotOpen
 	}
 	const x = "export"
-	Check(x, x, args[1])
+	if code := Check(x, x, args[1]); code > 0 {
+		return ErrBucketNil
+	}
 	name, err := database.Abs(args[1])
 	if err != nil {
 		return err
@@ -110,7 +114,9 @@ func List(db *bolt.DB, quiet bool, args [2]string) error {
 	if db == nil {
 		return bolt.ErrDatabaseNotOpen
 	}
-	Check("list", dls, args[1])
+	if code := Check("list", dls, args[1]); code > 0 {
+		return ErrBucketNil
+	}
 	name, err := database.Abs(args[1])
 	if err != nil {
 		return err
@@ -139,23 +145,28 @@ func List(db *bolt.DB, quiet bool, args [2]string) error {
 }
 
 // Move renames a bucket by duplicating it to a new bucket location.
-func Move(db *bolt.DB, c *dupe.Config, assumeYes bool, args [3]string) error {
+func Move(db *bolt.DB, c *dupe.Config, assumeYes bool, args [2]string) error {
 	if db == nil {
 		return bolt.ErrDatabaseNotOpen
 	}
-	b, dir := args[1], args[2]
-	Check("move and rename", dmv, b)
+	if c == nil {
+		return dupe.ErrNilConfig
+	}
+	b, dir := args[0], args[1]
+	if code := Check("move and rename", dmv, b); code > 0 {
+		return ErrBucketNil
+	}
 	name, err := database.Abs(b)
 	if err != nil {
 		return err
 	}
 	w := os.Stdout
-	if errEx := database.Exist(db, name); errEx != nil {
-		if errors.Is(errEx, bolt.ErrBucketNotFound) {
+	if err := database.Exist(db, name); err != nil {
+		if errors.Is(err, bolt.ErrBucketNotFound) {
 			fmt.Fprintf(w, "\nBucket name: %s\n", name)
 			out.Example("dupers mv <bucket name> <new directory>")
 		}
-		return fmt.Errorf("%w: %s", errEx, name)
+		return fmt.Errorf("%w: %s", err, name)
 	}
 	if dir == "" {
 		fmt.Fprintln(os.Stderr, "\nCannot move bucket within the database as no new directory was provided.")
@@ -191,7 +202,9 @@ func Remove(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
 		return bolt.ErrBucketNotFound
 	}
 	bucket := args[1]
-	Check("remove", drm, bucket)
+	if code := Check("remove", drm, bucket); code > 0 {
+		return ErrBucketNil
+	}
 	name, err := database.Abs(bucket)
 	if err != nil {
 		return err
@@ -223,7 +236,7 @@ func rmBucket(db *bolt.DB, name, retry string) error {
 		// retry with the original argument
 		if err1 := database.RM(db, retry); err1 != nil {
 			if errors.Is(err1, bolt.ErrBucketNotFound) {
-				notFound(db, name, err1)
+				return notFound(db, name, err1)
 			}
 			return err
 		}
@@ -231,20 +244,25 @@ func rmBucket(db *bolt.DB, name, retry string) error {
 	return err
 }
 
-func notFound(db *bolt.DB, name string, err error) {
+func notFound(db *bolt.DB, name string, err error) error {
+	if db == nil {
+		return bolt.ErrBucketNotFound
+	}
 	out.StderrCR(err)
 	w := os.Stdout
 	fmt.Fprintf(w, "Bucket to remove: %s\n", color.Danger.Sprint(name))
 	buckets, err2 := database.All(db)
 	if err2 != nil {
-		out.ErrFatal(err2)
+		return err2
 	}
 	if len(buckets) == 0 {
 		fmt.Fprintln(w, "There are no buckets in the database")
 		out.ErrFatal(nil)
 	}
-	fmt.Fprintf(w, "Buckets in use:   %s\n", strings.Join(buckets, "\n\t\t  "))
+	fmt.Fprintf(w, "Buckets in use:   %s\n",
+		strings.Join(buckets, "\n\t\t  "))
 	out.ErrFatal(nil)
+	return nil
 }
 
 // Rescan the bucket for changes with the file system.
@@ -256,7 +274,9 @@ func Rescan(db *bolt.DB, c *dupe.Config, archives bool, args [2]string) error {
 	if archives {
 		cmd = dupp
 	}
-	Check("add or update", cmd, args[1])
+	if code := Check("add or update", cmd, args[1]); code > 0 {
+		return ErrBucketNil
+	}
 	path, err := database.Abs(args[1])
 	if err != nil {
 		return err

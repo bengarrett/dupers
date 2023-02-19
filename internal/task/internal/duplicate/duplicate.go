@@ -22,9 +22,7 @@ var (
 	ErrSearch = errors.New("search request needs an expression")
 )
 
-const (
-	winOS = "windows"
-)
+const winOS = "windows"
 
 // Cleanup runs the cleanup commands when the appropriate flags are set.
 func Cleanup(c *dupe.Config, f *cmd.Flags) error {
@@ -33,6 +31,18 @@ func Cleanup(c *dupe.Config, f *cmd.Flags) error {
 	}
 	if f == nil {
 		return cmd.ErrNilFlag
+	}
+	if f.Sensen == nil {
+		return fmt.Errorf("%w: sensen", cmd.ErrNilFlag)
+	}
+	if f.Rm == nil {
+		return fmt.Errorf("%w: rm", cmd.ErrNilFlag)
+	}
+	if f.RmPlus == nil {
+		return fmt.Errorf("%w: rmplus", cmd.ErrNilFlag)
+	}
+	if f.Yes == nil {
+		return fmt.Errorf("%w: yes", cmd.ErrNilFlag)
 	}
 	if !*f.Sensen && !*f.Rm && !*f.RmPlus {
 		return nil
@@ -103,10 +113,16 @@ func CmdErr(args, buckets, minArgs int, test bool) {
 	}
 }
 
-// Lookup both cleans and then updates the buckets with file system changes.
-func Lookup(db *bolt.DB, c *dupe.Config, f *cmd.Flags) error {
+// WalkScanSave both cleans and then updates the buckets with file system changes.
+func WalkScanSave(db *bolt.DB, c *dupe.Config, f *cmd.Flags) error {
 	if db == nil {
 		return bolt.ErrDatabaseNotOpen
+	}
+	if c == nil {
+		return dupe.ErrNilConfig
+	}
+	if f == nil || f.Lookup == nil {
+		return fmt.Errorf("%w: lookup", cmd.ErrNilFlag)
 	}
 	c.DPrint("dupe lookup.")
 
@@ -114,7 +130,7 @@ func Lookup(db *bolt.DB, c *dupe.Config, f *cmd.Flags) error {
 
 	// normalise bucket names
 
-	// CHECK EXISTANCE
+	// TODO: CHECK EXISTANCE
 	for i, b := range c.All() {
 		abs, err := database.Abs(string(b))
 		if err != nil {
@@ -144,7 +160,7 @@ func Lookup(db *bolt.DB, c *dupe.Config, f *cmd.Flags) error {
 		}
 	}
 	if *f.Lookup {
-		if err := lookup(db, c); err != nil {
+		if err := Lookup(db, c); err != nil {
 			return nil
 		}
 	}
@@ -152,22 +168,25 @@ func Lookup(db *bolt.DB, c *dupe.Config, f *cmd.Flags) error {
 	return c.WalkDirs(db)
 }
 
-func lookup(db *bolt.DB, c *dupe.Config) error {
+func Lookup(db *bolt.DB, c *dupe.Config) error {
 	if db == nil {
 		return bolt.ErrDatabaseNotOpen
 	}
+	if c == nil {
+		return dupe.ErrNilConfig
+	}
 	c.DPrint("read the hash values in the buckets.")
-	fastErr := false
+	fastFlagErr := false
 	for _, bucket := range c.All() {
 		if i, err := c.SetCompares(db, bucket); err != nil {
 			out.StderrCR(err)
 		} else if i > 0 {
 			continue
 		}
-		fastErr = true
+		fastFlagErr = true
 		fmt.Fprintln(os.Stderr, "The -fast flag cannot be used for this dupe query")
 	}
-	if !fastErr {
+	if fastFlagErr {
 		return ErrFast
 	}
 	return nil

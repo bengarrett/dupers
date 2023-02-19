@@ -29,6 +29,7 @@ var (
 	ErrArgs     = errors.New("no buckets were given as arguments")
 	ErrCommand  = errors.New("command is unknown")
 	ErrNilFlags = errors.New("flags cannot be a nil value")
+	ErrNoArgs   = errors.New("arguments cannot be empty")
 )
 
 const (
@@ -78,6 +79,12 @@ func Directories() error {
 
 // Database parses the commands that interact with the database.
 func Database(db *bolt.DB, c *dupe.Config, args ...string) error {
+	if db == nil {
+		return bolt.ErrDatabaseNotOpen
+	}
+	if c == nil {
+		return dupe.ErrNilConfig
+	}
 	if len(args) == 0 {
 		return ErrCommand
 	}
@@ -93,7 +100,7 @@ func Database(db *bolt.DB, c *dupe.Config, args ...string) error {
 	case Backup_:
 		return backupDB(quiet)
 	case Clean_:
-		return cleanupDB(db, c)
+		return CleanupDB(db, c)
 	case DB_, Database_:
 		s, err := database.Info(db)
 		if err != nil {
@@ -107,8 +114,6 @@ func Database(db *bolt.DB, c *dupe.Config, args ...string) error {
 	case LS_:
 		return bucket.List(db, quiet, buckets)
 	case MV_:
-		buckets := [3]string{}
-		copy(buckets[:], args)
 		return bucket.Move(db, c, assumeYes, buckets)
 	case RM_:
 		return bucket.Remove(db, quiet, assumeYes, buckets)
@@ -128,6 +133,9 @@ func Dupe(db *bolt.DB, c *dupe.Config, f *cmd.Flags, testing bool, args ...strin
 		return bolt.ErrDatabaseNotOpen
 	}
 	if f == nil {
+		return ErrNilFlags
+	}
+	if f.Version == nil {
 		return ErrNilFlags
 	}
 	c.DPrint(fmt.Sprintf("dupe command: %s", strings.Join(args, " ")))
@@ -155,16 +163,23 @@ func Dupe(db *bolt.DB, c *dupe.Config, f *cmd.Flags, testing bool, args ...strin
 	if err := c.SetSource(args[source]); err != nil {
 		return err
 	}
-	if err := walkCheck(db, c, args...); err != nil {
+	if err := WalkCheck(db, c, args...); err != nil {
 		return err
 	}
-	return walkScan(db, c, f, args...)
+	return WalkScan(db, c, f, args...)
 }
 
-// walkCheck checks directories and files to scan, a bucket is the name given to database tables.
-func walkCheck(db *bolt.DB, c *dupe.Config, args ...string) error {
+// WalkCheck checks directories and files to scan, a bucket is the name given to database tables.
+func WalkCheck(db *bolt.DB, c *dupe.Config, args ...string) error {
 	if db == nil {
 		return bolt.ErrDatabaseNotOpen
+	}
+	if c == nil {
+		return dupe.ErrNilConfig
+	}
+	const minArgs = 2
+	if len(args) < minArgs {
+		return ErrNoArgs
 	}
 	buckets := args[2:]
 	if len(buckets) == 0 {
@@ -177,16 +192,19 @@ func walkCheck(db *bolt.DB, c *dupe.Config, args ...string) error {
 	if err := c.SetBuckets(buckets...); err != nil {
 		return err
 	}
-	if err := checkDupePaths(c); err != nil {
+	if err := CheckDupePaths(c); err != nil {
 		return err
 	}
 	c.DPrint(fmt.Sprintf("use buckets: %s", c.BucketS()))
 	return nil
 }
 
-func walkScan(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
+func WalkScan(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
 	if db == nil {
 		return bolt.ErrDatabaseNotOpen
+	}
+	if c == nil {
+		return dupe.ErrNilConfig
 	}
 	// files or directories to compare (these are not saved to database)
 	if err := c.WalkSource(); err != nil {
@@ -194,7 +212,7 @@ func walkScan(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
 	}
 	c.DPrint("walksource complete.")
 	// walk, scan and save file paths and hashes to the database
-	if err := duplicate.Lookup(db, c, f); err != nil {
+	if err := duplicate.WalkScanSave(db, c, f); err != nil {
 		return err
 	}
 	if !c.Quiet {
@@ -273,7 +291,13 @@ func Search(db *bolt.DB, f *cmd.Flags, test bool, args ...string) error {
 	if f == nil {
 		return ErrNilFlags
 	}
+	if f.Filename == nil || f.Exact == nil || f.Quiet == nil {
+		return ErrNilFlags
+	}
 	l := len(args)
+	if l == 0 {
+		return ErrArgs
+	}
 	if err := search.CmdErr(l, test); err != nil {
 		return err
 	}
@@ -313,7 +337,13 @@ func backupDB(quiet bool) error {
 }
 
 // cleanupDB cleans and compacts the database.
-func cleanupDB(db *bolt.DB, c *dupe.Config) error {
+func CleanupDB(db *bolt.DB, c *dupe.Config) error {
+	if db == nil {
+		return bolt.ErrDatabaseNotOpen
+	}
+	if c == nil {
+		return dupe.ErrNilConfig
+	}
 	if err := database.Clean(db, c.Quiet, c.Debug); err != nil {
 		if b := errors.Is(err, database.ErrClean); !b {
 			return err
@@ -328,8 +358,11 @@ func cleanupDB(db *bolt.DB, c *dupe.Config) error {
 	return nil
 }
 
-// checkDupePaths checks the path arguments supplied to the dupe command.
-func checkDupePaths(c *dupe.Config) error {
+// CheckDupePaths checks the path arguments supplied to the dupe command.
+func CheckDupePaths(c *dupe.Config) error {
+	if c == nil {
+		return dupe.ErrNilConfig
+	}
 	files, buckets, err := c.CheckPaths()
 	if err != nil {
 		return err

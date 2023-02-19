@@ -18,6 +18,7 @@ import (
 var (
 	ErrWindowsDir = errors.New("cannot parse the directory path")
 	ErrNilFlag    = errors.New("flags cannot be a nil value")
+	ErrNilAlias   = errors.New("aliases cannot be a nil value")
 )
 
 const (

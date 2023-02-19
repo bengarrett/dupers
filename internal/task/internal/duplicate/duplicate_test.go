@@ -4,25 +4,70 @@ package duplicate_test
 import (
 	"testing"
 
+	"github.com/bengarrett/dupers/internal/cmd"
+	"github.com/bengarrett/dupers/internal/mock"
 	"github.com/bengarrett/dupers/internal/task/internal/duplicate"
+	"github.com/bengarrett/dupers/pkg/dupe"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestCmdErr(t *testing.T) {
-	type args struct {
-		args    int
-		buckets int
-		minArgs int
-	}
-	tests := []struct {
-		name string
-		args args
-	}{
-		{"zero", args{args: 0, buckets: 0, minArgs: 0}},
-		{"one", args{args: 0, buckets: 0, minArgs: 1}},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			duplicate.CmdErr(tt.args.args, tt.args.buckets, tt.args.minArgs, true)
-		})
-	}
+func TestCleanup(t *testing.T) {
+	err := duplicate.Cleanup(nil, nil)
+	assert.NotNil(t, err)
+	c := dupe.Config{}
+	f := cmd.Flags{}
+	err = duplicate.Cleanup(&c, nil)
+	assert.NotNil(t, err)
+	err = duplicate.Cleanup(nil, &f)
+	assert.NotNil(t, err)
+	err = duplicate.Cleanup(&c, &f)
+	assert.NotNil(t, err)
+	no, yes := false, true
+	f.Sensen = &no
+	f.Rm = &no
+	f.RmPlus = &no
+	err = duplicate.Cleanup(&c, &f)
+	assert.NotNil(t, err)
+	f.Sensen = &yes
+	f.Yes = &no
+	err = duplicate.Cleanup(&c, &f)
+	assert.NotNil(t, err)
+}
+
+func TestWalkScanSave(t *testing.T) {
+	err := duplicate.WalkScanSave(nil, nil, nil)
+	assert.NotNil(t, err)
+	db, err := mock.Database()
+	assert.Nil(t, err)
+	defer db.Close()
+	err = duplicate.WalkScanSave(db, nil, nil)
+	assert.NotNil(t, err)
+	c := dupe.Config{Test: true}
+	err = duplicate.WalkScanSave(db, &c, nil)
+	assert.NotNil(t, err)
+	f := cmd.Flags{}
+	err = duplicate.WalkScanSave(db, &c, &f)
+	assert.NotNil(t, err)
+	no, yes := false, true
+	f.Lookup = &no
+	err = duplicate.WalkScanSave(db, &c, &f)
+	assert.Nil(t, err)
+	f.Lookup = &yes
+	err = duplicate.WalkScanSave(db, &c, &f)
+	assert.Nil(t, err)
+}
+
+func TestLookup(t *testing.T) {
+	err := duplicate.Lookup(nil, nil)
+	assert.NotNil(t, err)
+	db, err := mock.Database()
+	assert.Nil(t, err)
+	defer db.Close()
+	err = duplicate.Lookup(db, nil)
+	assert.NotNil(t, err)
+	c := dupe.Config{Test: true}
+	err = duplicate.Lookup(db, &c)
+	assert.Nil(t, err)
+	err = duplicate.Lookup(db, &c)
+	assert.Nil(t, err)
 }

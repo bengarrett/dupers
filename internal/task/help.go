@@ -14,7 +14,13 @@ import (
 	"github.com/gookit/color"
 )
 
-func Debug(a *cmd.Aliases, f *cmd.Flags) string {
+func Debug(a *cmd.Aliases, f *cmd.Flags) (string, error) {
+	if a == nil {
+		return "", cmd.ErrNilAlias
+	}
+	if f == nil {
+		return "", cmd.ErrNilFlag
+	}
 	const na = "n/a"
 	buf := new(bytes.Buffer)
 	w := tabwriter.NewWriter(buf, 0, 0, 1, ' ', tabwriter.AlignRight)
@@ -33,8 +39,10 @@ func Debug(a *cmd.Aliases, f *cmd.Flags) string {
 	fmt.Fprintf(w, "-delete:\t\t%v\t\t%v\n", *f.Rm, na)
 	fmt.Fprintf(w, "-delete+:\t\t%v\t\t%v\n", *f.RmPlus, na)
 	fmt.Fprintf(w, "-sensen:\t\t%v\t\t%v\n", *f.RmPlus, na)
-	w.Flush()
-	return buf.String()
+	if err := w.Flush(); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }
 
 // DatabaseHelp creates the database command help.

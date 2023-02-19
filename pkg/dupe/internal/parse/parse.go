@@ -40,7 +40,7 @@ type Scanner struct {
 	timer   time.Time
 }
 
-var ErrNoSource = errors.New("cannot set an empty source")
+var ErrNoSource = errors.New("cannot use an empty source")
 
 // All buckets returned as a slice.
 func (p *Scanner) All() []Bucket {

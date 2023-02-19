@@ -101,7 +101,11 @@ func main() {
 		color.Enable = false
 	}
 
-	if help := taskHelpVer(&a, &f); help != "" {
+	help, err := taskHelpVer(&a, &f)
+	if err != nil {
+		out.ErrFatal(err)
+	}
+	if help != "" {
 		fmt.Fprint(os.Stdout, help)
 		os.Exit(0)
 	}
@@ -138,7 +142,7 @@ func unknownExit(s string) {
 }
 
 // taskHelpVer returns the help or version options.
-func taskHelpVer(a *cmd.Aliases, f *cmd.Flags) string {
+func taskHelpVer(a *cmd.Aliases, f *cmd.Flags) (string, error) {
 	noArgs := len(flag.Args()) == 0
 	if *f.Version && *f.Debug {
 		return task.Debug(a, f)
@@ -150,23 +154,23 @@ func taskHelpVer(a *cmd.Aliases, f *cmd.Flags) string {
 		}
 		switch selection {
 		case task.Dupe_:
-			return task.HelpDupe()
+			return task.HelpDupe(), nil
 		case task.Search_:
-			return task.HelpSearch()
+			return task.HelpSearch(), nil
 		case task.Database_, task.DB_:
-			return task.HelpDatabase()
+			return task.HelpDatabase(), nil
 		default:
-			return task.Help()
+			return task.Help(), nil
 		}
 	}
 	if *a.Version || *f.Version {
-		return about(*f.Quiet)
+		return about(*f.Quiet), nil
 	}
 	// no commands or arguments, then always return help
 	if noArgs {
-		return task.Help()
+		return task.Help(), nil
 	}
-	return ""
+	return "", nil
 }
 
 // about returns the program branding and information.

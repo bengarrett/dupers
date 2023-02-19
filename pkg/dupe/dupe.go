@@ -508,6 +508,9 @@ func (c *Config) walkDebug(s string, err error) error {
 // WalkSource walks the source directory or a file to collect the hashed content for a future comparison.
 func (c *Config) WalkSource() error {
 	root := c.GetSource()
+	if root == "" {
+		return parse.ErrNoSource
+	}
 	c.DPrint("walksource to check: " + root)
 	stat, err := os.Stat(root)
 	if errors.Is(err, os.ErrNotExist) {

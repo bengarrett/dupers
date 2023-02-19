@@ -20,20 +20,19 @@ var (
 )
 
 // CmdErr parses the arguments of the search command.
-func CmdErr(l int, test bool) error {
-	if l > 1 {
+func CmdErr(lenArgs int, test bool) error {
+	if lenArgs > 1 {
 		return nil
 	}
-	w := os.Stdout
+	w := os.Stderr
 	out.StderrCR(ErrSearch)
 	fmt.Fprintln(w, "A search expression can be a partial or complete filename,")
 	fmt.Fprintln(w, "or a partial or complete directory.")
 	out.Example("\ndupers search <search expression> [optional, directories to search]")
-	if test {
-		return ErrSearch
+	if !test {
+		out.ErrFatal(nil)
 	}
-	out.ErrFatal(nil)
-	return nil
+	return ErrSearch
 }
 
 func Compare(db *bolt.DB, f *cmd.Flags, term string, buckets []string, test bool) (*database.Matches, error) {
@@ -41,6 +40,9 @@ func Compare(db *bolt.DB, f *cmd.Flags, term string, buckets []string, test bool
 		return nil, bolt.ErrDatabaseNotOpen
 	}
 	if f == nil {
+		return nil, ErrNoFlags
+	}
+	if f.Filename == nil || f.Exact == nil {
 		return nil, ErrNoFlags
 	}
 	var err error
@@ -82,14 +84,13 @@ func Error(err error, test bool) error {
 		}
 		s := fmt.Sprintf("dupers up %s\n", dir)
 		out.Example(s)
-		if test {
-			return nil
+		if !test {
+			out.ErrFatal(nil)
 		}
-		out.ErrFatal(nil)
+		return nil
 	}
-	if test {
-		return err
+	if !test {
+		out.ErrFatal(err)
 	}
-	out.ErrFatal(err)
-	return nil
+	return err
 }
