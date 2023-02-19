@@ -10,6 +10,7 @@ import (
 	"github.com/bengarrett/dupers/internal/mock"
 	"github.com/bengarrett/dupers/pkg/database"
 	"github.com/bengarrett/dupers/pkg/dupe/internal/parse"
+	"github.com/gookit/color"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -188,6 +189,7 @@ func Test_SetSource(t *testing.T) {
 }
 
 func TestMarker(t *testing.T) {
+	color.Enable = false
 	s := parse.Marker("", "", false)
 	assert.Equal(t, "", s)
 
