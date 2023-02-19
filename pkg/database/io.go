@@ -22,13 +22,16 @@ import (
 	"golang.org/x/text/number"
 )
 
-const loops = 0
+const (
+	Timeout = 3 * time.Second // Timeout lock option for the Bolt database.
+	loops   = 0
+)
 
 var (
 	ErrImportList = errors.New("import list cannot be empty")
 	ErrNoBucket   = errors.New("the named bucket cannot be empty")
-	ErrNoFilename = errors.New("the named file cannot be empty")
 	ErrNoDest     = errors.New("the destination path cannot be empty")
+	ErrNoFilename = errors.New("the named file cannot be empty")
 )
 
 // Backup makes a copy of the database to the named location.

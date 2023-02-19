@@ -13,7 +13,6 @@ import (
 	"runtime"
 	"strings"
 	"text/tabwriter"
-	"time"
 
 	"github.com/bengarrett/dupers/internal/out"
 	"github.com/bengarrett/dupers/pkg/database/internal/bucket"
@@ -37,11 +36,10 @@ type (
 )
 
 const (
-	PrivateFile fs.FileMode = 0o600
-	PrivateDir  fs.FileMode = 0o700
+	PrivateFile fs.FileMode = 0o600 // PrivateFile mode means only the owner has read/write access.
+	PrivateDir  fs.FileMode = 0o700 // PrivateDir mode means only the owner has read/write/dir access.
 
 	NotFound = "This is okay as one will be created when using the dupe or search commands."
-	Timeout  = 3 * time.Second
 
 	backupTime = "20060102-150405"
 	boltName   = "dupers.db"
@@ -53,14 +51,13 @@ const (
 )
 
 var (
-	ErrClean     = errors.New("database has nothing to clean")
-	ErrCompact   = errors.New("database compression has not reduced the size")
 	ErrEmpty     = errors.New("database is empty and contains no items")
+	ErrNoCompact = errors.New("compression has not reduced the database size")
+	ErrNoClean   = errors.New("database has nothing to clean")
+	ErrNoTerm    = errors.New("cannot compare an empty term")
 	ErrNotFound  = errors.New("database file does not exist")
-	ErrSameNames = errors.New("bucket target is the same as the bucket name")
-	ErrZeroByte  = errors.New("database is a zero byte file")
-
-	ErrNoTerm = errors.New("cannot compare an empty term")
+	ErrSameName  = errors.New("bucket target is the same as the bucket name")
+	ErrZeroByte  = errors.New("database is a zero byte file and is unusable")
 )
 
 // Abs returns an absolute representation of the named bucket.
@@ -188,7 +185,7 @@ func Clean(db *bolt.DB, quiet, debug bool, buckets ...string) error {
 	w := os.Stdout
 	if debug && finds == 0 {
 		fmt.Fprintln(w, "")
-		return ErrClean
+		return ErrNoClean
 	}
 	if finds > 0 {
 		fmt.Fprintf(w, "\rThe database removed %d stale items\n", finds)
@@ -319,7 +316,7 @@ func compare(db *bolt.DB, ignoreCase, pathBase bool, term []byte, buckets ...str
 		if err != nil {
 			out.StderrCR(err)
 		}
-		if err = db.View(func(tx *bolt.Tx) error {
+		err = db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket(abs)
 			if b == nil {
 				return bolt.ErrBucketNotFound
@@ -343,9 +340,11 @@ func compare(db *bolt.DB, ignoreCase, pathBase bool, term []byte, buckets ...str
 				return nil
 			})
 			return err
-		}); errors.Is(err, bolt.ErrBucketNotFound) {
-			return nil, fmt.Errorf("%w: '%s'", err, abs)
-		} else if err != nil {
+		})
+		if err != nil {
+			if errors.Is(err, bolt.ErrBucketNotFound) {
+				return nil, fmt.Errorf("%w: '%s'", err, abs)
+			}
 			return nil, err
 		}
 	}
@@ -589,7 +588,7 @@ func Rename(db *bolt.DB, name, target string) error {
 		return bolt.ErrDatabaseNotOpen
 	}
 	if name == target {
-		return ErrSameNames
+		return ErrSameName
 	}
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(name))
@@ -609,8 +608,8 @@ func Rename(db *bolt.DB, name, target string) error {
 	})
 }
 
-// RM removes the named bucket from the database.
-func RM(db *bolt.DB, name string) error {
+// Remove the named bucket from the database.
+func Remove(db *bolt.DB, name string) error {
 	if db == nil {
 		return bolt.ErrDatabaseNotOpen
 	}

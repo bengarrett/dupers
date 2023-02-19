@@ -23,18 +23,14 @@ var (
 )
 
 const (
-	Header = "sha256_sum,path#"
-	WinOS  = "windows"
-
-	BackSlash = "\u005C"
-	FwdSlash  = "\u002F"
-	UncPath   = BackSlash + BackSlash
+	Header    = "sha256_sum,path#"    // Header that is inserted into exported CSV files.
+	WinOS     = "windows"             // WinOS is the Windows operating system.s
+	BackSlash = "\u005C"              // BackSlash Unicode representation.
+	FwdSlash  = "\u002F"              // FwdSlash is a forward slash Unicode representation.
+	UncPath   = BackSlash + BackSlash // UncPath is the  Universal Naming Convention path.
 )
 
-type (
-	// Filepath is the absolute path to a file used as a map key.
-	Filepath string
-)
+type Filepath string // Filepath is the absolute path to a file used as a map key.
 
 // Bucket validates the header of a csv file and returns the embedded bucket name.
 func Bucket(header string) string {

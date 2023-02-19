@@ -345,13 +345,13 @@ func CleanupDB(db *bolt.DB, c *dupe.Config) error {
 		return dupe.ErrNilConfig
 	}
 	if err := database.Clean(db, c.Quiet, c.Debug); err != nil {
-		if b := errors.Is(err, database.ErrClean); !b {
+		if b := errors.Is(err, database.ErrNoClean); !b {
 			return err
 		}
 		out.StderrCR(err)
 	}
 	if err := database.Compact(db, c.Debug); err != nil {
-		if b := errors.Is(err, database.ErrCompact); !b {
+		if b := errors.Is(err, database.ErrNoCompact); !b {
 			return err
 		}
 	}

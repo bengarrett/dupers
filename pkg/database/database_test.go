@@ -186,9 +186,9 @@ func TestIsEmpty(t *testing.T) {
 	assert.Nil(t, err)
 	bucket2, err := mock.Bucket(2)
 	assert.Nil(t, err)
-	err = database.RM(db, bucket1)
+	err = database.Remove(db, bucket1)
 	assert.Nil(t, err)
-	err = database.RM(db, bucket2)
+	err = database.Remove(db, bucket2)
 	assert.Nil(t, err)
 
 	err = database.IsEmpty(db)

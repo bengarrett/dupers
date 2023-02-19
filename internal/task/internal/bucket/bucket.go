@@ -187,7 +187,7 @@ func Move(db *bolt.DB, c *dupe.Config, assumeYes bool, args [2]string) error {
 		}
 	}
 	if err := database.Rename(db, name, newName); err != nil {
-		if errors.Is(err, database.ErrSameNames) {
+		if errors.Is(err, database.ErrSameName) {
 			fmt.Fprintln(os.Stderr, "\nCannot move the bucket to the same directory as its current directory.")
 			out.Example(fmt.Sprintf("dupers mv %s <new directory>\n", b))
 		}
@@ -231,10 +231,10 @@ func Remove(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
 }
 
 func rmBucket(db *bolt.DB, name, retry string) error {
-	err := database.RM(db, name)
+	err := database.Remove(db, name)
 	if errors.Is(err, bolt.ErrBucketNotFound) {
 		// retry with the original argument
-		if err1 := database.RM(db, retry); err1 != nil {
+		if err1 := database.Remove(db, retry); err1 != nil {
 			if errors.Is(err1, bolt.ErrBucketNotFound) {
 				return notFound(db, name, err1)
 			}
