@@ -25,18 +25,18 @@ func TestCmdErr(t *testing.T) {
 }
 
 func TestErr(t *testing.T) {
-	err := search.Error(nil, true)
+	err := search.Error(nil)
 	assert.Nil(t, err)
-	err = search.Error(database.ErrEmpty, true)
+	err = search.Error(database.ErrEmpty)
 	assert.Nil(t, err)
-	err = search.Error(bolt.ErrBucketNotFound, true)
+	err = search.Error(bolt.ErrBucketNotFound)
 	assert.Nil(t, err)
-	err = search.Error(bolt.ErrDatabaseNotOpen, true)
+	err = search.Error(bolt.ErrDatabaseNotOpen)
 	assert.NotNil(t, err)
 }
 
 func TestCompare(t *testing.T) {
-	m, err := search.Compare(nil, nil, "", nil, true)
+	m, err := search.Compare(nil, nil, "", nil)
 	assert.NotNil(t, err)
 	assert.Nil(t, m)
 	val := true
@@ -48,7 +48,7 @@ func TestCompare(t *testing.T) {
 	assert.Nil(t, err)
 	defer db.Close()
 	defer os.Remove(path)
-	m, err = search.Compare(db, &f, "", nil, true)
+	m, err = search.Compare(db, &f, "", nil)
 	assert.NotNil(t, err)
 	assert.Nil(t, m)
 }

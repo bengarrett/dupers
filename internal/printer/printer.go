@@ -119,6 +119,7 @@ func Example(cmd string) {
 	}
 
 	fmt.Fprintln(os.Stdout, color.Debug.Sprint(cmd))
+	fmt.Fprintln(os.Stdout)
 }
 
 // EraseLine uses ANSI to erase the current line in stdout.

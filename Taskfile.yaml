@@ -173,7 +173,11 @@ tasks:
     internal: false
     desc: remove the temporary hidden task directory used for the tests
     cmds:
+      - cmd: rm -fvR {{.DST}}
+        platforms: [darwin]
+        ignore_error: true
       - cmd: rm --force --recursive --verbose {{.DST}}
+        platforms: [linux]
         ignore_error: true
   clone-a-temp-file:
     silent: false

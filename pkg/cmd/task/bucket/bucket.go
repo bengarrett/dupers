@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	ErrDatabaseName = errors.New("database has no bucket name")
+	ErrDatabaseName = errors.New("database has no bucket with this name")
 	ErrImport       = errors.New("import filepath is missing")
 	ErrNewName      = errors.New("a new directory is required")
 	ErrBucketNil    = errors.New("bucket cannot be empty")
@@ -51,6 +51,15 @@ func Check(term, cmd, name string) int {
 	return 1
 }
 
+func checkBucket(cmd, name string, err error) error {
+	if errors.Is(err, bolt.ErrBucketNotFound) {
+		printer.StderrCR(ErrDatabaseName)
+		fmt.Fprintf(os.Stdout, "Bucket name: %s\n", name)
+		printer.Example("\ndupers " + cmd + " <bucket name>")
+	}
+	return err
+}
+
 // Export the bucket as a CSV file.
 func Export(db *bolt.DB, quiet bool, args [2]string) error {
 	if db == nil {
@@ -64,13 +73,8 @@ func Export(db *bolt.DB, quiet bool, args [2]string) error {
 	if err != nil {
 		return err
 	}
-	w := os.Stdout
 	if err := database.Exist(db, name); err != nil {
-		if errors.Is(err, bolt.ErrBucketNotFound) {
-			fmt.Fprintf(w, "Bucket name: %s\n", name)
-			printer.Example("\ndupers export <bucket name>")
-		}
-		return err
+		return checkBucket(x, name, err)
 	}
 	exp, err := database.CSVExport(db, name)
 	if err != nil {
@@ -90,13 +94,21 @@ func Import(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
 	if db == nil {
 		return bolt.ErrDatabaseNotOpen
 	}
+	help := fmt.Sprintf("\ndupers %s <filepath>", dim)
 	if args[1] == "" {
 		fmt.Fprintln(os.Stderr, "Cannot import file as no filepath was provided.")
-		printer.Example(fmt.Sprintf("\ndupers %s <filepath>", dim))
+		printer.Example(help)
 		return ErrImport
 	}
 	name, err := database.Abs(args[1])
 	if err != nil {
+		return err
+	}
+	if _, err = os.Stat(name); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			fmt.Fprintln(os.Stderr, "Cannot import file as the filepath is incorrect.")
+			printer.Example(help)
+		}
 		return err
 	}
 	r, err := database.CSVImport(db, name, assumeYes)
@@ -120,6 +132,9 @@ func List(db *bolt.DB, quiet bool, args [2]string) error {
 	name, err := database.Abs(args[1])
 	if err != nil {
 		return err
+	}
+	if err := database.Exist(db, name); err != nil {
+		return checkBucket(dls, name, err)
 	}
 	ls, err := database.List(db, name)
 	if err != nil {
@@ -145,35 +160,35 @@ func List(db *bolt.DB, quiet bool, args [2]string) error {
 }
 
 // Move renames a bucket by duplicating it to a new bucket location.
-func Move(db *bolt.DB, c *dupe.Config, assumeYes bool, args [2]string) error {
+func Move(db *bolt.DB, c *dupe.Config, assumeYes bool, src, dest string) error {
 	if db == nil {
 		return bolt.ErrDatabaseNotOpen
 	}
 	if c == nil {
 		return dupe.ErrNilConfig
 	}
-	b, dir := args[0], args[1]
-	if code := Check("move and rename", dmv, b); code > 0 {
+	if code := Check("move and rename", dmv, src); code > 0 {
 		return ErrBucketNil
 	}
-	name, err := database.Abs(b)
+	name, err := database.Abs(src)
 	if err != nil {
 		return err
 	}
 	w := os.Stdout
 	if err := database.Exist(db, name); err != nil {
 		if errors.Is(err, bolt.ErrBucketNotFound) {
+			printer.StderrCR(ErrDatabaseName)
 			fmt.Fprintf(w, "\nBucket name: %s\n", name)
 			printer.Example("dupers mv <bucket name> <new directory>")
 		}
 		return fmt.Errorf("%w: %s", err, name)
 	}
-	if dir == "" {
+	if dest == "" {
 		fmt.Fprintln(os.Stderr, "\nCannot move bucket within the database as no new directory was provided.")
-		printer.Example(fmt.Sprintf("dupers mv %s <new directory>", b))
+		printer.Example(fmt.Sprintf("dupers mv %s <new directory>", src))
 		return ErrNewName
 	}
-	newName, err := database.Abs(dir)
+	newName, err := database.Abs(dest)
 	if err != nil {
 		return err
 	}
@@ -189,7 +204,7 @@ func Move(db *bolt.DB, c *dupe.Config, assumeYes bool, args [2]string) error {
 	if err := database.Rename(db, name, newName); err != nil {
 		if errors.Is(err, database.ErrSameName) {
 			fmt.Fprintln(os.Stderr, "\nCannot move the bucket to the same directory as its current directory.")
-			printer.Example(fmt.Sprintf("dupers mv %s <new directory>\n", b))
+			printer.Example(fmt.Sprintf("dupers mv %s <new directory>\n", src))
 		}
 		return err
 	}
@@ -208,6 +223,9 @@ func Remove(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
 	name, err := database.Abs(bucket)
 	if err != nil {
 		return err
+	}
+	if err := database.Exist(db, name); err != nil {
+		return checkBucket(drm, name, err)
 	}
 	items, err := database.Count(db, name)
 	if err != nil {
@@ -280,6 +298,9 @@ func Rescan(db *bolt.DB, c *dupe.Config, archives bool, args [2]string) error {
 	path, err := database.Abs(args[1])
 	if err != nil {
 		return err
+	}
+	if err := database.Exist(db, path); err != nil {
+		return checkBucket(cmd, path, err)
 	}
 	name := dupe.Bucket(path)
 	if archives {

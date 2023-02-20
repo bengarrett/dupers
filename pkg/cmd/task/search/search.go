@@ -35,7 +35,7 @@ func CmdErr(lenArgs int, test bool) error {
 	return ErrSearch
 }
 
-func Compare(db *bolt.DB, f *cmd.Flags, term string, buckets []string, test bool) (*database.Matches, error) {
+func Compare(db *bolt.DB, f *cmd.Flags, term string, buckets []string) (*database.Matches, error) {
 	if db == nil {
 		return nil, bolt.ErrDatabaseNotOpen
 	}
@@ -50,47 +50,41 @@ func Compare(db *bolt.DB, f *cmd.Flags, term string, buckets []string, test bool
 	switch {
 	case *f.Filename && !*f.Exact:
 		if m, err = database.CompareBaseNoCase(db, term, buckets...); err != nil {
-			return nil, Error(err, test)
+			return nil, Error(err)
 		}
 	case *f.Filename && *f.Exact:
 		if m, err = database.CompareBase(db, term, buckets...); err != nil {
-			return nil, Error(err, test)
+			return nil, Error(err)
 		}
 	case !*f.Filename && !*f.Exact:
 		if m, err = database.CompareNoCase(db, term, buckets...); err != nil {
-			return nil, Error(err, test)
+			return nil, Error(err)
 		}
 	case !*f.Filename && *f.Exact:
 		if m, err = database.Compare(db, term, buckets...); err != nil {
-			return nil, Error(err, test)
+			return nil, Error(err)
 		}
 	}
 	return m, nil
 }
 
 // Error parses the errors from search compares.
-func Error(err error, test bool) error {
+func Error(err error) error {
 	if errors.Is(err, database.ErrEmpty) {
 		printer.StderrCR(err)
 		return nil
 	}
 	if errors.Is(err, bolt.ErrBucketNotFound) {
 		printer.StderrCR(err)
-		fmt.Fprintln(os.Stdout, "\nTo add this directory to the database, run:")
+		fmt.Fprintln(os.Stdout, "To add this directory as a bucket to the database, run:")
 		dir := err.Error()
-		if errors.Unwrap(err) == nil {
-			s := fmt.Sprintf("%s: ", errors.Unwrap(err))
-			dir = strings.ReplaceAll(err.Error(), s, "")
+		if errors.Unwrap(err) != nil {
+			s := fmt.Sprintf("%s: ", bolt.ErrBucketNotFound.Error())
+			dir = strings.ReplaceAll(dir, s, "")
 		}
 		s := fmt.Sprintf("dupers up %s\n", dir)
 		printer.Example(s)
-		if !test {
-			printer.ErrFatal(nil)
-		}
-		return nil
-	}
-	if !test {
-		printer.ErrFatal(err)
+		return err
 	}
 	return err
 }

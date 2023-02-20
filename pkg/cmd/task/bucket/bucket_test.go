@@ -61,27 +61,24 @@ func TestList(t *testing.T) {
 }
 
 func TestMove(t *testing.T) {
-	args := [2]string{"", ""}
-	err := bucket.Move(nil, nil, false, args)
+	err := bucket.Move(nil, nil, false, "", "")
 	assert.NotNil(t, err)
 
 	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
 	defer os.Remove(path)
-	err = bucket.Move(db, nil, false, args)
+	err = bucket.Move(db, nil, false, "", "")
 	assert.NotNil(t, err)
 	c := dupe.Config{}
-	err = bucket.Move(db, &c, false, args)
+	err = bucket.Move(db, &c, false, "", "")
 	assert.NotNil(t, err)
 
 	src, err := mock.Bucket(1)
 	assert.Nil(t, err)
 	dest, err := mock.Bucket(3)
 	assert.Nil(t, err)
-	args[0] = src
-	args[1] = dest
-	err = bucket.Move(db, &c, true, args)
+	err = bucket.Move(db, &c, true, src, dest)
 	assert.Nil(t, err)
 }
 

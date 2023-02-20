@@ -116,7 +116,14 @@ func Database(db *bolt.DB, c *dupe.Config, args ...string) error {
 	case LS_:
 		return bucket.List(db, quiet, buckets)
 	case MV_:
-		return bucket.Move(db, c, assumeYes, buckets)
+		src, dest := "", ""
+		if len(args) > 1 {
+			src = args[1]
+		}
+		if len(args) > 2 {
+			dest = args[2]
+		}
+		return bucket.Move(db, c, assumeYes, src, dest)
 	case RM_:
 		return bucket.Remove(db, quiet, assumeYes, buckets)
 	case Up_:
@@ -308,7 +315,7 @@ func Search(db *bolt.DB, f *cmd.Flags, test bool, args ...string) error {
 	if l > minArgs {
 		buckets = args[minArgs:]
 	}
-	m, err := search.Compare(db, f, term, buckets, false)
+	m, err := search.Compare(db, f, term, buckets)
 	if err != nil {
 		return err
 	}

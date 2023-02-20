@@ -122,6 +122,7 @@ func main() {
 		if errors.Is(err, database.ErrZeroByte) {
 			os.Exit(1)
 		}
+		c.Debugger("error details: " + fmt.Sprintf("%+V", err))
 		printer.ErrFatal(err)
 	}
 }
