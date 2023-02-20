@@ -2,7 +2,6 @@
 package parse_test
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -138,7 +137,6 @@ func TestRead(t *testing.T) {
 	assert.Equal(t, true, ok)
 
 	item2, err := mock.Item(2)
-	fmt.Println("item1", item2)
 	assert.Nil(t, err)
 	assert.NotEqual(t, "", item1)
 	sum, err = parse.Read(item2)

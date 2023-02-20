@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/bengarrett/dupers/internal/print"
+	"github.com/bengarrett/dupers/internal/printer"
 	"github.com/bengarrett/dupers/pkg/database"
 	"github.com/bengarrett/dupers/pkg/dupe"
 	"github.com/gookit/color"
@@ -41,13 +41,13 @@ func Check(term, cmd, name string) int {
 	if name != "" {
 		return 0
 	}
-	print.StderrCR(ErrDatabaseName)
+	printer.StderrCR(ErrDatabaseName)
 	fmt.Fprintf(os.Stderr, "Cannot %s the bucket as no bucket name was provided.\n", term)
 	if cmd == dmv {
-		print.Example(fmt.Sprintf("\ndupers %s <bucket name> <new directory>", cmd))
+		printer.Example(fmt.Sprintf("\ndupers %s <bucket name> <new directory>", cmd))
 		return 1
 	}
-	print.Example(fmt.Sprintf("\ndupers %s <bucket name>", cmd))
+	printer.Example(fmt.Sprintf("\ndupers %s <bucket name>", cmd))
 	return 1
 }
 
@@ -68,7 +68,7 @@ func Export(db *bolt.DB, quiet bool, args [2]string) error {
 	if err := database.Exist(db, name); err != nil {
 		if errors.Is(err, bolt.ErrBucketNotFound) { // TODO: move this out to the main.go
 			fmt.Fprintf(w, "Bucket name: %s\n", name)
-			print.Example("\ndupers export <bucket name>")
+			printer.Example("\ndupers export <bucket name>")
 		}
 		return err
 	}
@@ -78,7 +78,7 @@ func Export(db *bolt.DB, quiet bool, args [2]string) error {
 	}
 	s := fmt.Sprintf("%s %s\n", color.Secondary.Sprint("Bucket name:"), color.Debug.Sprint(name))
 	s += fmt.Sprintf("The exported bucket file is at: %s", exp)
-	print.Quiet(quiet, s)
+	printer.Quiet(quiet, s)
 	if quiet {
 		fmt.Fprintln(os.Stdout, exp)
 	}
@@ -92,7 +92,7 @@ func Import(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
 	}
 	if args[1] == "" {
 		fmt.Fprintln(os.Stderr, "Cannot import file as no filepath was provided.")
-		print.Example(fmt.Sprintf("\ndupers %s <filepath>", dim))
+		printer.Example(fmt.Sprintf("\ndupers %s <filepath>", dim))
 		return ErrImport
 	}
 	name, err := database.Abs(args[1])
@@ -105,7 +105,7 @@ func Import(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
 	}
 	p := message.NewPrinter(language.English)
 	s := p.Sprintf("\rSuccessfully imported %d records.", number.Decimal(r))
-	print.Quiet(quiet, s)
+	printer.Quiet(quiet, s)
 	return nil
 }
 
@@ -164,13 +164,13 @@ func Move(db *bolt.DB, c *dupe.Config, assumeYes bool, args [2]string) error {
 	if err := database.Exist(db, name); err != nil {
 		if errors.Is(err, bolt.ErrBucketNotFound) {
 			fmt.Fprintf(w, "\nBucket name: %s\n", name)
-			print.Example("dupers mv <bucket name> <new directory>")
+			printer.Example("dupers mv <bucket name> <new directory>")
 		}
 		return fmt.Errorf("%w: %s", err, name)
 	}
 	if dir == "" {
 		fmt.Fprintln(os.Stderr, "\nCannot move bucket within the database as no new directory was provided.")
-		print.Example(fmt.Sprintf("dupers mv %s <new directory>", b))
+		printer.Example(fmt.Sprintf("dupers mv %s <new directory>", b))
 		return ErrNewName
 	}
 	newName, err := database.Abs(dir)
@@ -182,14 +182,14 @@ func Move(db *bolt.DB, c *dupe.Config, assumeYes bool, args [2]string) error {
 			color.Secondary.Sprint("Bucket name:"), color.Debug.Sprint(name),
 			"New name:", color.Debug.Sprint(newName))
 		fmt.Fprintln(w, "Renames the database bucket, but this does not make changes to the file system.")
-		if !print.AskYN("Rename bucket", assumeYes, print.No) {
+		if !printer.AskYN("Rename bucket", assumeYes, printer.No) {
 			return nil
 		}
 	}
 	if err := database.Rename(db, name, newName); err != nil {
 		if errors.Is(err, database.ErrSameName) {
 			fmt.Fprintln(os.Stderr, "\nCannot move the bucket to the same directory as its current directory.")
-			print.Example(fmt.Sprintf("dupers mv %s <new directory>\n", b))
+			printer.Example(fmt.Sprintf("dupers mv %s <new directory>\n", b))
 		}
 		return err
 	}
@@ -218,7 +218,7 @@ func Remove(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
 		fmt.Fprintf(w, "%s\t%s\n", color.Secondary.Sprint("Bucket:"), color.Debug.Sprint(name))
 		p := message.NewPrinter(language.English)
 		fmt.Fprintf(w, "%s\t%s\n", color.Secondary.Sprint("Items:"), color.Debug.Sprint(p.Sprint(items)))
-		if !print.AskYN("Remove this bucket", assumeYes, print.No) {
+		if !printer.AskYN("Remove this bucket", assumeYes, printer.No) {
 			return nil
 		}
 	}
@@ -226,7 +226,7 @@ func Remove(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
 		return err
 	}
 	s := fmt.Sprintf("Removed bucket from the database: '%s'\n", name)
-	print.Quiet(quiet, s)
+	printer.Quiet(quiet, s)
 	return nil
 }
 
@@ -248,7 +248,7 @@ func notFound(db *bolt.DB, name string, err error) error {
 	if db == nil {
 		return bolt.ErrBucketNotFound
 	}
-	print.StderrCR(err)
+	printer.StderrCR(err)
 	w := os.Stdout
 	fmt.Fprintf(w, "Bucket to remove: %s\n", color.Danger.Sprint(name))
 	buckets, err2 := database.All(db)
@@ -257,11 +257,11 @@ func notFound(db *bolt.DB, name string, err error) error {
 	}
 	if len(buckets) == 0 {
 		fmt.Fprintln(w, "There are no buckets in the database")
-		print.ErrFatal(nil)
+		printer.ErrFatal(nil)
 	}
 	fmt.Fprintf(w, "Buckets in use:   %s\n",
 		strings.Join(buckets, "\n\t\t  "))
-	print.ErrFatal(nil)
+	printer.ErrFatal(nil)
 	return nil
 }
 

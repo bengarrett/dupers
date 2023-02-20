@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bengarrett/dupers/internal/print"
+	"github.com/bengarrett/dupers/internal/printer"
 	"github.com/bengarrett/dupers/pkg/database"
 	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"
@@ -213,7 +213,7 @@ func Print(quiet, exact bool, term string, m *database.Matches) string {
 			}
 			mark := Marker(file, term, exact)
 			if cnt == 1 {
-				fmt.Fprintf(w, "%s%s\n", color.Success.Sprint(print.MatchPrefix),
+				fmt.Fprintf(w, "%s%s\n", color.Success.Sprint(printer.MatchPrefix),
 					mark)
 				continue
 			}

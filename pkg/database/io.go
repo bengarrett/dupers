@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bengarrett/dupers/internal/print"
+	"github.com/bengarrett/dupers/internal/printer"
 	"github.com/bengarrett/dupers/pkg/database/bucket"
 	"github.com/bengarrett/dupers/pkg/database/csv"
 	"github.com/gookit/color"
@@ -215,7 +215,7 @@ func (batch Lists) iterate(db *bolt.DB, name Bucket, imported, total int) (int, 
 			if err != nil {
 				return err
 			}
-			fmt.Fprint(os.Stdout, print.Status(imported, total, print.Read))
+			fmt.Fprint(os.Stdout, printer.Status(imported, total, printer.Read))
 			if err := b.Put([]byte(string(path)), sum[:]); err != nil {
 				return err
 			}

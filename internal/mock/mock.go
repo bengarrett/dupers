@@ -26,7 +26,7 @@ const (
 	SevenZip                = "test/randomfiles.7z" //
 	NoSuchFile              = "qwertryuiop"         // NoSuchFile is a non-existent filename.
 	filename                = "dupers-*.db"         // filename of the mock database.
-	subdir                  = "dupers-mock"         // subdir is the sub-directory within config that houses the mock database.
+	subdir                  = "dupers-mock"         // the sub-directory within config that houses the mock database.
 	win                     = "windows"
 	oneKb                   = 1024
 	oneMb                   = oneKb * oneKb
@@ -107,12 +107,13 @@ func TempDir() (string, error) {
 // Bucket returns the absolute path of test bucket.
 func Bucket(i int) (string, error) {
 	name := ""
+	const b1, b2, b3 = 1, 2, 3
 	switch i {
-	case 1:
+	case b1:
 		name = "bucket1"
-	case 2:
+	case b2:
 		name = "bucket2"
-	case 3:
+	case b3:
 		name = "bucket3"
 	default:
 		return "", ErrBucket
@@ -209,7 +210,7 @@ func NamedDB() (string, error) {
 	defer f.Close()
 	return f.Name(), nil
 
-	//return filepath.Join(path, filename), nil
+	// return filepath.Join(path, filename), nil
 }
 
 // Create the mock database and return its location.
@@ -242,7 +243,8 @@ func Create() (string, error) {
 			return fmt.Errorf("%w: create bucket: %s", err, bucket1)
 		}
 		// create the new, but empty mock bucket #2
-		bucket2, err := Bucket(2)
+		const item = 2
+		bucket2, err := Bucket(item)
 		if err != nil {
 			return err
 		}
@@ -376,6 +378,7 @@ func RemoveTmp(path string) (int, error) {
 // and copies a mock Windows/DOS .exe program file into one.
 // The returned int is the number of bytes copied.
 func SensenTmp(path string) (int64, error) {
+	const expected = 16
 	n := 0
 	dest := ""
 	for n < 25 {
@@ -384,7 +387,7 @@ func SensenTmp(path string) (int64, error) {
 		if err := os.MkdirAll(name, PrivateDir); err != nil {
 			return 0, err
 		}
-		if n == 16 {
+		if n == expected {
 			dest = name
 		}
 	}

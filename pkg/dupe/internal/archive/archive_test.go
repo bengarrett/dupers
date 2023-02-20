@@ -27,7 +27,6 @@ func TestExtension(t *testing.T) {
 }
 
 func TestReadMIME(t *testing.T) {
-
 	mime, err := archive.ReadMIME("")
 	assert.NotNil(t, err)
 	assert.Equal(t, "", mime)

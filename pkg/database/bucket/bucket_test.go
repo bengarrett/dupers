@@ -91,7 +91,6 @@ func TestCleaner_Clean(t *testing.T) {
 	assert.Equal(t, 3, items)
 	assert.Equal(t, 0, finds)
 	assert.Equal(t, 0, errs)
-
 }
 
 func TestAbs(t *testing.T) {

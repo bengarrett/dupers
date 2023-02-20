@@ -64,6 +64,7 @@ func TestWalkScan(t *testing.T) {
 	err = task.WalkScan(db, &c, &f, args...)
 	assert.NotNil(t, err)
 }
+
 func TestWalkCheck(t *testing.T) {
 	err := task.WalkCheck(nil, nil, "")
 	assert.NotNil(t, err)
@@ -195,25 +196,3 @@ func TestCheckDupePaths(t *testing.T) {
 	err = task.CheckDupePaths(&c)
 	assert.NotNil(t, err)
 }
-
-// 	type args struct {
-// 		c   *dupe.Config
-// 		cmd string
-// 	}
-// 	tests := []struct {
-// 		name    string
-// 		args    args
-// 		wantErr bool
-// 	}{
-// 		{"empty", args{}, true},
-// 		{"invalid cmd", args{cmd: "xyz"}, true},
-// 		{"backup", args{cmd: "backup"}, false},
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			if err := task.Database(nil, tt.args.c, tt.args.cmd); (err != nil) != tt.wantErr {
-// 				t.Errorf("Database() error = %v, wantErr %v", err, tt.wantErr)
-// 			}
-// 		})
-// 	}
-// }

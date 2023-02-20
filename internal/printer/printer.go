@@ -1,5 +1,5 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
-package print
+package printer
 
 import (
 	"bufio"
