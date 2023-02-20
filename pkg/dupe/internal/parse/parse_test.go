@@ -3,6 +3,7 @@ package parse_test
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -15,9 +16,10 @@ import (
 )
 
 func TestSetBuckets(t *testing.T) {
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	var s parse.Scanner
 	err = s.SetAllBuckets(nil)
@@ -43,9 +45,10 @@ func TestParser_SetCompares(t *testing.T) {
 	_, err := s.SetCompares(nil, "")
 	assert.NotNil(t, err)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 	_, err = s.SetCompares(db, "")
 	assert.NotNil(t, err)
 

@@ -2,6 +2,7 @@
 package duplicate_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/bengarrett/dupers/internal/cmd"
@@ -37,9 +38,10 @@ func TestCleanup(t *testing.T) {
 func TestWalkScanSave(t *testing.T) {
 	err := duplicate.WalkScanSave(nil, nil, nil)
 	assert.NotNil(t, err)
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 	err = duplicate.WalkScanSave(db, nil, nil)
 	assert.NotNil(t, err)
 	c := dupe.Config{Test: true}
@@ -60,9 +62,10 @@ func TestWalkScanSave(t *testing.T) {
 func TestLookup(t *testing.T) {
 	err := duplicate.Lookup(nil, nil)
 	assert.NotNil(t, err)
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 	err = duplicate.Lookup(db, nil)
 	assert.NotNil(t, err)
 	c := dupe.Config{Test: true}

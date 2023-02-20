@@ -2,6 +2,7 @@
 package database_test
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -16,9 +17,10 @@ func TestAll(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Nil(t, results)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	results, err = database.All(db)
 	assert.Nil(t, err)
@@ -30,9 +32,10 @@ func TestClean(t *testing.T) {
 	err := database.Clean(nil, true, false)
 	assert.NotNil(t, err)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	err = database.Clean(db, true, false)
 	assert.Nil(t, err)
@@ -42,9 +45,10 @@ func TestCompact(t *testing.T) {
 	err := database.Compact(nil, false)
 	assert.NotNil(t, err)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	err = database.Compact(db, false)
 	assert.Nil(t, err)
@@ -55,9 +59,10 @@ func TestCompare(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Nil(t, results)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 	results, err = database.Compare(db, "", "")
 	assert.NotNil(t, err)
 	assert.Nil(t, results)
@@ -105,9 +110,10 @@ func TestCompareBases(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Nil(t, results)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 	results, err = database.CompareBase(db, "", "")
 	assert.NotNil(t, err)
 	assert.Nil(t, results)
@@ -149,9 +155,10 @@ func TestExist(t *testing.T) {
 	err := database.Exist(nil, "")
 	assert.NotNil(t, err)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	err = database.Exist(db, "")
 	assert.NotNil(t, err)
@@ -174,9 +181,10 @@ func TestIsEmpty(t *testing.T) {
 	err := database.IsEmpty(nil)
 	assert.NotNil(t, err)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	err = database.IsEmpty(db)
 	assert.Nil(t, err)
@@ -200,9 +208,10 @@ func TestList(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, 0, len(results))
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	_, err = database.List(db, "")
 	assert.NotNil(t, err)
@@ -224,9 +233,10 @@ func TestInfo(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, "", info)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	info, err = database.Info(db)
 	assert.Nil(t, err)
@@ -239,9 +249,10 @@ func TestRename(t *testing.T) {
 	err := database.Rename(nil, "", "")
 	assert.NotNil(t, err)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 	err = database.Rename(db, "", "")
 	assert.NotNil(t, err)
 

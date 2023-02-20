@@ -25,7 +25,7 @@ const (
 	PrivateDir  fs.FileMode = 0o700                 // PrivateDir mode means only the owner has read/write/dir access.
 	SevenZip                = "test/randomfiles.7z" //
 	NoSuchFile              = "qwertryuiop"         // NoSuchFile is a non-existent filename.
-	filename                = "dupers.db"           // filename of the mock database.
+	filename                = "dupers-*.db"         // filename of the mock database.
 	subdir                  = "dupers-mock"         // subdir is the sub-directory within config that houses the mock database.
 	win                     = "windows"
 	oneKb                   = 1024
@@ -61,6 +61,15 @@ var extensions = map[string]string{
 }
 
 var test = "test"
+
+// Database creates, opens and returns the mock database.
+func Database() (db *bolt.DB, path string, err error) {
+	path, err = Create()
+	if err != nil {
+		return nil, "", err
+	}
+	return Open(path)
+}
 
 // CSV returns the path to a mock exported comma-separated values file.
 func CSV() string {
@@ -125,8 +134,8 @@ func Export(i int) (string, error) {
 	if i >= len(sources) || i < 0 {
 		return "", ErrItem
 	}
-	filename := fmt.Sprintf("export-bucket%d.csv", i)
-	path := filepath.Join(RootDir(), test, filename)
+	name := fmt.Sprintf("export-bucket%d.csv", i)
+	path := filepath.Join(RootDir(), test, name)
 	f, err := filepath.Abs(path)
 	if err != nil {
 		return "", err
@@ -169,7 +178,7 @@ func Extension(ext string) (string, error) {
 	return f, nil
 }
 
-// NamedDB returns the absolute path of the mock Bolt database.
+// NamedDB returns the absolute path of a mock Bolt database with a randomly generated filename.
 func NamedDB() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
@@ -192,7 +201,14 @@ func NamedDB() (string, error) {
 		return "", err
 	}
 
-	return filepath.Join(path, filename), nil
+	f, err := os.CreateTemp(path, filename)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	return f.Name(), nil
+
+	//return filepath.Join(path, filename), nil
 }
 
 // Create the mock database and return its location.
@@ -275,39 +291,19 @@ func Read(name string) (sum [32]byte, err error) {
 	return [32]byte(h.Sum(nil)), nil
 }
 
-// Database creates, opens and returns the mock database.
-func Database() (*bolt.DB, error) {
-	if err := Delete(); err != nil {
-		return nil, err
-	}
-	if _, err := Create(); err != nil {
-		return nil, err
-	}
-	return Open()
-}
-
 // Open the mock database.
 // This will need to be closed after use.
-func Open() (*bolt.DB, error) {
-	path, err := NamedDB()
-	if err != nil {
-		return nil, err
-	}
-
+func Open(path string) (*bolt.DB, string, error) {
 	db, err := bolt.Open(path, PrivateFile, nil)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	return db, nil
+	return db, path, nil
 }
 
 // Delete the mock database.
-func Delete() error {
-	path, err := NamedDB()
-	if err != nil {
-		return err
-	}
-	err = os.Remove(path)
+func Delete(path string) error {
+	err := os.Remove(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil

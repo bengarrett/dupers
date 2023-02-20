@@ -2,6 +2,7 @@
 package bucket_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/bengarrett/dupers/internal/mock"
@@ -14,9 +15,10 @@ func TestExport(t *testing.T) {
 	args := [2]string{"", ""}
 	err := bucket.Export(nil, false, args)
 	assert.NotNil(t, err)
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 	err = bucket.Export(db, false, args)
 	assert.NotNil(t, err)
 	bucket1, err := mock.Bucket(1)
@@ -30,9 +32,10 @@ func TestImport(t *testing.T) {
 	args := [2]string{"", ""}
 	err := bucket.Import(nil, false, false, args)
 	assert.NotNil(t, err)
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 	err = bucket.Import(db, false, false, args)
 	assert.NotNil(t, err)
 	args[1] = mock.CSV()
@@ -44,9 +47,10 @@ func TestList(t *testing.T) {
 	args := [2]string{"", ""}
 	err := bucket.List(nil, false, args)
 	assert.NotNil(t, err)
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 	err = bucket.List(db, false, args)
 	assert.NotNil(t, err)
 	bucket1, err := mock.Bucket(1)
@@ -61,9 +65,10 @@ func TestMove(t *testing.T) {
 	err := bucket.Move(nil, nil, false, args)
 	assert.NotNil(t, err)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 	err = bucket.Move(db, nil, false, args)
 	assert.NotNil(t, err)
 	c := dupe.Config{}
@@ -85,9 +90,10 @@ func TestRemove(t *testing.T) {
 	err := bucket.Remove(nil, false, false, args)
 	assert.NotNil(t, err)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 	err = bucket.Remove(db, false, false, args)
 	assert.NotNil(t, err)
 
@@ -109,9 +115,10 @@ func TestRescan(t *testing.T) {
 	args := [2]string{"", ""}
 	err := bucket.Rescan(nil, nil, false, args)
 	assert.NotNil(t, err)
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 	err = bucket.Rescan(db, nil, false, args)
 	assert.NotNil(t, err)
 

@@ -2,6 +2,7 @@
 package search_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/bengarrett/dupers/internal/cmd"
@@ -43,9 +44,10 @@ func TestCompare(t *testing.T) {
 		Filename: &val,
 		Exact:    &val,
 	}
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 	m, err = search.Compare(db, &f, "", nil, true)
 	assert.NotNil(t, err)
 	assert.Nil(t, m)

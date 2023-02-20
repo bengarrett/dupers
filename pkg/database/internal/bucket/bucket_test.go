@@ -2,6 +2,7 @@
 package bucket_test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -18,9 +19,10 @@ func TestParse(t *testing.T) {
 	assert.Equal(t, "", name)
 	assert.Equal(t, false, debug)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	items, errs, name, debug = p.Parse(db)
 	assert.Equal(t, 0, items)
@@ -68,9 +70,10 @@ func TestCleaner_Clean(t *testing.T) {
 	assert.Equal(t, 0, finds)
 	assert.Equal(t, 0, errs)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	items, finds, errs, err = c.Clean(db)
 	assert.Nil(t, err)
@@ -106,9 +109,10 @@ func TestCount(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, 0, val)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	_, err = bucket.Count(db, "")
 	assert.NotNil(t, err)
@@ -144,9 +148,10 @@ func TestTotal(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, i, 0)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	i, err = bucket.Total(db, nil)
 	assert.NotNil(t, err)

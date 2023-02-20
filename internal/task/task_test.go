@@ -3,6 +3,7 @@ package task_test
 
 import (
 	"flag"
+	"os"
 	"testing"
 
 	"github.com/bengarrett/dupers/internal/cmd"
@@ -35,9 +36,10 @@ func TestWalkScan(t *testing.T) {
 	err := task.WalkScan(nil, nil, nil, "")
 	assert.NotNil(t, err)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 	err = task.WalkScan(db, nil, nil, "")
 	assert.NotNil(t, err)
 
@@ -67,9 +69,10 @@ func TestWalkCheck(t *testing.T) {
 	err := task.WalkCheck(nil, nil, "")
 	assert.NotNil(t, err)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 	err = task.WalkCheck(db, nil, "")
 	assert.NotNil(t, err)
 	c := dupe.Config{}
@@ -89,9 +92,10 @@ func TestSearch(t *testing.T) {
 	err := task.Search(nil, nil, true, "")
 	assert.NotNil(t, err)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 	err = task.Search(db, nil, true, "")
 	assert.NotNil(t, err)
 
@@ -118,9 +122,10 @@ func TestDupe(t *testing.T) {
 	err := task.Dupe(nil, nil, nil, true, "")
 	assert.NotNil(t, err)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 	err = task.Dupe(db, nil, nil, true, "")
 	assert.NotNil(t, err)
 
@@ -139,9 +144,10 @@ func TestDatabase(t *testing.T) {
 	err := task.Database(nil, nil, "")
 	assert.NotNil(t, err)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	err = task.Database(db, nil, "")
 	assert.NotNil(t, err)
@@ -171,9 +177,10 @@ func TestCleanupDB(t *testing.T) {
 	err := task.CleanupDB(nil, nil)
 	assert.NotNil(t, err)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 	err = task.CleanupDB(db, nil)
 	assert.NotNil(t, err)
 	c := dupe.Config{}

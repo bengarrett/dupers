@@ -47,9 +47,10 @@ func TestCSVExport(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, "", csv)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	csv, err = database.CSVExport(db, "")
 	assert.NotNil(t, err)
@@ -74,9 +75,10 @@ func TestCSVImport(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, 0, imported)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	imported, err = database.CSVImport(db, "", false)
 	assert.NotNil(t, err)
@@ -105,9 +107,10 @@ func TestImport(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEqual(t, "", export1)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	imported, err := database.Import(db, "", nil)
 	assert.NotNil(t, err)
@@ -160,9 +163,10 @@ func TestUsage(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, "", s)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	s, err = database.Usage(db, "", true)
 	assert.NotNil(t, err)

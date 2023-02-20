@@ -112,9 +112,10 @@ func TestConfig_WalkDirs(t *testing.T) {
 	bucket1, err := mock.Bucket(1)
 	assert.Nil(t, err)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	c.SetBuckets(bucket1)
 	assert.Nil(t, err)
@@ -132,9 +133,10 @@ func TestConfig_WalkDir(t *testing.T) {
 	item1, err := mock.Item(1)
 	assert.Nil(t, err)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	err = c.WalkDir(db, "")
 	assert.NotNil(t, err, "WalkDir should return an error with the empty config")
@@ -220,9 +222,10 @@ func TestChecksum(t *testing.T) {
 	bucket1, err := mock.Bucket(1)
 	assert.Nil(t, err)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	item, err := mock.Item(1)
 	assert.Nil(t, err)
@@ -250,9 +253,10 @@ func TestConfig_WalkArchiver(t *testing.T) {
 	bucket1, err := mock.Bucket(1)
 	assert.Nil(t, err)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	err = c.WalkArchiver(nil, "")
 	assert.NotNil(t, err)

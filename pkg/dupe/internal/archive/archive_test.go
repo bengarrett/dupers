@@ -2,6 +2,7 @@
 package archive_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/bengarrett/dupers/internal/mock"
@@ -63,9 +64,10 @@ func TestConfig_WalkArchiver(t *testing.T) {
 	err := c.WalkArchiver(nil, "")
 	assert.NotNil(t, err)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	err = c.WalkArchiver(db, "")
 	assert.NotNil(t, err)
@@ -90,9 +92,10 @@ func TestConfigRead7Zip(t *testing.T) {
 	err := c.Read7Zip(nil, "", "")
 	assert.NotNil(t, err)
 
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 
 	err = c.Read7Zip(db, "", "")
 	assert.NotNil(t, err)

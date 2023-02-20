@@ -45,18 +45,15 @@ func TestExport(t *testing.T) {
 
 func TestNamedDB(t *testing.T) {
 	// delete mock db if it exists
-	err := mock.Delete()
-	assert.Nil(t, err)
 	file, err := mock.NamedDB()
 	assert.Nil(t, err)
 	assert.NotEqual(t, "", file)
 	stat, err := os.Stat(file)
-	assert.NotNil(t, err, "expected an error for a non-existent database file")
-	assert.Nil(t, stat)
+	assert.Nil(t, err)
+	assert.NotNil(t, stat)
 	// create an empty db for more tests
-	path := ""
-	path, err = mock.Create()
-	defer mock.Delete()
+	path, err := mock.Create()
+	defer mock.Delete(path)
 	assert.Nil(t, err, "expected a database at: "+file)
 	assert.NotEqual(t, "", path)
 	stat, err = os.Stat(file)
@@ -65,15 +62,19 @@ func TestNamedDB(t *testing.T) {
 }
 
 func TestDatabase(t *testing.T) {
-	db, err := mock.Database()
+	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
+	defer os.Remove(path)
 	assert.NotEqual(t, "", db.Path())
 	assert.NotEqual(t, "", db.String())
 }
 
 func TestOpen(t *testing.T) {
-	db, err := mock.Open()
+	path, err := mock.Create()
+	assert.Nil(t, err)
+	defer os.Remove(path)
+	db, _, err := mock.Open(path)
 	assert.Nil(t, err)
 	defer db.Close()
 	assert.NotEqual(t, "", db.Path())

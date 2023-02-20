@@ -229,48 +229,49 @@ func Compact(db *bolt.DB, debug bool) error {
 		return bolt.ErrDatabaseNotOpen
 	}
 	out.DPrint(debug, "running database compact")
-	// active database
-	src, err := DB()
-	if err != nil {
-		return err
-	}
 	// make a temporary database
-	tmp := filepath.Join(os.TempDir(), backup())
-	// open target database
-	tmpDB, err := bolt.Open(tmp, PrivateFile, write())
+	f, err := os.CreateTemp(os.TempDir(), "dupers-*.db")
 	if err != nil {
 		return err
 	}
-	out.DPrint(debug, "opened replacement database: "+tmp)
-	defer tmpDB.Close()
+	defer f.Close()
+
+	// open target database
+	target, err := bolt.Open(f.Name(), PrivateFile, write())
+	if err != nil {
+		return fmt.Errorf("%w: open %s", err, f.Name())
+	}
+	out.DPrint(debug, "opened replacement database: "+f.Name())
+	defer target.Close()
 
 	// compress and copy the results to the temporary database
 	out.DPrint(debug, "compress and copy databases")
-	if errComp := bolt.Compact(tmpDB, db, 0); errComp != nil {
-		return errComp
+	if err := bolt.Compact(target, db, 0); err != nil {
+		return fmt.Errorf("%w: compact %s", err, f.Name())
 	}
 	if debug {
-		sr, errS := os.Stat(src)
-		if errS != nil {
-			return errS
+		statSrc, err := os.Stat(db.Path())
+		if err != nil {
+			return err
 		}
-		tm, errT := os.Stat(tmp)
-		if errT != nil {
-			return errT
+		statDst, err := os.Stat(f.Name())
+		if err != nil {
+			return err
 		}
-		s1 := fmt.Sprintf("original database: %d bytes, %s", sr.Size(), sr.Name())
+		s1 := fmt.Sprintf("original database: %d bytes, %s", statSrc.Size(), statSrc.Name())
 		out.DPrint(debug, s1)
-		s2 := fmt.Sprintf("new database:      %d bytes, %s", tm.Size(), tm.Name())
+		s2 := fmt.Sprintf("new database:      %d bytes, %s", statDst.Size(), statDst.Name())
 		out.DPrint(debug, s2)
 	}
+	path := db.Path()
 	if err = db.Close(); err != nil {
 		return err
 	}
-	cp, err := CopyFile(tmp, src)
+	i, err := CopyFile(f.Name(), path)
 	if err != nil {
 		return err
 	}
-	s := fmt.Sprintf("copied %d bytes to: %s", cp, src)
+	s := fmt.Sprintf("copied %d bytes to: %s", i, path)
 	out.DPrint(debug, s)
 	return nil
 }
