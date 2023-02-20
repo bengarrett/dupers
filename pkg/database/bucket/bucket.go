@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/bengarrett/dupers/internal/out"
+	"github.com/bengarrett/dupers/internal/print"
 	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"
 )
@@ -55,7 +55,7 @@ func (c *Cleaner) Clean(db *bolt.DB) (items, finds, errors int, err error) {
 						return nil
 					}
 				}
-				out.DPrint(c.Debug, fmt.Sprintf("%s: %s", k, errS))
+				print.DPrint(c.Debug, fmt.Sprintf("%s: %s", k, errS))
 				if errUp := db.Update(func(tx *bolt.Tx) error {
 					return tx.Bucket([]byte(c.Name)).Delete(k)
 				}); errUp != nil {
@@ -68,13 +68,13 @@ func (c *Cleaner) Clean(db *bolt.DB) (items, finds, errors int, err error) {
 		})
 		if err != nil {
 			c.Errs++
-			out.StderrCR(err)
+			print.StderrCR(err)
 		}
 		return nil
 	}); err != nil {
 		c.Errs++
 
-		out.StderrCR(err)
+		print.StderrCR(err)
 	}
 
 	return c.Items, c.Finds, c.Errs, nil
@@ -89,21 +89,21 @@ type Parser struct {
 
 func (p *Parser) Parse(db *bolt.DB) (items, errs int, name string, debug bool) {
 	if db == nil {
-		out.StderrCR(bolt.ErrDatabaseNotOpen)
+		print.StderrCR(bolt.ErrDatabaseNotOpen)
 		return
 	}
 	abs, err := Abs(p.Name)
 	if err != nil {
-		out.StderrCR(err)
+		print.StderrCR(err)
 		return p.Items, p.Errs, "", true
 	}
-	out.DPrint(p.Debug, "bucket: "+abs)
+	print.DPrint(p.Debug, "bucket: "+abs)
 
 	// check the bucket directory exists on the file system
 	fi, errS := os.Stat(abs)
 	switch {
 	case os.IsNotExist(errS):
-		out.StderrCR(fmt.Errorf("%w: %s", ErrBucketSkip, abs))
+		print.StderrCR(fmt.Errorf("%w: %s", ErrBucketSkip, abs))
 		p.Errs++
 
 		if i, errc := Count(db, p.Name); errc == nil {
@@ -112,12 +112,12 @@ func (p *Parser) Parse(db *bolt.DB) (items, errs int, name string, debug bool) {
 
 		return p.Items, p.Errs, "", true
 	case err != nil:
-		out.StderrCR(err)
+		print.StderrCR(err)
 		p.Errs++
 
 		return p.Items, p.Errs, "", true
 	case !fi.IsDir():
-		out.StderrCR(fmt.Errorf("%w: %s", ErrBucketAsFile, abs))
+		print.StderrCR(fmt.Errorf("%w: %s", ErrBucketAsFile, abs))
 		p.Errs++
 		if i, errc := Count(db, p.Name); errc == nil {
 			p.Items += i
@@ -147,9 +147,9 @@ func Abs(name string) (string, error) {
 
 func printStat(debug, quiet bool, cnt, total int, k []byte) {
 	if !debug && !quiet {
-		fmt.Fprintf(os.Stdout, "%s", out.Status(cnt, total, out.Check))
+		fmt.Fprintf(os.Stdout, "%s", print.Status(cnt, total, print.Check))
 	}
-	out.DPrint(debug, "clean: "+string(k))
+	print.DPrint(debug, "clean: "+string(k))
 }
 
 // Count the number of records in the bucket.
@@ -194,19 +194,19 @@ func count(db *bolt.DB, b *bolt.Bucket) (int, error) {
 
 // Rename prompts for confirmation for the use of the named bucket.
 func Rename(name string, assumeYes bool) string {
-	out.StderrCR(ErrBucketExists)
+	print.StderrCR(ErrBucketExists)
 	w := os.Stdout
 	fmt.Fprintln(w)
 	fmt.Fprintf(w, "Import bucket name: %s", color.Debug.Sprint(name))
 	fmt.Fprintln(w)
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "The existing data in this bucket will overridden and any new data will be appended.")
-	if out.AskYN("Do you want to continue using this bucket", assumeYes, out.Yes) {
+	if print.AskYN("Do you want to continue using this bucket", assumeYes, print.Yes) {
 		return name
 	}
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Please choose a new bucket, which must be an absolute directory path.")
-	return out.Prompt(query)
+	return print.Prompt(query)
 }
 
 // Stats checks the validity of the named bucket and prompts for user confirmation on errors.
@@ -233,31 +233,31 @@ func Stat(name string, assumeYes, test bool) string {
 	name = strings.TrimSpace(name)
 	abs, err := Abs(name)
 	if err != nil {
-		out.StderrCR(fmt.Errorf("%w: %s", err, name))
+		print.StderrCR(fmt.Errorf("%w: %s", err, name))
 		return ""
 	}
 	s, err := os.Stat(abs)
 	if errors.Is(err, os.ErrNotExist) {
-		out.StderrCR(ErrBucketPath)
+		print.StderrCR(ErrBucketPath)
 		printName()
 		fmt.Fprintln(w, "You may still run dupe checks and searches without the actual files on your system.")
 		fmt.Fprintln(w, "Choosing no will prompt for a new bucket.")
 		if !test {
-			if out.AskYN("Do you want to continue using this bucket", assumeYes, out.Yes) {
+			if print.AskYN("Do you want to continue using this bucket", assumeYes, print.Yes) {
 				return abs
 			}
-			return out.Prompt(query)
+			return print.Prompt(query)
 		}
 		return ""
 	} else if err == nil && !s.IsDir() {
 		err = ErrBucketNotDir
 	}
 	if err != nil {
-		out.StderrCR(ErrBucketNotDir)
+		print.StderrCR(ErrBucketNotDir)
 		printName()
 		fmt.Fprintln(w, "You cannot use this path as a bucket, please choose an absolute directory path.")
 		if !test {
-			return out.Prompt(query)
+			return print.Prompt(query)
 		}
 		return ""
 	}

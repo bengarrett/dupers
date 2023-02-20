@@ -14,7 +14,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/bengarrett/dupers/internal/out"
+	"github.com/bengarrett/dupers/internal/print"
 	"github.com/bengarrett/dupers/pkg/database/bucket"
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
@@ -101,14 +101,14 @@ func Check() (int64, error) {
 	w := os.Stdout
 	i, err1 := os.Stat(path)
 	if os.IsNotExist(err1) {
-		out.StderrCR(ErrNotFound)
+		print.StderrCR(ErrNotFound)
 		fmt.Fprintf(w, "\n%s\nThe database will be located at: %s\n", NotFound, path)
 		return 0, ErrNotFound // 0
 	} else if err1 != nil {
 		return 0, err
 	}
 	if i.Size() == 0 {
-		out.StderrCR(ErrZeroByte)
+		print.StderrCR(ErrZeroByte)
 		s := "This error occures when dupers cannot save any data to the file system."
 		fmt.Fprintf(w, "\n%s\nThe database is located at: %s\n", s, path)
 		return 0, ErrZeroByte // 1
@@ -138,7 +138,7 @@ func Clean(db *bolt.DB, quiet, debug bool, buckets ...string) error {
 	}
 	cleanDebug(debug, buckets)
 
-	out.DPrint(debug, fmt.Sprintf("cleaner of buckets: %s", buckets))
+	print.DPrint(debug, fmt.Sprintf("cleaner of buckets: %s", buckets))
 	cleaned, err := cleaner(db, debug, buckets)
 	if err != nil {
 		return err
@@ -199,9 +199,9 @@ func cleanDebug(debug bool, buckets []string) {
 	if !debug {
 		return
 	}
-	out.DPrint(true, "running database clean")
-	out.DPrint(true, "list of buckets:")
-	out.DPrint(true, strings.Join(buckets, "\n"))
+	print.DPrint(true, "running database clean")
+	print.DPrint(true, "list of buckets:")
+	print.DPrint(true, strings.Join(buckets, "\n"))
 }
 
 func cleaner(db *bolt.DB, debug bool, buckets []string) ([]string, error) {
@@ -212,7 +212,7 @@ func cleaner(db *bolt.DB, debug bool, buckets []string) ([]string, error) {
 		return buckets, nil
 	}
 
-	out.DPrint(debug, "fetching all buckets")
+	print.DPrint(debug, "fetching all buckets")
 	all, err := All(db)
 	if err != nil {
 		return nil, err
@@ -228,7 +228,7 @@ func Compact(db *bolt.DB, debug bool) error {
 	if db == nil {
 		return bolt.ErrDatabaseNotOpen
 	}
-	out.DPrint(debug, "running database compact")
+	print.DPrint(debug, "running database compact")
 	// make a temporary database
 	f, err := os.CreateTemp(os.TempDir(), "dupers-*.db")
 	if err != nil {
@@ -241,11 +241,11 @@ func Compact(db *bolt.DB, debug bool) error {
 	if err != nil {
 		return fmt.Errorf("%w: open %s", err, f.Name())
 	}
-	out.DPrint(debug, "opened replacement database: "+f.Name())
+	print.DPrint(debug, "opened replacement database: "+f.Name())
 	defer target.Close()
 
 	// compress and copy the results to the temporary database
-	out.DPrint(debug, "compress and copy databases")
+	print.DPrint(debug, "compress and copy databases")
 	if err := bolt.Compact(target, db, 0); err != nil {
 		return fmt.Errorf("%w: compact %s", err, f.Name())
 	}
@@ -259,9 +259,9 @@ func Compact(db *bolt.DB, debug bool) error {
 			return err
 		}
 		s1 := fmt.Sprintf("original database: %d bytes, %s", statSrc.Size(), statSrc.Name())
-		out.DPrint(debug, s1)
+		print.DPrint(debug, s1)
 		s2 := fmt.Sprintf("new database:      %d bytes, %s", statDst.Size(), statDst.Name())
-		out.DPrint(debug, s2)
+		print.DPrint(debug, s2)
 	}
 	path := db.Path()
 	if err = db.Close(); err != nil {
@@ -272,7 +272,7 @@ func Compact(db *bolt.DB, debug bool) error {
 		return err
 	}
 	s := fmt.Sprintf("copied %d bytes to: %s", i, path)
-	out.DPrint(debug, s)
+	print.DPrint(debug, s)
 	return nil
 }
 
@@ -315,7 +315,7 @@ func compare(db *bolt.DB, ignoreCase, pathBase bool, term []byte, buckets ...str
 	for _, bucket := range checked {
 		abs, err := AbsB(bucket)
 		if err != nil {
-			out.StderrCR(err)
+			print.StderrCR(err)
 		}
 		err = db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket(abs)

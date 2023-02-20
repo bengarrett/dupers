@@ -11,7 +11,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/bengarrett/dupers/internal/out"
+	"github.com/bengarrett/dupers/internal/print"
 	"github.com/bengarrett/dupers/pkg/cmd"
 	"github.com/bengarrett/dupers/pkg/cmd/task/bucket"
 	"github.com/bengarrett/dupers/pkg/cmd/task/duplicate"
@@ -104,7 +104,7 @@ func Database(db *bolt.DB, c *dupe.Config, args ...string) error {
 	case DB_, Database_:
 		s, err := database.Info(db)
 		if err != nil {
-			out.StderrCR(err)
+			print.StderrCR(err)
 		}
 		fmt.Fprintln(os.Stdout, s)
 	case Export_:
@@ -216,7 +216,7 @@ func WalkScan(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
 		return err
 	}
 	if !c.Quiet {
-		fmt.Fprint(os.Stdout, out.EraseLine())
+		fmt.Fprint(os.Stdout, print.EraseLine())
 	}
 	// print the found dupes
 	s, err := c.Print()
@@ -332,7 +332,7 @@ func backupDB(quiet bool) error {
 	}
 	s := fmt.Sprintf("A new copy of the database (%s) is at: %s",
 		humanize.Bytes(uint64(writ)), name)
-	out.Response(s, quiet)
+	print.Response(s, quiet)
 	return nil
 }
 
@@ -348,7 +348,7 @@ func CleanupDB(db *bolt.DB, c *dupe.Config) error {
 		if b := errors.Is(err, database.ErrNoClean); !b {
 			return err
 		}
-		out.StderrCR(err)
+		print.StderrCR(err)
 	}
 	if err := database.Compact(db, c.Debug); err != nil {
 		if b := errors.Is(err, database.ErrNoCompact); !b {
@@ -399,7 +399,7 @@ func CheckDupePaths(c *dupe.Config) error {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "The bucket to lookup is to be stored in the database,")
 	color.Warn.Println(" but the \"Directory to check\" is not.")
-	if !out.AskYN("Is this what you want", c.Yes, out.No) {
+	if !print.AskYN("Is this what you want", c.Yes, print.No) {
 		return nil
 	}
 	return nil

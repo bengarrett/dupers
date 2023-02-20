@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/bengarrett/dupers/internal/out"
+	"github.com/bengarrett/dupers/internal/print"
 	"github.com/bengarrett/dupers/pkg/dupe"
 	"github.com/gookit/color"
 )
@@ -224,7 +224,7 @@ func Home() string {
 	h, err := os.UserHomeDir()
 	if err != nil {
 		if h, err = os.Getwd(); err != nil {
-			out.StderrCR(err)
+			print.StderrCR(err)
 		}
 	}
 	return h

@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/bengarrett/dupers/internal/out"
+	"github.com/bengarrett/dupers/internal/print"
 	"github.com/bengarrett/dupers/pkg/cmd"
 	"github.com/bengarrett/dupers/pkg/database"
 	bolt "go.etcd.io/bbolt"
@@ -25,12 +25,12 @@ func CmdErr(lenArgs int, test bool) error {
 		return nil
 	}
 	w := os.Stderr
-	out.StderrCR(ErrSearch)
+	print.StderrCR(ErrSearch)
 	fmt.Fprintln(w, "A search expression can be a partial or complete filename,")
 	fmt.Fprintln(w, "or a partial or complete directory.")
-	out.Example("\ndupers search <search expression> [optional, directories to search]")
+	print.Example("\ndupers search <search expression> [optional, directories to search]")
 	if !test {
-		out.ErrFatal(nil)
+		print.ErrFatal(nil)
 	}
 	return ErrSearch
 }
@@ -71,11 +71,11 @@ func Compare(db *bolt.DB, f *cmd.Flags, term string, buckets []string, test bool
 // Error parses the errors from search compares.
 func Error(err error, test bool) error {
 	if errors.Is(err, database.ErrEmpty) {
-		out.StderrCR(err)
+		print.StderrCR(err)
 		return nil
 	}
 	if errors.Is(err, bolt.ErrBucketNotFound) {
-		out.StderrCR(err)
+		print.StderrCR(err)
 		fmt.Fprintln(os.Stdout, "\nTo add this directory to the database, run:")
 		dir := err.Error()
 		if errors.Unwrap(err) == nil {
@@ -83,14 +83,14 @@ func Error(err error, test bool) error {
 			dir = strings.ReplaceAll(err.Error(), s, "")
 		}
 		s := fmt.Sprintf("dupers up %s\n", dir)
-		out.Example(s)
+		print.Example(s)
 		if !test {
-			out.ErrFatal(nil)
+			print.ErrFatal(nil)
 		}
 		return nil
 	}
 	if !test {
-		out.ErrFatal(err)
+		print.ErrFatal(err)
 	}
 	return err
 }

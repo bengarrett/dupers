@@ -15,7 +15,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/bengarrett/dupers/internal/out"
+	"github.com/bengarrett/dupers/internal/print"
 	"github.com/bengarrett/dupers/pkg/cmd"
 	"github.com/bengarrett/dupers/pkg/cmd/task"
 	"github.com/bengarrett/dupers/pkg/database"
@@ -103,7 +103,7 @@ func main() {
 
 	help, err := taskHelpVer(&a, &f)
 	if err != nil {
-		out.ErrFatal(err)
+		print.ErrFatal(err)
 	}
 	if help != "" {
 		fmt.Fprint(os.Stdout, help)
@@ -111,7 +111,7 @@ func main() {
 	}
 
 	if err := task.Directories(); err != nil {
-		out.ErrFatal(err)
+		print.ErrFatal(err)
 	}
 
 	selection := strings.ToLower(flag.Args()[0])
@@ -123,20 +123,20 @@ func main() {
 		if errors.Is(err, database.ErrZeroByte) {
 			os.Exit(1)
 		}
-		out.ErrFatal(err)
+		print.ErrFatal(err)
 	}
 }
 
 // unknownExit prints the command is unknown helper error and exits.
 func unknownExit(s string) {
 	w := os.Stderr
-	out.StderrCR(ErrCmd)
+	print.StderrCR(ErrCmd)
 	fmt.Fprintf(w, "Command: '%s'", s)
 	fmt.Fprintln(w)
 	fmt.Fprintln(w)
 	fmt.Fprint(w, "See the help for the available commands and options:")
 	fmt.Fprintln(w)
-	out.Example("dupers -help")
+	print.Example("dupers -help")
 
 	os.Exit(1)
 }
@@ -178,7 +178,7 @@ func about(quiet bool) string {
 	const width = 45
 	exe, err := cmd.Self()
 	if err != nil {
-		out.StderrCR(err)
+		print.StderrCR(err)
 	}
 	w := new(bytes.Buffer)
 	if !quiet {

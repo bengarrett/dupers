@@ -8,7 +8,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/bengarrett/dupers/internal/out"
+	"github.com/bengarrett/dupers/internal/print"
 	"github.com/bengarrett/dupers/pkg/cmd"
 	"github.com/bengarrett/dupers/pkg/database"
 	"github.com/bengarrett/dupers/pkg/dupe"
@@ -86,14 +86,14 @@ func Cleanup(c *dupe.Config, f *cmd.Flags) error {
 func CmdErr(args, buckets, minArgs int, test bool) {
 	w := os.Stdout
 	if args < minArgs {
-		out.StderrCR(ErrNoArgs)
+		print.StderrCR(ErrNoArgs)
 		fmt.Fprintln(w, "\nThe dupe command requires a directory or file to check.")
 		if runtime.GOOS == winOS {
 			fmt.Fprintln(w, "The optional bucket can be one or more directories or drive letters.")
 		} else {
 			fmt.Fprintln(w, "The optional bucket can be one or more directory paths.")
 		}
-		out.Example("\ndupers dupe <directory or file to check> [buckets to lookup]")
+		print.Example("\ndupers dupe <directory or file to check> [buckets to lookup]")
 	}
 	if buckets == 0 && args == minArgs {
 		fmt.Fprintln(w, color.Warn.Sprint("The database is empty.\n"))
@@ -105,11 +105,11 @@ func CmdErr(args, buckets, minArgs int, test bool) {
 		fmt.Fprintln(w, "These lookup directories will be stored to the database as buckets.")
 		if len(flag.Args()) > 0 {
 			s := fmt.Sprintf("\ndupers dupe %s <one or more directories>\n", flag.Args()[1])
-			out.Example(s)
+			print.Example(s)
 		}
 	}
 	if !test {
-		out.ErrFatal(nil)
+		print.ErrFatal(nil)
 	}
 }
 
@@ -156,7 +156,7 @@ func WalkScanSave(db *bolt.DB, c *dupe.Config, f *cmd.Flags) error {
 	if !*f.Lookup && len(buckets) > 0 {
 		c.DPrint("non-fast mode, database cleanup.")
 		if err := database.Clean(db, c.Quiet, c.Debug, buckets...); err != nil {
-			out.StderrCR(err)
+			print.StderrCR(err)
 		}
 	}
 	if *f.Lookup {
@@ -179,7 +179,7 @@ func Lookup(db *bolt.DB, c *dupe.Config) error {
 	fastFlagErr := false
 	for _, bucket := range c.All() {
 		if i, err := c.SetCompares(db, bucket); err != nil {
-			out.StderrCR(err)
+			print.StderrCR(err)
 		} else if i > 0 {
 			continue
 		}
