@@ -78,7 +78,7 @@ func Export(db *bolt.DB, quiet bool, args [2]string) error {
 	}
 	s := fmt.Sprintf("%s %s\n", color.Secondary.Sprint("Bucket name:"), color.Debug.Sprint(name))
 	s += fmt.Sprintf("The exported bucket file is at: %s", exp)
-	print.Response(s, quiet)
+	print.Quiet(quiet, s)
 	if quiet {
 		fmt.Fprintln(os.Stdout, exp)
 	}
@@ -105,7 +105,7 @@ func Import(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
 	}
 	p := message.NewPrinter(language.English)
 	s := p.Sprintf("\rSuccessfully imported %d records.", number.Decimal(r))
-	print.Response(s, quiet)
+	print.Quiet(quiet, s)
 	return nil
 }
 
@@ -226,7 +226,7 @@ func Remove(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
 		return err
 	}
 	s := fmt.Sprintf("Removed bucket from the database: '%s'\n", name)
-	print.Response(s, quiet)
+	print.Quiet(quiet, s)
 	return nil
 }
 

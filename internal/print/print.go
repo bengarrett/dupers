@@ -42,12 +42,21 @@ const (
 	winOS = "windows"
 )
 
-// DPrint prints the string to a newline.
-func DPrint(debug bool, s string) {
-	if !debug {
+// Debug prints the string to a newline whenever the value of flag is true.
+func Debug(flag bool, s string) {
+	if !flag {
 		return
 	}
 	fmt.Fprintf(os.Stdout, "∙%s\n", s)
+}
+
+// Quiet prints the string when the flag value is false.
+func Quiet(flag bool, s string) {
+	if flag {
+		return
+	}
+
+	fmt.Fprintf(os.Stdout, "%s\n", s)
 }
 
 // EnterKey returns the Enter keyboard code.
@@ -60,7 +69,7 @@ func EnterKey() byte {
 	return lf
 }
 
-// Stderr formats and prints the err to stderr.
+// Stderr prints the formatted err to stderr.
 func Stderr(err error) {
 	if err == nil {
 		return
@@ -71,7 +80,7 @@ func Stderr(err error) {
 	fmt.Fprintln(os.Stderr)
 }
 
-// StderrCR formats and prints the err to current line of  stderr.
+// StderrCR prints the formatted err to the current line of stderr.
 func StderrCR(err error) {
 	if err == nil {
 		return
@@ -99,7 +108,8 @@ func ErrFatal(err error) {
 		color.Error.Tips(" " + err.Error())
 	}
 
-	os.Exit(1)
+	const fatal = 3
+	os.Exit(fatal)
 }
 
 // Example is intended for help screens and prints the example command.
@@ -109,15 +119,6 @@ func Example(cmd string) {
 	}
 
 	fmt.Fprintln(os.Stdout, color.Debug.Sprint(cmd))
-}
-
-// Response prints the string when quiet is false.
-func Response(s string, quiet bool) {
-	if quiet {
-		return
-	}
-
-	fmt.Fprintf(os.Stdout, "%s\n", s)
 }
 
 // EraseLine uses ANSI to erase the current line in stdout.
@@ -230,8 +231,8 @@ func AskYN(question string, alwaysYes bool, recommend YN) bool {
 	}
 }
 
-func (y YN) Define() (string, string) {
-	prompt, suffix := "", ""
+// Define returns the prompt and suffix strings to print for a Yes or No prompt.
+func (y YN) Define() (prompt string, suffix string) {
 	switch y {
 	case Nil:
 		prompt = "Y/N"

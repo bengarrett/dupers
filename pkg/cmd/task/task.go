@@ -332,7 +332,7 @@ func backupDB(quiet bool) error {
 	}
 	s := fmt.Sprintf("A new copy of the database (%s) is at: %s",
 		humanize.Bytes(uint64(writ)), name)
-	print.Response(s, quiet)
+	print.Quiet(quiet, s)
 	return nil
 }
 

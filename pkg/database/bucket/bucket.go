@@ -55,7 +55,7 @@ func (c *Cleaner) Clean(db *bolt.DB) (items, finds, errors int, err error) {
 						return nil
 					}
 				}
-				print.DPrint(c.Debug, fmt.Sprintf("%s: %s", k, errS))
+				print.Debug(c.Debug, fmt.Sprintf("%s: %s", k, errS))
 				if errUp := db.Update(func(tx *bolt.Tx) error {
 					return tx.Bucket([]byte(c.Name)).Delete(k)
 				}); errUp != nil {
@@ -97,7 +97,7 @@ func (p *Parser) Parse(db *bolt.DB) (items, errs int, name string, debug bool) {
 		print.StderrCR(err)
 		return p.Items, p.Errs, "", true
 	}
-	print.DPrint(p.Debug, "bucket: "+abs)
+	print.Debug(p.Debug, "bucket: "+abs)
 
 	// check the bucket directory exists on the file system
 	fi, errS := os.Stat(abs)
@@ -149,7 +149,7 @@ func printStat(debug, quiet bool, cnt, total int, k []byte) {
 	if !debug && !quiet {
 		fmt.Fprintf(os.Stdout, "%s", print.Status(cnt, total, print.Check))
 	}
-	print.DPrint(debug, "clean: "+string(k))
+	print.Debug(debug, "clean: "+string(k))
 }
 
 // Count the number of records in the bucket.

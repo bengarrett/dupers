@@ -138,7 +138,7 @@ func Clean(db *bolt.DB, quiet, debug bool, buckets ...string) error {
 	}
 	cleanDebug(debug, buckets)
 
-	print.DPrint(debug, fmt.Sprintf("cleaner of buckets: %s", buckets))
+	print.Debug(debug, fmt.Sprintf("cleaner of buckets: %s", buckets))
 	cleaned, err := cleaner(db, debug, buckets)
 	if err != nil {
 		return err
@@ -199,9 +199,9 @@ func cleanDebug(debug bool, buckets []string) {
 	if !debug {
 		return
 	}
-	print.DPrint(true, "running database clean")
-	print.DPrint(true, "list of buckets:")
-	print.DPrint(true, strings.Join(buckets, "\n"))
+	print.Debug(true, "running database clean")
+	print.Debug(true, "list of buckets:")
+	print.Debug(true, strings.Join(buckets, "\n"))
 }
 
 func cleaner(db *bolt.DB, debug bool, buckets []string) ([]string, error) {
@@ -212,7 +212,7 @@ func cleaner(db *bolt.DB, debug bool, buckets []string) ([]string, error) {
 		return buckets, nil
 	}
 
-	print.DPrint(debug, "fetching all buckets")
+	print.Debug(debug, "fetching all buckets")
 	all, err := All(db)
 	if err != nil {
 		return nil, err
@@ -228,7 +228,7 @@ func Compact(db *bolt.DB, debug bool) error {
 	if db == nil {
 		return bolt.ErrDatabaseNotOpen
 	}
-	print.DPrint(debug, "running database compact")
+	print.Debug(debug, "running database compact")
 	// make a temporary database
 	f, err := os.CreateTemp(os.TempDir(), "dupers-*.db")
 	if err != nil {
@@ -241,11 +241,11 @@ func Compact(db *bolt.DB, debug bool) error {
 	if err != nil {
 		return fmt.Errorf("%w: open %s", err, f.Name())
 	}
-	print.DPrint(debug, "opened replacement database: "+f.Name())
+	print.Debug(debug, "opened replacement database: "+f.Name())
 	defer target.Close()
 
 	// compress and copy the results to the temporary database
-	print.DPrint(debug, "compress and copy databases")
+	print.Debug(debug, "compress and copy databases")
 	if err := bolt.Compact(target, db, 0); err != nil {
 		return fmt.Errorf("%w: compact %s", err, f.Name())
 	}
@@ -259,9 +259,9 @@ func Compact(db *bolt.DB, debug bool) error {
 			return err
 		}
 		s1 := fmt.Sprintf("original database: %d bytes, %s", statSrc.Size(), statSrc.Name())
-		print.DPrint(debug, s1)
+		print.Debug(debug, s1)
 		s2 := fmt.Sprintf("new database:      %d bytes, %s", statDst.Size(), statDst.Name())
-		print.DPrint(debug, s2)
+		print.Debug(debug, s2)
 	}
 	path := db.Path()
 	if err = db.Close(); err != nil {
@@ -272,7 +272,7 @@ func Compact(db *bolt.DB, debug bool) error {
 		return err
 	}
 	s := fmt.Sprintf("copied %d bytes to: %s", i, path)
-	print.DPrint(debug, s)
+	print.Debug(debug, s)
 	return nil
 }
 
