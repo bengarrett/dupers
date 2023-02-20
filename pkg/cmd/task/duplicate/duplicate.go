@@ -55,7 +55,7 @@ func Cleanup(c *dupe.Config, f *cmd.Flags) error {
 			return err
 		}
 		fmt.Fprint(w, s)
-		removes, err := c.Removes(*f.Yes)
+		removes, err := c.Removes()
 		if err != nil {
 			return err
 		}

@@ -66,7 +66,7 @@ func Export(db *bolt.DB, quiet bool, args [2]string) error {
 	}
 	w := os.Stdout
 	if err := database.Exist(db, name); err != nil {
-		if errors.Is(err, bolt.ErrBucketNotFound) { // TODO: move this out to the main.go
+		if errors.Is(err, bolt.ErrBucketNotFound) {
 			fmt.Fprintf(w, "Bucket name: %s\n", name)
 			printer.Example("\ndupers export <bucket name>")
 		}

@@ -26,10 +26,12 @@ import (
 )
 
 var (
-	ErrArgs     = errors.New("no buckets were given as arguments")
-	ErrCommand  = errors.New("command is unknown")
-	ErrNilFlags = errors.New("flags cannot be a nil value")
-	ErrNoArgs   = errors.New("arguments cannot be empty")
+	ErrArgs      = errors.New("no buckets were given as arguments")
+	ErrEmptyDB   = errors.New("the database is empty with no buckets")
+	ErrToFewArgs = errors.New("too few arguments were given")
+	ErrCommand   = errors.New("command is unknown")
+	ErrNilFlags  = errors.New("flags cannot be a nil value")
+	ErrNoArgs    = errors.New("arguments cannot be empty")
 )
 
 const (
@@ -152,11 +154,11 @@ func Dupe(db *bolt.DB, c *dupe.Config, f *cmd.Flags, testing bool, args ...strin
 	switch {
 	case l == 1:
 		duplicate.CmdErr(l, 0, minArgs, testing)
-		return nil // TODO return err?
+		return ErrToFewArgs
 	case l < minArgs:
 		if len(b) == 0 {
-			duplicate.CmdErr(l, len(b), minArgs, testing)
-			return nil // TODO return err?
+			duplicate.CmdErr(l, 0, minArgs, testing)
+			return ErrEmptyDB
 		}
 		return ErrArgs
 	}

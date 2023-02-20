@@ -325,7 +325,7 @@ func (c *Config) Remove() (string, error) {
 
 // Removes the directories from the source that do not contain unique MS-DOS or Windows programs.
 // The strings contains the path of any undeletable files.
-func (c *Config) Removes(assumeYes bool) ([]string, error) {
+func (c *Config) Removes() ([]string, error) {
 	root := c.GetSource()
 	if _, err := os.Stat(root); errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("%w: %s", ErrPathNoFound, root)
@@ -344,7 +344,7 @@ func (c *Config) Removes(assumeYes bool) ([]string, error) {
 		fmt.Fprintf(w, "%s %s\n", color.Secondary.Sprint("Target directory:"), color.Debug.Sprint(root))
 		fmt.Fprintln(w, "Delete everything in the target directory, except for directories"+
 			"\ncontaining unique Windows or MS-DOS programs and assets?")
-		if input := printer.AskYN("Please confirm", assumeYes, printer.Nil); !input {
+		if input := printer.AskYN("Please confirm", c.Yes, printer.Nil); !input {
 			os.Exit(0)
 		}
 		fmt.Fprintln(w)

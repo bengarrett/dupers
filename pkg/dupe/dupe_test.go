@@ -206,7 +206,7 @@ func TestRemoves(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, int64(20), i)
 
-	paths, err := c.Removes(false)
+	paths, err := c.Removes()
 	assert.Nil(t, err)
 	assert.Len(t, paths, 0, "removes should not return any invalid paths")
 
@@ -268,14 +268,14 @@ func TestConfig_WalkArchiver(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestConfig_DWrite(t *testing.T) {
+func TestConfig_Writer(t *testing.T) {
 	const s = "test config dwrite"
 	var c dupe.Config
 	var w bytes.Buffer
-	c.DWrite(&w, s)
+	c.Writer(&w, s)
 	assert.Equal(t, "", w.String())
 	c.Debug = true
-	c.DWrite(&w, s)
+	c.Writer(&w, s)
 	assert.Contains(t, w.String(), s)
 }
 
