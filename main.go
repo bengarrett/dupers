@@ -114,7 +114,7 @@ func main() {
 	}
 
 	selection := strings.ToLower(flag.Args()[0])
-	c.DPrint("command selection: " + selection)
+	c.Debugger("command selection: " + selection)
 	if err := tasks(selection, a, &c, f); err != nil {
 		if errors.Is(err, database.ErrNotFound) {
 			os.Exit(0)

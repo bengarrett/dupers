@@ -49,7 +49,7 @@ func Cleanup(c *dupe.Config, f *cmd.Flags) error {
 	}
 	w := os.Stdout
 	if *f.Sensen {
-		c.DPrint("remove all non unique Windows and MS-DOS files.")
+		c.Debugger("remove all non unique Windows and MS-DOS files.")
 		s, err := c.Remove()
 		if err != nil {
 			return err
@@ -68,14 +68,14 @@ func Cleanup(c *dupe.Config, f *cmd.Flags) error {
 		return nil
 	}
 	if *f.Rm || *f.RmPlus {
-		c.DPrint("remove duplicate files.")
+		c.Debugger("remove duplicate files.")
 		s, err := c.Remove()
 		if err != nil {
 			return err
 		}
 		fmt.Fprint(w, s)
 		if *f.RmPlus {
-			c.DPrint("remove empty directories.")
+			c.Debugger("remove empty directories.")
 			fmt.Fprint(w, c.Clean())
 		}
 	}
@@ -124,13 +124,11 @@ func WalkScanSave(db *bolt.DB, c *dupe.Config, f *cmd.Flags) error {
 	if f == nil || f.Lookup == nil {
 		return fmt.Errorf("%w: lookup", cmd.ErrNilFlag)
 	}
-	c.DPrint("dupe lookup.")
+	c.Debugger("dupe lookup.")
 
 	var errs error
 
 	// normalise bucket names
-
-	// TODO: CHECK EXISTANCE
 	for i, b := range c.All() {
 		abs, err := database.Abs(string(b))
 		if err != nil {
@@ -154,7 +152,7 @@ func WalkScanSave(db *bolt.DB, c *dupe.Config, f *cmd.Flags) error {
 	}
 
 	if !*f.Lookup && len(buckets) > 0 {
-		c.DPrint("non-fast mode, database cleanup.")
+		c.Debugger("non-fast mode, database cleanup.")
 		if err := database.Clean(db, c.Quiet, c.Debug, buckets...); err != nil {
 			printer.StderrCR(err)
 		}
@@ -164,7 +162,7 @@ func WalkScanSave(db *bolt.DB, c *dupe.Config, f *cmd.Flags) error {
 			return nil
 		}
 	}
-	c.DPrint("walk the buckets.")
+	c.Debugger("walk the buckets.")
 	return c.WalkDirs(db)
 }
 
@@ -175,7 +173,7 @@ func Lookup(db *bolt.DB, c *dupe.Config) error {
 	if c == nil {
 		return dupe.ErrNilConfig
 	}
-	c.DPrint("read the hash values in the buckets.")
+	c.Debugger("read the hash values in the buckets.")
 	fastFlagErr := false
 	for _, bucket := range c.All() {
 		if i, err := c.SetCompares(db, bucket); err != nil {

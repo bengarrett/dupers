@@ -138,7 +138,7 @@ func Dupe(db *bolt.DB, c *dupe.Config, f *cmd.Flags, testing bool, args ...strin
 	if f.Version == nil {
 		return ErrNilFlags
 	}
-	c.DPrint(fmt.Sprintf("dupe command: %s", strings.Join(args, " ")))
+	c.Debugger(fmt.Sprintf("dupe command: %s", strings.Join(args, " ")))
 
 	// fetch bucket info
 	b, err := database.All(db)
@@ -186,7 +186,7 @@ func WalkCheck(db *bolt.DB, c *dupe.Config, args ...string) error {
 		if err := c.SetAllBuckets(db); err != nil {
 			return err
 		}
-		c.DPrint(fmt.Sprintf("use all buckets: %s", c.BucketS()))
+		c.Debugger(fmt.Sprintf("use all buckets: %s", c.BucketS()))
 		return nil
 	}
 	if err := c.SetBuckets(buckets...); err != nil {
@@ -195,7 +195,7 @@ func WalkCheck(db *bolt.DB, c *dupe.Config, args ...string) error {
 	if err := CheckDupePaths(c); err != nil {
 		return err
 	}
-	c.DPrint(fmt.Sprintf("use buckets: %s", c.BucketS()))
+	c.Debugger(fmt.Sprintf("use buckets: %s", c.BucketS()))
 	return nil
 }
 
@@ -210,7 +210,7 @@ func WalkScan(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
 	if err := c.WalkSource(); err != nil {
 		return err
 	}
-	c.DPrint("walksource complete.")
+	c.Debugger("walksource complete.")
 	// walk, scan and save file paths and hashes to the database
 	if err := duplicate.WalkScanSave(db, c, f); err != nil {
 		return err
