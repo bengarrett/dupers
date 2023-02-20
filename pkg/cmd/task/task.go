@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/fs"
 	"os"
 	"runtime"
 	"strings"
@@ -137,7 +138,7 @@ func Database(db *bolt.DB, c *dupe.Config, args ...string) error {
 }
 
 // Dupe parses the dupe command.
-func Dupe(db *bolt.DB, c *dupe.Config, f *cmd.Flags, testing bool, args ...string) error {
+func Dupe(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
 	if db == nil {
 		return bolt.ErrDatabaseNotOpen
 	}
@@ -160,16 +161,21 @@ func Dupe(db *bolt.DB, c *dupe.Config, f *cmd.Flags, testing bool, args ...strin
 	l := len(args)
 	switch {
 	case l == 1:
-		duplicate.CmdErr(l, 0, minArgs, testing)
+		duplicate.Check(l, 0, minArgs)
 		return ErrToFewArgs
 	case l < minArgs:
 		if len(b) == 0 {
-			duplicate.CmdErr(l, 0, minArgs, testing)
+			duplicate.Check(l, 0, minArgs)
 			return ErrEmptyDB
 		}
 		return ErrArgs
 	}
 	if err := c.SetSource(args[source]); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			printer.StderrCR(os.ErrNotExist)
+			fmt.Fprintf(os.Stdout, "File or directory path: %s\n", args[source])
+			printer.Example("\ndupers dupe <file or directory> [buckets to lookup]")
+		}
 		return err
 	}
 	if err := WalkCheck(db, c, args...); err != nil {
@@ -199,6 +205,12 @@ func WalkCheck(db *bolt.DB, c *dupe.Config, args ...string) error {
 		return nil
 	}
 	if err := c.SetBuckets(buckets...); err != nil {
+		var pathError *fs.PathError
+		if errors.As(err, &pathError) {
+			printer.StderrCR(bolt.ErrBucketNotFound)
+			fmt.Fprintf(os.Stdout, "Bucket: %s\n", pathError.Path)
+			printer.Example("\ndupers dupe " + args[1] + " [buckets to lookup]")
+		}
 		return err
 	}
 	if err := CheckDupePaths(c); err != nil {

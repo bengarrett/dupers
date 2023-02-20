@@ -120,21 +120,21 @@ func TestSearch(t *testing.T) {
 }
 
 func TestDupe(t *testing.T) {
-	err := task.Dupe(nil, nil, nil, true, "")
+	err := task.Dupe(nil, nil, nil, "")
 	assert.NotNil(t, err)
 
 	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
 	defer os.Remove(path)
-	err = task.Dupe(db, nil, nil, true, "")
+	err = task.Dupe(db, nil, nil, "")
 	assert.NotNil(t, err)
 
 	c := dupe.Config{}
-	err = task.Dupe(db, &c, nil, true, "")
+	err = task.Dupe(db, &c, nil, "")
 	assert.NotNil(t, err)
 	f := cmd.Flags{}
-	err = task.Dupe(db, &c, &f, true, "")
+	err = task.Dupe(db, &c, &f, "")
 	assert.NotNil(t, err)
 
 	// there's no need to run further tests

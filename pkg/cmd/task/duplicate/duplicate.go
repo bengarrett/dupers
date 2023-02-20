@@ -82,8 +82,8 @@ func Cleanup(c *dupe.Config, f *cmd.Flags) error {
 	return nil
 }
 
-// CmdErr parses the arguments of the dupe command.
-func CmdErr(args, buckets, minArgs int, test bool) {
+// Check parses the arguments of the dupe command.
+func Check(args, buckets, minArgs int) {
 	w := os.Stdout
 	if args < minArgs {
 		printer.StderrCR(ErrNoArgs)
@@ -107,9 +107,6 @@ func CmdErr(args, buckets, minArgs int, test bool) {
 			s := fmt.Sprintf("\ndupers dupe %s <one or more directories>\n", flag.Args()[1])
 			printer.Example(s)
 		}
-	}
-	if !test {
-		printer.ErrFatal(nil)
 	}
 }
 
