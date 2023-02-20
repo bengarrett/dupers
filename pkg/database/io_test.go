@@ -33,7 +33,7 @@ func TestCopyFile(t *testing.T) {
 
 	tmpDir, err := mock.TempDir()
 	assert.Nil(t, err)
-	defer mock.RemoveTmp()
+	defer mock.RemoveTmp(tmpDir)
 
 	const expected = int64(20)
 	dest := filepath.Join(tmpDir, "some-random-file.stuff")

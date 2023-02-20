@@ -36,6 +36,7 @@ func TestSetBuckets(t *testing.T) {
 func TestTimer(t *testing.T) {
 	p := parse.Scanner{}
 	p.SetTimer()
+	time.Sleep(100 * time.Millisecond)
 	const zero time.Duration = 0
 	assert.Greater(t, p.Timer(), zero, "timer should not be 0")
 }
@@ -106,17 +107,17 @@ func TestExecutable(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, false, b)
 
-	i, err := mock.SensenTmp()
+	tmpDir, err := mock.TempDir()
+	assert.Nil(t, err)
+	i, err := mock.SensenTmp(tmpDir)
 	assert.Nil(t, err)
 	assert.Equal(t, int64(20), i)
 
-	tmpDir, err := mock.TempDir()
-	assert.Nil(t, err)
 	b, err = parse.Executable(tmpDir)
 	assert.Nil(t, err)
 	assert.Equal(t, true, b)
 
-	_, err = mock.RemoveTmp()
+	_, err = mock.RemoveTmp(tmpDir)
 	assert.Nil(t, err)
 }
 

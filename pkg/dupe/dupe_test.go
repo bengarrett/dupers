@@ -189,20 +189,20 @@ func TestRemoves(t *testing.T) {
 	tmpDir, err := mock.TempDir()
 	assert.Nil(t, err)
 
-	_, err = mock.RemoveTmp()
+	_, err = mock.RemoveTmp(tmpDir)
 	assert.Nil(t, err)
 
 	bucket1, err := mock.Bucket(1)
 	assert.Nil(t, err)
 	assert.NotNil(t, bucket1)
 
-	err = mock.MirrorTmp(bucket1)
+	path, err := mock.MirrorTmp(bucket1)
 	assert.Nil(t, err)
 
-	err = c.SetSource(tmpDir)
+	err = c.SetSource(path)
 	assert.Nil(t, err)
 
-	i, err := mock.SensenTmp()
+	i, err := mock.SensenTmp(path)
 	assert.Nil(t, err)
 	assert.Equal(t, int64(20), i)
 
@@ -211,7 +211,7 @@ func TestRemoves(t *testing.T) {
 	assert.Len(t, paths, 0, "removes should not return any invalid paths")
 
 	removed := 0
-	removed, err = mock.RemoveTmp()
+	removed, err = mock.RemoveTmp(path)
 	assert.Nil(t, err)
 	assert.Equal(t, 25, removed)
 }

@@ -2,7 +2,6 @@
 package task_test
 
 import (
-	"flag"
 	"os"
 	"testing"
 
@@ -111,9 +110,10 @@ func TestSearch(t *testing.T) {
 	err = task.Search(db, &f, true, args...)
 	assert.NotNil(t, err)
 
-	f.Filename = flag.Bool("a", false, "")
-	f.Exact = flag.Bool("b", false, "")
-	f.Quiet = flag.Bool("c", false, "")
+	no := false
+	f.Filename = &no
+	f.Exact = &no
+	f.Quiet = &no
 	err = task.Search(db, &f, true, args...)
 	assert.Nil(t, err)
 }

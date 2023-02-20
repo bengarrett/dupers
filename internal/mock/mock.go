@@ -96,9 +96,10 @@ func TempDir() (string, error) {
 	if root == "" {
 		return "", ErrNoRoot
 	}
-	tmp := filepath.Join(root, ".tmp", "mock")
-	if err := os.MkdirAll(tmp, PrivateDir); err != nil {
-		return tmp, err
+	dir := filepath.Join(root, ".tmp")
+	tmp, err := os.MkdirTemp(dir, "mock-*")
+	if err != nil {
+		log.Fatal(err)
 	}
 	return tmp, nil
 }
@@ -320,17 +321,17 @@ func Delete(path string) error {
 }
 
 // MirrorTmp recursively copies the directory content of src into the hidden tmp mock directory.
-func MirrorTmp(src string) error {
+func MirrorTmp(src string) (string, error) {
 	const dirAllAccess fs.FileMode = 0o777
 	from, err := filepath.Abs(src)
 	if err != nil {
-		return err
+		return "", err
 	}
 	tmpDir, err := TempDir()
 	if err != nil {
-		return err
+		return "", err
 	}
-	return filepath.WalkDir(from, func(path string, d fs.DirEntry, err error) error {
+	err = filepath.WalkDir(from, func(path string, d fs.DirEntry, err error) error {
 		if path == from {
 			return nil
 		}
@@ -349,19 +350,16 @@ func MirrorTmp(src string) error {
 		}
 		return nil
 	})
+	if err != nil {
+		return "", err
+	}
+	return tmpDir, nil
 }
 
 // RemoveTmp deletes the hidden tmp mock directory and returns the number of files deleted.
-func RemoveTmp() (int, error) {
-	tmpDir, err := TempDir()
-	if err != nil {
-		return 0, err
-	}
+func RemoveTmp(path string) (int, error) {
 	count := 0
-	err = filepath.WalkDir(tmpDir, func(path string, d fs.DirEntry, err error) error {
-		if path == tmpDir {
-			return nil
-		}
+	err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() {
 			return nil
 		}
@@ -371,23 +369,19 @@ func RemoveTmp() (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	return count, os.RemoveAll(tmpDir)
+	return count, os.RemoveAll(path)
 }
 
-// SensenTmp generates 25 subdirectories within the hidden tmp mock directory,
+// SensenTmp generates 25 subdirectories within a hidden tmp mock directory,
 // and copies a mock Windows/DOS .exe program file into one.
 // The returned int is the number of bytes copied.
-func SensenTmp() (int64, error) {
-	tmpDir, err := TempDir()
-	if err != nil {
-		return 0, err
-	}
+func SensenTmp(path string) (int64, error) {
 	n := 0
 	dest := ""
 	for n < 25 {
 		n++
-		name := filepath.Join(tmpDir, fmt.Sprintf("mock-dir-%d", n))
-		if err = os.MkdirAll(name, PrivateDir); err != nil {
+		name := filepath.Join(path, fmt.Sprintf("mock-dir-%d", n))
+		if err := os.MkdirAll(name, PrivateDir); err != nil {
 			return 0, err
 		}
 		if n == 16 {
@@ -398,7 +392,11 @@ func SensenTmp() (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return database.CopyFile(item, filepath.Join(dest, "some-pretend-windows-app.exe"))
+	i, err := database.CopyFile(item, filepath.Join(dest, "some-pretend-windows-app.exe"))
+	if err != nil {
+		return 0, err
+	}
+	return i, err
 }
 
 // Sum compares b against the expected SHA-256 binary checksum of the test source file item.
