@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/bengarrett/dupers/internal/mock"
-	"github.com/bengarrett/dupers/internal/task/internal/bucket"
+	"github.com/bengarrett/dupers/pkg/cmd/task/bucket"
 	"github.com/bengarrett/dupers/pkg/dupe"
 	"github.com/stretchr/testify/assert"
 )

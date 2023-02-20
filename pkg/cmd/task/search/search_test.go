@@ -5,9 +5,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/bengarrett/dupers/internal/cmd"
 	"github.com/bengarrett/dupers/internal/mock"
-	"github.com/bengarrett/dupers/internal/task/internal/search"
+	"github.com/bengarrett/dupers/pkg/cmd"
+	"github.com/bengarrett/dupers/pkg/cmd/task/search"
 	"github.com/bengarrett/dupers/pkg/database"
 	"github.com/stretchr/testify/assert"
 	bolt "go.etcd.io/bbolt"

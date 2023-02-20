@@ -5,9 +5,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/bengarrett/dupers/internal/cmd"
 	"github.com/bengarrett/dupers/internal/mock"
-	"github.com/bengarrett/dupers/internal/task"
+	"github.com/bengarrett/dupers/pkg/cmd"
+	"github.com/bengarrett/dupers/pkg/cmd/task"
 	"github.com/bengarrett/dupers/pkg/dupe"
 	"github.com/stretchr/testify/assert"
 )

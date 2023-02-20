@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/bengarrett/dupers/internal/mock"
-	"github.com/bengarrett/dupers/pkg/database/internal/csv"
+	"github.com/bengarrett/dupers/pkg/database/csv"
 	"github.com/stretchr/testify/assert"
 )
 

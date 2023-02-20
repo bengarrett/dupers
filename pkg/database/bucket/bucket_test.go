@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/bengarrett/dupers/internal/mock"
-	"github.com/bengarrett/dupers/pkg/database/internal/bucket"
+	"github.com/bengarrett/dupers/pkg/database/bucket"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -15,9 +15,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/bengarrett/dupers/internal/cmd"
 	"github.com/bengarrett/dupers/internal/out"
-	"github.com/bengarrett/dupers/internal/task"
+	"github.com/bengarrett/dupers/pkg/cmd"
+	"github.com/bengarrett/dupers/pkg/cmd/task"
 	"github.com/bengarrett/dupers/pkg/database"
 	"github.com/bengarrett/dupers/pkg/dupe"
 	"github.com/carlmjohnson/versioninfo"

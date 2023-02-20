@@ -8,8 +8,8 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/bengarrett/dupers/internal/cmd"
 	"github.com/bengarrett/dupers/internal/out"
+	"github.com/bengarrett/dupers/pkg/cmd"
 	"github.com/bengarrett/dupers/pkg/database"
 	"github.com/bengarrett/dupers/pkg/dupe"
 	"github.com/gookit/color"

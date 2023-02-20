@@ -8,7 +8,7 @@ import (
 	"github.com/bengarrett/dupers/internal/mock"
 	"github.com/bengarrett/dupers/pkg/dupe"
 	"github.com/bengarrett/dupers/pkg/dupe/internal/archive"
-	"github.com/bengarrett/dupers/pkg/dupe/internal/parse"
+	"github.com/bengarrett/dupers/pkg/dupe/parse"
 	"github.com/stretchr/testify/assert"
 )
 

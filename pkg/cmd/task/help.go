@@ -10,7 +10,7 @@ import (
 	"runtime"
 	"text/tabwriter"
 
-	"github.com/bengarrett/dupers/internal/cmd"
+	"github.com/bengarrett/dupers/pkg/cmd"
 	"github.com/gookit/color"
 )
 
