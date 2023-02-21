@@ -197,7 +197,7 @@ func AskYN(question string, alwaysYes bool, recommend YN) bool {
 
 	w := os.Stdout
 	prompt, suffix := recommend.Define()
-	ask := fmt.Sprintf("\r%s?%s[%s]: ", question, prompt, suffix)
+	ask := fmt.Sprintf("\r%s? [%s]%s: ", question, prompt, suffix)
 	fmt.Fprintf(w, "%s", ask)
 	if alwaysYes {
 		fmt.Fprintln(w, yes)
