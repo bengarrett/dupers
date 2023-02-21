@@ -127,15 +127,25 @@ func WalkScanSave(db *bolt.DB, c *dupe.Config, f *cmd.Flags) error {
 
 	// normalise bucket names
 	for i, b := range c.Buckets {
+		// TODO: move range body to a func
 		abs, err := database.Abs(string(b))
 		if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("%w: %s", err, b))
+			errs = errors.Join(errs, fmt.Errorf("x %w: %s", err, b))
 			c.Buckets[i] = ""
 
 			continue
 		}
 		if err := database.Exist(db, abs); err != nil {
-			errs = errors.Join(errs, fmt.Errorf("%w: %s", err, b))
+			if errors.Is(err, bolt.ErrBucketNotFound) {
+				s := "Scan and add this new directory to the database:\n" +
+					color.Warn.Sprintf(" %s\n\n", abs) +
+					"This could take awhile with large numbers of files"
+				if printer.AskYN(s, c.Yes, printer.Yes) {
+					// continue automatically adds the bucket to the database
+					continue
+				}
+			}
+			errs = errors.Join(errs, fmt.Errorf("y %w: %s", err, b))
 		}
 		c.Buckets[i] = dupe.Bucket(abs)
 	}

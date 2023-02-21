@@ -236,7 +236,7 @@ func Remove(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
 		fmt.Fprintf(w, "%s\t%s\n", color.Secondary.Sprint("Bucket:"), color.Debug.Sprint(name))
 		p := message.NewPrinter(language.English)
 		fmt.Fprintf(w, "%s\t%s\n", color.Secondary.Sprint("Items:"), color.Debug.Sprint(p.Sprint(items)))
-		if !printer.AskYN("Remove this bucket", assumeYes, printer.No) {
+		if !printer.AskYN("Remove this bucket from the database", assumeYes, printer.No) {
 			return nil
 		}
 	}
