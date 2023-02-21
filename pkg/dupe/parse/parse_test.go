@@ -28,7 +28,7 @@ func TestSetBuckets(t *testing.T) {
 	assert.Nil(t, err)
 
 	const expected = 2
-	actual := len(s.All())
+	actual := len(s.Buckets)
 	assert.Equal(t, expected, actual)
 }
 

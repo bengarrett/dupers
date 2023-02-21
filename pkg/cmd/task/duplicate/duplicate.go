@@ -126,25 +126,25 @@ func WalkScanSave(db *bolt.DB, c *dupe.Config, f *cmd.Flags) error {
 	var errs error
 
 	// normalise bucket names
-	for i, b := range c.All() {
+	for i, b := range c.Buckets {
 		abs, err := database.Abs(string(b))
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("%w: %s", err, b))
-			c.All()[i] = ""
+			c.Buckets[i] = ""
 
 			continue
 		}
 		if err := database.Exist(db, abs); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("%w: %s", err, b))
 		}
-		c.All()[i] = dupe.Bucket(abs)
+		c.Buckets[i] = dupe.Bucket(abs)
 	}
 	if errs != nil {
 		return errs
 	}
 
-	buckets := make([]string, 0, len(c.All()))
-	for _, b := range c.All() {
+	buckets := make([]string, 0, len(c.Buckets))
+	for _, b := range c.Buckets {
 		buckets = append(buckets, string(b))
 	}
 
@@ -172,7 +172,7 @@ func Lookup(db *bolt.DB, c *dupe.Config) error {
 	}
 	c.Debugger("read the hash values in the buckets.")
 	fastFlagErr := false
-	for _, bucket := range c.All() {
+	for _, bucket := range c.Buckets {
 		if i, err := c.SetCompares(db, bucket); err != nil {
 			printer.StderrCR(err)
 		} else if i > 0 {

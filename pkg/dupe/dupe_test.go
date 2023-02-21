@@ -279,9 +279,9 @@ func TestConfig_Writer(t *testing.T) {
 	assert.Contains(t, w.String(), s)
 }
 
-func TestConfig_CheckPaths(t *testing.T) {
+func TestConfig_StatSource(t *testing.T) {
 	var c dupe.Config
-	files, buckets, err := c.CheckPaths()
+	_, files, buckets, err := c.StatSource()
 	assert.NotNil(t, err)
 	assert.Equal(t, 0, files, "unexpected file count")
 	assert.Equal(t, 0, buckets, "unexpected bucket count")
@@ -292,7 +292,7 @@ func TestConfig_CheckPaths(t *testing.T) {
 	assert.Nil(t, err)
 	err = c.SetBuckets(bucket1)
 	assert.Nil(t, err)
-	files, buckets, err = c.CheckPaths()
+	_, files, buckets, err = c.StatSource()
 	assert.Nil(t, err)
 	assert.Equal(t, 24, files, "unexpected file count")
 	assert.Equal(t, 12, buckets, "unexpected bucket count")

@@ -178,14 +178,14 @@ func Dupe(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
 		}
 		return err
 	}
-	if err := WalkCheck(db, c, args...); err != nil {
+	if err := SetStat(db, c, args...); err != nil {
 		return err
 	}
 	return WalkScan(db, c, f, args...)
 }
 
-// WalkCheck checks directories and files to scan, a bucket is the name given to database tables.
-func WalkCheck(db *bolt.DB, c *dupe.Config, args ...string) error {
+// SetStat sets and stats directories and files to scan, a bucket is the name given to database tables.
+func SetStat(db *bolt.DB, c *dupe.Config, args ...string) error {
 	if db == nil {
 		return bolt.ErrDatabaseNotOpen
 	}
@@ -213,7 +213,13 @@ func WalkCheck(db *bolt.DB, c *dupe.Config, args ...string) error {
 		}
 		return err
 	}
-	if err := CheckDupePaths(c); err != nil {
+	if err := StatSource(c); err != nil {
+		var pathError *fs.PathError
+		if errors.As(err, &pathError) {
+			printer.StderrCR(os.ErrNotExist)
+			fmt.Fprintf(os.Stdout, "Bucket: %s\n", pathError.Path)
+			printer.Example("\ndupers dupe <file or directory> [buckets to lookup]")
+		}
 		return err
 	}
 	c.Debugger(fmt.Sprintf("use buckets: %s", c.BucketS()))
@@ -379,49 +385,64 @@ func CleanupDB(db *bolt.DB, c *dupe.Config) error {
 	return nil
 }
 
-// CheckDupePaths checks the path arguments supplied to the dupe command.
-func CheckDupePaths(c *dupe.Config) error {
+// StatSource checks the path arguments supplied to the dupe command.
+func StatSource(c *dupe.Config) error {
 	if c == nil {
 		return dupe.ErrNilConfig
 	}
-	files, buckets, err := c.CheckPaths()
+	isDir, files, verses, err := c.StatSource()
 	if err != nil {
 		return err
 	}
 	// handle any problems
 	p := message.NewPrinter(language.English)
 	verb := "Buckets"
-	if len(c.All()) == 1 {
+	if len(c.Buckets) == 1 {
 		verb = "Bucket"
 	}
+	src := c.GetSource()
 	w := os.Stdout
-	fmt.Fprint(w, "Directory to check:")
-	fmt.Fprintln(w)
-	if buckets == 0 {
-		fmt.Fprintf(w, " %s ", c.GetSource())
+	if isDir {
+		fmt.Fprint(w, "Directory to check:")
 	} else {
-		fmt.Fprintf(w, " %s ", color.Warn.Sprint(c.GetSource()))
+		fmt.Fprint(w, "File to check:")
 	}
-	fmt.Fprintf(w, "(%s)", color.Info.Sprintf("%s files", p.Sprint(files)))
+	fmt.Fprintln(w)
+	if verses == 0 {
+		fmt.Fprintf(w, " %s ", src)
+	} else {
+		fmt.Fprintf(w, " %s ", color.Warn.Sprint(src))
+	}
+	if !isDir {
+		stat, err := os.Stat(src)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(w, "(%s)", color.Info.Sprintf("%s bytes", p.Sprint(stat.Size())))
+	} else {
+		fmt.Fprintf(w, "(%s)", color.Info.Sprintf("%s files", p.Sprint(files)))
+	}
 	fmt.Fprintln(w)
 	fmt.Fprintln(w)
 	fmt.Fprintf(w, "%s to lookup, for finding duplicates:", verb)
 	fmt.Fprintln(w)
 	fmt.Fprintf(w, " %s ", c.BucketS())
-	if buckets == 0 {
-		fmt.Fprintf(w, "(%s)", color.Danger.Sprintf("%s files", p.Sprint(buckets)))
+	if verses == 0 {
+		fmt.Fprintf(w, "(%s)", color.Danger.Sprintf("%s files", p.Sprint(verses)))
 		fmt.Fprintln(w)
 		fmt.Fprintln(w)
 		fmt.Fprintln(os.Stderr, color.Danger.Sprintf("The %s to lookup contains no files", strings.ToLower(verb)))
 		return bucket.ErrBucketEmpty
 	}
-	fmt.Fprintf(w, "(%s)", color.Info.Sprintf("%s files", p.Sprint(buckets)))
+	fmt.Fprintf(w, "(%s)", color.Info.Sprintf("%s files", p.Sprint(verses)))
 	fmt.Fprintln(w)
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "The bucket to lookup is to be stored in the database,")
-	color.Warn.Println(" but the \"Directory to check\" is not.")
-	if !printer.AskYN("Is this what you want", c.Yes, printer.No) {
-		return nil
+	if isDir && verses >= files/2 {
+		fmt.Fprintln(w, "The bucket to lookup is to be stored in the database,")
+		color.Warn.Println(" but the \"Directory to check\" is not.")
+		if !printer.AskYN("Is this what you want", c.Yes, printer.No) {
+			return nil
+		}
 	}
 	return nil
 }

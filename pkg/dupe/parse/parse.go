@@ -42,11 +42,6 @@ type Scanner struct {
 
 var ErrNoSource = errors.New("cannot use an empty source")
 
-// All buckets returned as a slice.
-func (p *Scanner) All() []Bucket {
-	return p.Buckets
-}
-
 // Compares returns the number of items in the Compare Scanner.
 func (p *Scanner) Compares() int {
 	return len(p.Compare)
@@ -157,8 +152,8 @@ func (p *Scanner) SetSource(name string) error {
 
 // BucketS returns a list of buckets used by the database.
 func (p *Scanner) BucketS() string {
-	s := make([]string, 0, len(p.All()))
-	for _, b := range p.All() {
+	s := make([]string, 0, len(p.Buckets))
+	for _, b := range p.Buckets {
 		s = append(s, string(b))
 	}
 	return strings.Join(s, " ")

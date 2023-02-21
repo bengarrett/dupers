@@ -65,26 +65,26 @@ func TestWalkScan(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestWalkCheck(t *testing.T) {
-	err := task.WalkCheck(nil, nil, "")
+func TestSetStat(t *testing.T) {
+	err := task.SetStat(nil, nil, "")
 	assert.NotNil(t, err)
 
 	db, path, err := mock.Database()
 	assert.Nil(t, err)
 	defer db.Close()
 	defer os.Remove(path)
-	err = task.WalkCheck(db, nil, "")
+	err = task.SetStat(db, nil, "")
 	assert.NotNil(t, err)
 	c := dupe.Config{}
-	err = task.WalkCheck(db, &c, "")
+	err = task.SetStat(db, &c, "")
 	assert.NotNil(t, err)
 	args := []string{"placeholder 1", "placeholder 2"}
-	err = task.WalkCheck(db, &c, args...)
+	err = task.SetStat(db, &c, args...)
 	assert.Nil(t, err)
 	bucket1, err := mock.Bucket(1)
 	assert.Nil(t, err)
 	args = []string{"placeholder 1", "placeholder 2", bucket1}
-	err = task.WalkCheck(db, &c, args...)
+	err = task.SetStat(db, &c, args...)
 	assert.NotNil(t, err)
 }
 
@@ -189,10 +189,10 @@ func TestCleanupDB(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestCheckDupePaths(t *testing.T) {
-	err := task.CheckDupePaths(nil)
+func TestStatSource(t *testing.T) {
+	err := task.StatSource(nil)
 	assert.NotNil(t, err)
 	c := dupe.Config{}
-	err = task.CheckDupePaths(&c)
+	err = task.StatSource(&c)
 	assert.NotNil(t, err)
 }

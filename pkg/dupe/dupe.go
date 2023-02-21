@@ -38,6 +38,7 @@ const (
 )
 
 var (
+	ErrFileEmpty     = errors.New("file is empty, being 0 byte in size")
 	ErrNilConfig     = errors.New("config cannot be nil")
 	ErrNoNamedBucket = errors.New("a named bucket is required")
 	ErrPathEmpty     = errors.New("path is empty")
@@ -68,45 +69,107 @@ func (c *Config) Writer(w io.Writer, s string) {
 	fmt.Fprintf(w, "∙%s\n", s)
 }
 
-// CheckPaths counts the number of files in a directory to check, versus the number of items in the buckets.
-func (c *Config) CheckPaths() (files, versus int, err error) {
+// StatSource returns the number of files in the source directory to check.
+// If the source is a file, files will always equal 1.
+// The returned versus the number of items in the buckets for the dupe check.
+func (c *Config) StatSource() (isDir bool, files, versus int, err error) {
 	c.Debugger("count the files within the paths")
-	dupeItem := c.GetSource()
-	c.Debugger("path to check: " + dupeItem)
-	s, err := c.CheckDir(dupeItem)
-	if err != nil {
-		return 0, 0, err
-	}
-	if s != dupeItem {
-		c.Debugger("path to check was not found: " + dupeItem)
-		c.Debugger("will attempt to use: " + s)
-		dupeItem = s
-	}
-	c.Debugger(fmt.Sprintf("all buckets: %s", c.All()))
 
+	src := c.GetSource()
+	c.Debugger("path to check: " + src)
 	versus = 0
-	files, err = c.walkPath(dupeItem)
+	isDir, files, err = c.statSource()
 	if err != nil {
-		return 0, 0, err
+		return isDir, 0, 0, err
 	}
-	for _, b := range c.All() {
+	name := c.GetSource()
+	if name != src {
+		c.Debugger("path to check was not found: " + src)
+		c.Debugger("will attempt to use: " + name)
+		src = name
+	}
+	c.Debugger(fmt.Sprintf("all buckets: %s", c.Buckets))
+	fmt.Println("files", files)
+	for _, bucket := range c.Buckets {
+		// TODO: check bucket
 		var err error
-		versus, err = c.walkBucket(b, files, versus)
+		versus, err = c.walkBucket(bucket, files, versus)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return 0, 0, err
+			return isDir, 0, 0, err
 		}
 	}
-	if versus >= files/2 {
+	if isDir && versus >= files/2 {
 		c.Debugger("there seems to be too few files in the buckets")
 	}
-	return files, versus, nil
+	return isDir, files, versus, nil
+}
+
+func (c *Config) statSource() (isDir bool, files int, err error) {
+	name := c.GetSource()
+	stat, err := os.Stat(name)
+	if err != nil {
+		c.Debugger("path is not found, but there is an absolute resolved path")
+		name, err = filepath.Abs(name)
+		if err != nil {
+			return false, 0, os.ErrNotExist
+		}
+		stat, err = os.Stat(name)
+		if err != nil {
+			return false, 0, err
+		}
+		if err = c.SetSource(stat.Name()); err != nil {
+			return false, 0, err
+		}
+	}
+	if !stat.IsDir() {
+		if stat.Size() == 0 {
+			return false, 1, ErrFileEmpty
+		}
+		return false, 1, nil
+	}
+	files = 0
+	root := name
+	// TODO SkipDir
+	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		c.Debugger("counting: " + path)
+		if err != nil {
+			return err
+		}
+		if root == path {
+			return nil
+		}
+		if err := SkipDir(d); err != nil {
+			return nil
+		}
+		if !d.Type().IsRegular() {
+			return nil
+		}
+		if d.IsDir() {
+			return nil
+		}
+		files++
+		return nil
+	})
+	if err != nil {
+		return true, files, err
+	}
+	return true, files, nil
 }
 
 func (c *Config) walkBucket(b parse.Bucket, files, buckets int) (int, error) {
 	root := string(b)
+	stat, err := os.Stat(root)
+	if err != nil {
+		return 0, err
+	}
+	if !stat.IsDir() {
+		return 0, ErrPathIsFile
+	}
+	// TODO: SkipDir()
+	c.Debugger("walking bucket: " + root)
 	return buckets, filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -116,7 +179,7 @@ func (c *Config) walkBucket(b parse.Bucket, files, buckets int) (int, error) {
 		}
 		c.Debugger("walking bucket item: " + path)
 		if err := SkipDir(d); err != nil {
-			return err
+			return nil
 		}
 		if !d.Type().IsRegular() {
 			return nil
@@ -125,64 +188,40 @@ func (c *Config) walkBucket(b parse.Bucket, files, buckets int) (int, error) {
 			return nil
 		}
 		buckets++
-		if buckets >= files/2 {
-			return io.EOF
-		}
 		return nil
 	})
 }
 
-func (c *Config) walkPath(root string) (int, error) {
-	checkCnt := 0
-	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		c.Debugger("counting: " + path)
-		if err != nil {
-			return err
-		}
-		if root == path {
-			return nil
-		}
-		if err := SkipDir(d); err != nil {
-			return err
-		}
-		if !d.Type().IsRegular() {
-			return nil
-		}
-		if d.IsDir() {
-			return nil
-		}
-		checkCnt++
-		return nil
-	}); err != nil {
-		return 0, err
-	}
-	return checkCnt, nil
-}
-
-// CheckItem stat and returns the named file or directory.
+// Check stats and returns the named file or directory.
 // If it does not exist, it looks up an absolute path and returns the result.
 // If the item is a file it returns both the named file and an ErrPathIsFile error.
-func (c *Config) CheckDir(name string) (string, error) {
+func (c *Config) Check(name string) (isdir bool, path string, err error) {
 	if name == "" {
-		return "", ErrPathEmpty
+		return false, "", ErrPathEmpty
 	}
 	stat, err := os.Stat(name)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			c.Debugger("path is not found, but there is an absolute resolved path")
-			s, err1 := filepath.Abs(name)
-			if err1 != nil {
-				return "", os.ErrNotExist
-			}
-			return s, nil
+		if !errors.Is(err, os.ErrNotExist) {
+			c.Debugger("path is not found")
+			return false, "", err
 		}
-		c.Debugger("path is not found")
-		return "", err
+		c.Debugger("path is not found, but there is an absolute resolved path")
+		name, err = filepath.Abs(name)
+		if err != nil {
+			return false, "", os.ErrNotExist
+		}
+		stat, err = os.Stat(name)
+		if err != nil {
+			return false, "", err
+		}
 	}
 	if !stat.IsDir() {
-		return name, ErrPathIsFile
+		if stat.Size() == 0 {
+			return false, name, ErrFileEmpty
+		}
+		return false, name, nil
 	}
-	return name, nil
+	return true, name, nil
 }
 
 // Checksum the named file and save it to the bucket.
@@ -408,7 +447,7 @@ func (c *Config) WalkDirs(db *bolt.DB) error {
 		return err
 	}
 	// walk through the directories provided
-	for _, bucket := range c.All() {
+	for _, bucket := range c.Buckets {
 		s := string(bucket)
 		c.Debugger("walkdir bucket: " + s)
 		if err := c.WalkDir(db, bucket); err != nil {
@@ -422,7 +461,7 @@ func (c *Config) WalkDirs(db *bolt.DB) error {
 	}
 	// handle any items that exist in the database but not in the file system
 	// this would include items added using the `up+` archive scan command
-	for _, b := range c.All() {
+	for _, b := range c.Buckets {
 		if _, err := c.SetCompares(db, b); err != nil {
 			return err
 		}
@@ -512,6 +551,7 @@ func (c *Config) WalkSource() error {
 		return parse.ErrNoSource
 	}
 	c.Debugger("walksource to check: " + root)
+	// TODO: statSource
 	stat, err := os.Stat(root)
 	if errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("%w: %s", ErrPathNoFound, root)
@@ -524,7 +564,8 @@ func (c *Config) WalkSource() error {
 		c.Debugger("items dupe check: " + strings.Join(c.Sources, " "))
 		return nil
 	}
-	if err := c.walkSource(root); err != nil {
+
+	if err := c.statSources(root); err != nil {
 		printer.StderrCR(fmt.Errorf("item has a problem: %w", err))
 		return nil
 	}
@@ -532,7 +573,7 @@ func (c *Config) WalkSource() error {
 	return nil
 }
 
-func (c *Config) walkSource(root string) error {
+func (c *Config) statSources(root string) error {
 	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		c.Debugger(path)
 		if err != nil {
@@ -584,27 +625,27 @@ func (c *Config) init(db *bolt.DB) error {
 		return bolt.ErrDatabaseNotOpen
 	}
 	// use all the buckets if no specific buckets are provided
-	if !c.Test && len(c.All()) == 0 {
+	if !c.Test && len(c.Buckets) == 0 {
 		if err := c.SetAllBuckets(db); err != nil {
 			return err
 		}
 	}
 	// normalise bucket names
-	for i, b := range c.All() {
+	for i, b := range c.Buckets {
 		abs, err := database.Abs(string(b))
 		if err != nil {
 			printer.StderrCR(err)
-			c.All()[i] = ""
+			c.Buckets[i] = ""
 
 			continue
 		}
-		c.All()[i] = parse.Bucket(abs)
+		c.Buckets[i] = parse.Bucket(abs)
 	}
 	if c.Compare == nil {
 		c.Compare = make(parse.Checksums)
 	}
 	if !c.Test && c.Compare == nil {
-		for i, b := range c.All() {
+		for i, b := range c.Buckets {
 			_, err := c.SetCompares(db, b)
 			if err != nil {
 				return err
