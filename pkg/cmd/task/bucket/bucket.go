@@ -299,9 +299,6 @@ func Rescan(db *bolt.DB, c *dupe.Config, archives bool, args [2]string) error {
 	if err != nil {
 		return err
 	}
-	if err := database.Exist(db, path); err != nil {
-		return checkBucket(cmd, path, err)
-	}
 	name := dupe.Bucket(path)
 	if archives {
 		if err := c.WalkArchiver(db, name); err != nil {
