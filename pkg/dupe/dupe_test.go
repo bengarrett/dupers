@@ -321,7 +321,7 @@ func TestSkipDir(t *testing.T) {
 	info, err := os.Stat(tmpDir)
 	assert.Nil(t, err)
 	dir := fs.FileInfoToDirEntry(info)
-	err = dupe.SkipDir(dir)
+	err = dupe.SkipFS(false, false, false, dir)
 	assert.Nil(t, err)
 
 	skipDirs := []string{"node_modules", ".hidden", "__macosx"}
@@ -333,7 +333,7 @@ func TestSkipDir(t *testing.T) {
 		info, err = os.Stat(name)
 		assert.Nil(t, err)
 		dir = fs.FileInfoToDirEntry(info)
-		err = dupe.SkipDir(dir)
+		err = dupe.SkipFS(false, false, false, dir)
 		assert.NotNil(t, err)
 	}
 }

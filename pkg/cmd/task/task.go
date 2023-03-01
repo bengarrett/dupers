@@ -33,6 +33,7 @@ var (
 	ErrCommand   = errors.New("command is unknown")
 	ErrNilFlags  = errors.New("flags cannot be a nil value")
 	ErrNoArgs    = errors.New("arguments cannot be empty")
+	ErrUserExit  = errors.New("cannot dupe check a directory that isn't stored as a bucket")
 )
 
 const (
@@ -142,10 +143,7 @@ func Dupe(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
 	if db == nil {
 		return bolt.ErrDatabaseNotOpen
 	}
-	if f == nil {
-		return ErrNilFlags
-	}
-	if f.Version == nil {
+	if f == nil || f.Version == nil {
 		return ErrNilFlags
 	}
 	c.Debugger(fmt.Sprintf("dupe command: %s", strings.Join(args, " ")))
@@ -437,11 +435,14 @@ func StatSource(c *dupe.Config) error {
 	fmt.Fprintf(w, "(%s)", color.Info.Sprintf("%s files", p.Sprint(verses)))
 	fmt.Fprintln(w)
 	fmt.Fprintln(w)
-	if isDir && verses >= files/2 {
-		fmt.Fprintln(w, "The bucket to lookup is to be stored in the database,")
-		color.Warn.Println(" but the \"Directory to check\" is not.")
-		if !printer.AskYN("Is this what you want", c.Yes, printer.No) {
-			return nil
+	if isDir {
+		//  && verses >= files/2
+		fmt.Fprintln(w, "About to scan and save this directory to the database:")
+		fmt.Fprintf(w, " %s", c.BucketS())
+		fmt.Fprintln(w)
+		fmt.Fprintln(w)
+		if !printer.AskYN("Is this what you want (no will exit)", c.Yes, printer.Yes) {
+			return ErrUserExit
 		}
 	}
 	return nil

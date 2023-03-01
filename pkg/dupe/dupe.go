@@ -130,24 +130,21 @@ func (c *Config) statSource() (isDir bool, files int, err error) {
 		}
 		return false, 1, nil
 	}
+	if err := SkipDirs(name); err != nil {
+		return false, 0, err
+	}
 	files = 0
 	root := name
-	// TODO SkipDir
 	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		c.Debugger("counting: " + path)
 		if err != nil {
-			return err
+			c.Debugger("error reading: " + err.Error())
+			return nil
 		}
 		if root == path {
 			return nil
 		}
-		if err := SkipDir(d); err != nil {
-			return nil
-		}
-		if !d.Type().IsRegular() {
-			return nil
-		}
-		if d.IsDir() {
+		if err := SkipFS(true, false, true, d); err != nil {
 			return nil
 		}
 		files++
@@ -168,23 +165,20 @@ func (c *Config) walkBucket(b parse.Bucket, files, buckets int) (int, error) {
 	if !stat.IsDir() {
 		return 0, ErrPathIsFile
 	}
-	// TODO: SkipDir()
+	if err := SkipDirs(root); err != nil {
+		return 0, err
+	}
 	c.Debugger("walking bucket: " + root)
 	return buckets, filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
+			c.Debugger("error reading: " + err.Error())
 			return err
 		}
 		if root == path {
 			return nil
 		}
 		c.Debugger("walking bucket item: " + path)
-		if err := SkipDir(d); err != nil {
-			return nil
-		}
-		if !d.Type().IsRegular() {
-			return nil
-		}
-		if d.IsDir() {
+		if err := SkipFS(true, false, true, d); err != nil {
 			return nil
 		}
 		buckets++
@@ -312,26 +306,61 @@ func (c *Config) Print() (string, error) {
 
 	w := new(bytes.Buffer)
 	finds := 0
-	for _, path := range c.Sources {
-		sum, err := parse.Read(path)
+	for _, root := range c.Sources {
+		info, err := os.Stat(root)
 		if err != nil {
 			return "", err
 		}
-		l := c.lookupOne(sum)
-		if l == "" {
+		if !info.IsDir() {
+			if err := c.printer(w, root); err != nil {
+				return "", err
+			}
+			finds++
 			continue
 		}
-		if l == path {
+		c.Debugger("parse read path: " + root)
+		err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+			c.Debugger("walker: " + path)
+			if err != nil {
+				c.Debugger("stat sources error: " + err.Error())
+				return err
+			}
+			if root == path {
+				return nil
+			}
+			if err := SkipFS(true, false, true, d); err != nil {
+				return nil
+			}
+			if err := c.printer(w, root); err != nil {
+				return err
+			}
+			finds++
+			return nil
+		})
+		if err != nil {
 			continue
 		}
-		finds++
-
-		fmt.Fprintln(w, Match(path, l))
 	}
 	if finds == 0 {
 		fmt.Fprintln(w, color.Info.Sprint("\rNo duplicate files found.          "))
 	}
 	return w.String(), nil
+}
+
+func (c *Config) printer(w io.Writer, path string) error {
+	sum, err := parse.Read(path)
+	if err != nil {
+		return err
+	}
+	l := c.lookupOne(sum)
+	if l == "" {
+		return nil
+	}
+	if l == path {
+		return nil
+	}
+	fmt.Fprintln(w, Match(path, l))
+	return nil
 }
 
 // Remove duplicate files from the source directory.
@@ -507,22 +536,14 @@ func (c *Config) walkDir(db *bolt.DB, root string, skip []string) error {
 			if errors.Is(err, fs.ErrPermission) {
 				return nil
 			}
+			c.Debugger("error reading: " + err.Error())
 			return err
 		}
-		if path == root {
-			return nil
+		if path == root || skipSelf(path, skip...) {
+			return c.walkDebug(" -skip self", nil)
 		}
-		if err := SkipDir(d); err != nil {
-			return c.walkDebug(" - skipping directory", err)
-		}
-		if SkipFile(d.Name()) {
-			return c.walkDebug(" - skipping file", nil)
-		}
-		if !d.Type().IsRegular() {
-			return c.walkDebug(" - skipping not regular file", nil)
-		}
-		if skipSelf(path, skip...) {
-			return c.walkDebug(" - skipping self item", nil)
+		if err := SkipFS(false, true, true, d); err != nil {
+			return c.walkDebug(" -skip directory or system file", err)
 		}
 		c.Files++
 		if err := c.walkCompare(db, root, path); err != nil {
@@ -560,7 +581,6 @@ func (c *Config) WalkSource() error {
 		return fmt.Errorf("%w: %s", err, root)
 	}
 	if !stat.IsDir() {
-		c.Sources = append(c.Sources, root)
 		c.Debugger("items dupe check: " + strings.Join(c.Sources, " "))
 		return nil
 	}
@@ -577,21 +597,13 @@ func (c *Config) statSources(root string) error {
 	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		c.Debugger(path)
 		if err != nil {
+			c.Debugger("stat sources error: " + err.Error())
 			return err
 		}
 		if root == path {
 			return nil
 		}
-		// skip directories
-		if err := SkipDir(d); err != nil {
-			return err
-		}
-		// skip non-files such as symlinks
-		if !d.Type().IsRegular() {
-			return nil
-		}
-		// only append files
-		if d.IsDir() {
+		if err := SkipFS(true, false, true, d); err != nil {
 			return nil
 		}
 		c.Sources = append(c.Sources, path)
@@ -727,23 +739,41 @@ func PrintWalk(lookup bool, c *Config) string {
 	return printer.Status(c.Files, -1, printer.Scan)
 }
 
-// skipDir tells WalkDir to ignore specific system and hidden directories.
-func SkipDir(d fs.DirEntry) error {
-	if !d.IsDir() {
-		return nil
+// SkipFS tells WalkDir to ignore specific files and directories.
+// A true dir value will skip directories.
+// A true file value will skip OS specific system files.
+// A true regular value will skip all non-files such as symlinks.
+func SkipFS(dir, file, regular bool, d fs.DirEntry) error {
+	if dir && d.IsDir() {
+		// skip directorires
+		return filepath.SkipDir
 	}
+	if file && SkipFile(d.Name()) {
+		// skip specific system files
+		return filepath.SkipDir
+	}
+	if regular && !d.Type().IsRegular() {
+		// skip all non-files such as symlinks
+		return filepath.SkipDir
+	}
+	// note: this skips both directories and filenames sharing specific system dirs.
+	return SkipDirs(d.Name())
+}
+
+// SkipDirs tells WalkDir to ignore specific system and hidden directories.
+func SkipDirs(name string) error {
 	// skip directories
-	switch strings.ToLower(d.Name()) {
+	switch strings.ToLower(name) {
 	// the SkipDir return tells WalkDir to skip all files in these directories
 	case ".git", ".cache", ".config", ".local", "node_modules", "__macosx", "appdata":
 		return filepath.SkipDir
 	default:
 		// Unix style hidden directories
-		if strings.HasPrefix(d.Name(), ".") {
+		if strings.HasPrefix(name, ".") {
 			return filepath.SkipDir
 		}
 		// Windows system directories
-		if runtime.GOOS == WinOS && strings.HasPrefix(d.Name(), "$") {
+		if runtime.GOOS == WinOS && strings.HasPrefix(name, "$") {
 			return filepath.SkipDir
 		}
 		return nil
@@ -839,24 +869,16 @@ func (c *Config) WalkArchiver(db *bolt.DB, name parse.Bucket) error {
 			if errors.Is(err, fs.ErrPermission) {
 				return nil
 			}
+			c.Debugger("error reading: " + err.Error())
 			return err
 		}
-		if root == path {
+		if root == path || skipSelf(path, skip...) {
 			return nil
 		}
-		if err1 := SkipDir(d); err1 != nil {
-			return err1
-		}
-		if SkipFile(d.Name()) {
+		if err := SkipFS(false, true, true, d); err != nil {
 			return nil
 		}
-		if !d.Type().IsRegular() {
-			return nil
-		}
-		if skipSelf(path, skip...) {
-			return nil
-		}
-		err = c.walkThread(db, parse.Bucket(root), path)
+		err = c.readArchive(db, parse.Bucket(root), path)
 		if err != nil {
 			printer.StderrCR(err)
 		}
@@ -864,7 +886,7 @@ func (c *Config) WalkArchiver(db *bolt.DB, name parse.Bucket) error {
 	})
 }
 
-func (c *Config) walkThread(db *bolt.DB, b parse.Bucket, path string) error {
+func (c *Config) readArchive(db *bolt.DB, b parse.Bucket, path string) error {
 	if db == nil {
 		return bolt.ErrDatabaseNotOpen
 	}
@@ -1036,18 +1058,25 @@ func (c *Config) Read(db *bolt.DB, b parse.Bucket, name, mimeExt string) error {
 	return nil
 }
 
+func (c *Config) readRecover(archive string) {
+	if err := recover(); err != nil {
+		if !c.Quiet {
+			if !c.Debug {
+				fmt.Fprintln(os.Stdout)
+			}
+			color.Warn.Printf("Unsupported archive: '%s'\n", archive)
+		}
+		c.Debugger(fmt.Sprint(err))
+	}
+}
+
 func (c *Config) readWalk(db *bolt.DB, b parse.Bucket, archive string, cnt int, w archiver.Walker) (int, error) {
 	if db == nil {
 		return -1, bolt.ErrDatabaseNotOpen
 	}
 	return cnt, w.Walk(archive, func(f archiver.File) error {
-		if f.IsDir() {
-			return nil
-		}
-		if !f.FileInfo.Mode().IsRegular() {
-			return nil
-		}
-		if SkipFile(f.Name()) {
+		notFile := f.IsDir() || !f.FileInfo.Mode().IsRegular()
+		if notFile || SkipFile(f.Name()) {
 			return nil
 		}
 		path := filepath.Join(archive, f.Name())
@@ -1067,18 +1096,6 @@ func (c *Config) readWalk(db *bolt.DB, b parse.Bucket, archive string, cnt int, 
 		cnt++
 		return nil
 	})
-}
-
-func (c *Config) readRecover(archive string) {
-	if err := recover(); err != nil {
-		if !c.Quiet {
-			if !c.Debug {
-				fmt.Fprintln(os.Stdout)
-			}
-			color.Warn.Printf("Unsupported archive: '%s'\n", archive)
-		}
-		c.Debugger(fmt.Sprint(err))
-	}
 }
 
 // update saves the checksum and path values to the bucket.
