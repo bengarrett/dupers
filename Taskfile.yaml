@@ -68,6 +68,7 @@ tasks:
     silent: false
     desc: runs a formatter and linter over the source code
     cmds:
+      - cmd: clear
       - cmd: gofumpt -w .
       - cmd: golangci-lint run
   race:

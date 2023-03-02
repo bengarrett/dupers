@@ -82,14 +82,7 @@ func (c *Config) StatSource() (isDir bool, files, versus int, err error) {
 	if err != nil {
 		return isDir, 0, 0, err
 	}
-	name := c.GetSource()
-	if name != src {
-		c.Debugger("path to check was not found: " + src)
-		c.Debugger("will attempt to use: " + name)
-		src = name
-	}
 	c.Debugger(fmt.Sprintf("all buckets: %s", c.Buckets))
-	fmt.Println("files", files)
 	for _, bucket := range c.Buckets {
 		// TODO: check bucket
 		var err error

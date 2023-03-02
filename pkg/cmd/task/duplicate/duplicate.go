@@ -123,11 +123,34 @@ func WalkScanSave(db *bolt.DB, c *dupe.Config, f *cmd.Flags) error {
 	}
 	c.Debugger("dupe lookup.")
 
-	var errs error
+	if err := normalise(db, c); err != nil {
+		return err
+	}
 
-	// normalise bucket names
+	buckets := make([]string, 0, len(c.Buckets))
+	for _, b := range c.Buckets {
+		buckets = append(buckets, string(b))
+	}
+
+	if !*f.Lookup && len(buckets) > 0 {
+		c.Debugger("non-fast mode, database cleanup.")
+		if err := database.Clean(db, c.Quiet, c.Debug, buckets...); err != nil {
+			printer.StderrCR(err)
+		}
+	}
+	if *f.Lookup {
+		if err := Lookup(db, c); err != nil {
+			return nil
+		}
+	}
+	c.Debugger("walk the buckets.")
+	return c.WalkDirs(db)
+}
+
+// normalise the names of the buckets.
+func normalise(db *bolt.DB, c *dupe.Config) error {
+	var errs error
 	for i, b := range c.Buckets {
-		// TODO: move range body to a func
 		abs, err := database.Abs(string(b))
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("x %w: %s", err, b))
@@ -152,25 +175,7 @@ func WalkScanSave(db *bolt.DB, c *dupe.Config, f *cmd.Flags) error {
 	if errs != nil {
 		return errs
 	}
-
-	buckets := make([]string, 0, len(c.Buckets))
-	for _, b := range c.Buckets {
-		buckets = append(buckets, string(b))
-	}
-
-	if !*f.Lookup && len(buckets) > 0 {
-		c.Debugger("non-fast mode, database cleanup.")
-		if err := database.Clean(db, c.Quiet, c.Debug, buckets...); err != nil {
-			printer.StderrCR(err)
-		}
-	}
-	if *f.Lookup {
-		if err := Lookup(db, c); err != nil {
-			return nil
-		}
-	}
-	c.Debugger("walk the buckets.")
-	return c.WalkDirs(db)
+	return nil
 }
 
 func Lookup(db *bolt.DB, c *dupe.Config) error {

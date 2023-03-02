@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"runtime"
@@ -118,14 +119,7 @@ func Database(db *bolt.DB, c *dupe.Config, args ...string) error {
 	case LS_:
 		return bucket.List(db, quiet, buckets)
 	case MV_:
-		src, dest := "", ""
-		if len(args) > 1 {
-			src = args[1]
-		}
-		if len(args) > 2 {
-			dest = args[2]
-		}
-		return bucket.Move(db, c, assumeYes, src, dest)
+		return move(db, c, assumeYes, args...)
 	case RM_:
 		return bucket.Remove(db, quiet, assumeYes, buckets)
 	case Up_:
@@ -136,6 +130,18 @@ func Database(db *bolt.DB, c *dupe.Config, args ...string) error {
 		return ErrCommand
 	}
 	return nil
+}
+
+func move(db *bolt.DB, c *dupe.Config, assumeYes bool, args ...string) error {
+	const src, dest = 1, 2
+	s, d := "", ""
+	if len(args) > src {
+		s = args[src]
+	}
+	if len(args) > dest {
+		d = args[dest]
+	}
+	return bucket.Move(db, c, assumeYes, s, d)
 }
 
 // Dupe parses the dupe command.
@@ -436,14 +442,18 @@ func StatSource(c *dupe.Config) error {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w)
 	if isDir {
-		//  && verses >= files/2
-		fmt.Fprintln(w, "About to scan and save this directory to the database:")
-		fmt.Fprintf(w, " %s", c.BucketS())
-		fmt.Fprintln(w)
-		fmt.Fprintln(w)
-		if !printer.AskYN("Is this what you want (no will exit)", c.Yes, printer.Yes) {
-			return ErrUserExit
-		}
+		return dirPrompt(w, c)
+	}
+	return nil
+}
+
+func dirPrompt(w io.Writer, c *dupe.Config) error {
+	fmt.Fprintln(w, "About to scan and save this directory to the database:")
+	fmt.Fprintf(w, " %s", c.BucketS())
+	fmt.Fprintln(w)
+	fmt.Fprintln(w)
+	if !printer.AskYN("Is this what you want (no will exit)", c.Yes, printer.Yes) {
+		return ErrUserExit
 	}
 	return nil
 }
