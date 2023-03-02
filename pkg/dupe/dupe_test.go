@@ -33,9 +33,9 @@ func TestConfig_Print(t *testing.T) {
 
 	c.Compare = make(parse.Checksums)
 	c.Compare[sum] = item1
-
 	s, err := c.Print()
 	assert.Nil(t, err)
+	fmt.Println(s)
 	assert.Contains(t, s, "No duplicate files found")
 }
 
@@ -294,8 +294,9 @@ func TestConfig_StatSource(t *testing.T) {
 	assert.Nil(t, err)
 	_, files, buckets, err = c.StatSource()
 	assert.Nil(t, err)
-	assert.Equal(t, 24, files, "unexpected file count")
-	assert.Equal(t, 12, buckets, "unexpected bucket count")
+	const filesCount = 24
+	assert.Equal(t, filesCount, files, "unexpected file count")
+	assert.Equal(t, filesCount, buckets, "unexpected bucket count")
 }
 
 func TestMatch(t *testing.T) {

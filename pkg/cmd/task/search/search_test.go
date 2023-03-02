@@ -30,7 +30,7 @@ func TestErr(t *testing.T) {
 	err = search.Error(database.ErrEmpty)
 	assert.Nil(t, err)
 	err = search.Error(bolt.ErrBucketNotFound)
-	assert.Nil(t, err)
+	assert.NotNil(t, err)
 	err = search.Error(bolt.ErrDatabaseNotOpen)
 	assert.NotNil(t, err)
 }

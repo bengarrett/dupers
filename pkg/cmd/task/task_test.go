@@ -57,12 +57,14 @@ func TestWalkScan(t *testing.T) {
 	f := cmd.Flags{}
 	err = c.SetSource(bucket1)
 	assert.Nil(t, err)
+
 	err = task.WalkScan(db, &c, &f, args...)
 	assert.NotNil(t, err)
+
 	lookup := false
 	f.Lookup = &lookup
 	err = task.WalkScan(db, &c, &f, args...)
-	assert.NotNil(t, err)
+	assert.Nil(t, err)
 }
 
 func TestSetStat(t *testing.T) {

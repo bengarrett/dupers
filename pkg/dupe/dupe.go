@@ -40,6 +40,7 @@ const (
 var (
 	ErrFileEmpty     = errors.New("file is empty, being 0 byte in size")
 	ErrNilConfig     = errors.New("config cannot be nil")
+	ErrNoMatch       = errors.New("no match found")
 	ErrNoNamedBucket = errors.New("a named bucket is required")
 	ErrPathEmpty     = errors.New("path is empty")
 	ErrPathIsFile    = errors.New("path is a file")
@@ -84,7 +85,6 @@ func (c *Config) StatSource() (isDir bool, files, versus int, err error) {
 	}
 	c.Debugger(fmt.Sprintf("all buckets: %s", c.Buckets))
 	for _, bucket := range c.Buckets {
-		// TODO: check bucket
 		var err error
 		versus, err = c.walkBucket(bucket, files, versus)
 		if err != nil {
@@ -306,6 +306,9 @@ func (c *Config) Print() (string, error) {
 		}
 		if !info.IsDir() {
 			if err := c.printer(w, root); err != nil {
+				if errors.Is(err, ErrNoMatch) {
+					continue
+				}
 				return "", err
 			}
 			finds++
@@ -325,6 +328,9 @@ func (c *Config) Print() (string, error) {
 				return nil
 			}
 			if err := c.printer(w, root); err != nil {
+				if errors.Is(err, ErrNoMatch) {
+					return nil
+				}
 				return err
 			}
 			finds++
@@ -347,10 +353,10 @@ func (c *Config) printer(w io.Writer, path string) error {
 	}
 	l := c.lookupOne(sum)
 	if l == "" {
-		return nil
+		return ErrNoMatch
 	}
 	if l == path {
-		return nil
+		return ErrNoMatch
 	}
 	fmt.Fprintln(w, Match(path, l))
 	return nil
@@ -560,24 +566,19 @@ func (c *Config) walkDebug(s string, err error) error {
 
 // WalkSource walks the source directory or a file to collect the hashed content for a future comparison.
 func (c *Config) WalkSource() error {
+	isDir, _, err := c.statSource()
+	if err != nil {
+		return err
+	}
+	if !isDir {
+		c.Debugger("items dupe check: " + strings.Join(c.Sources, " "))
+		return nil
+	}
 	root := c.GetSource()
 	if root == "" {
 		return parse.ErrNoSource
 	}
 	c.Debugger("walksource to check: " + root)
-	// TODO: statSource
-	stat, err := os.Stat(root)
-	if errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("%w: %s", ErrPathNoFound, root)
-	}
-	if err != nil {
-		return fmt.Errorf("%w: %s", err, root)
-	}
-	if !stat.IsDir() {
-		c.Debugger("items dupe check: " + strings.Join(c.Sources, " "))
-		return nil
-	}
-
 	if err := c.statSources(root); err != nil {
 		printer.StderrCR(fmt.Errorf("item has a problem: %w", err))
 		return nil
