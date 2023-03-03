@@ -274,6 +274,28 @@ tasks:
       - defer: go {{.RUNRACE}} -yes rm {{.USERTST}}
       - go {{.RUNRACE}} -sensen -yes dupe {{.DST}} {{.USERTST}}
       - echo -e "all duplicate files and empty dirs should be removed"
+      - cmd: ls -l {{.DST}}randomfiles.zip
+        ignore_error: true
+      - cmd: test -d {{.DST}}zxcvbn && echo "(!) this directory should have been deleted"
+        ignore_error: true
+      - cmd: test -d {{.DST}}asdfgh && echo "(!) this directory should have been deleted"
+        ignore_error: true
+      - cmd: test -d {{.DST}}qwerty && echo "(!) this directory should have been deleted"
+        ignore_error: true
+      - cmd: test -f {{.DST}}example3/randomfiles.7z && echo "(!) this file should have been deleted"
+        ignore_error: true
+      - cmd: test -f {{.DST}}example3/subdir2/randomfiles.txt && echo "(!) this file should have been deleted"
+        ignore_error: true
+      - cmd: test -f {{.DST}}example3/subdir2/randomfiles.zip && echo "(!) this file should have been deleted"
+        ignore_error: true
+      - cmd: test -f {{.DST}}randomfiles.7z && echo "(!) this file should have been deleted"
+        ignore_error: true
+      - cmd: test -f {{.DST}}randomfiles.tar.xz && echo "(!) this file should have been deleted"
+        ignore_error: true
+      - cmd: test -f {{.DST}}randomfiles.txt && echo "(!) this file should have been deleted"
+        ignore_error: true
+      - cmd: test -f {{.DST}}randomfiles.zip && echo "(!) this file should have been deleted"
+        ignore_error: true
       - ls {{.DST}}
   searches:
     silent: false
