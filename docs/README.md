@@ -12,6 +12,11 @@
 
 # dupers
 
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/bengarrett/dupers)](https://pkg.go.dev/github.com/bengarrett/dupers)
+[![Go Report Card](https://goreportcard.com/badge/github.com/bengarrett/dupers)](https://goreportcard.com/report/github.com/bengarrett/dupers)
+[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/bengarrett/dupers)](https://github.com/bengarrett/dupers/releases)
+![GitHub](https://img.shields.io/github/license/bengarrett/dupers?style=flat)
+
 Dupers is the blazing-fast file duplicate checker and filename search tool.
 
 - Dupers uses SHA-256 checksums in the fast and straightforward key/value database store.
