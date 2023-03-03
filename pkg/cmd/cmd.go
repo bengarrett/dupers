@@ -84,9 +84,9 @@ type Flags struct {
 	Exact    *bool `usage:"match case"`
 	Filename *bool `usage:"search for filenames, and ignore directories"`
 	Lookup   *bool `usage:"query the database for a much faster match, the results\n\t maybe stale as it does not look for any file changes on\n\t your system"` //nolint:lll
-	Rm       *bool `usage:"delete everything in the <directory to check> except\n\t for directories containing unique Windows programs and\n\t assets"`          //nolint:lll
-	RmPlus   *bool `usage:"delete the duplicate files found in the\n\t <directory to check>"`
-	Sensen   *bool `usage:"delete the duplicate files and remove empty directories\n\t from the <directory to check>"`
+	Rm       *bool `usage:"delete the duplicate files found in the\n\t <directory to check>"`
+	RmPlus   *bool `usage:"delete the duplicate files and remove empty directories\n\t from the <directory to check>"`
+	Sensen   *bool `usage:"delete everything in the <directory to check> except\n\t for directories containing unique Windows programs and\n\t assets"` //nolint:lll
 
 	// global options
 
