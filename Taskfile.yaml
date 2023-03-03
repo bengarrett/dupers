@@ -169,7 +169,8 @@ tasks:
       - task: dupe-flag-sensen
   make-tmp:
     silent: false
-    internal: true
+    internal: false
+    desc: make the temporary directories and copy the files used for the test tasks
     cmds:
       - cmd: mkdir -v {{.DST}}
         ignore_error: true
