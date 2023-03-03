@@ -19,6 +19,7 @@ import (
 var (
 	ErrFast   = errors.New("fast flag cannot be used in this situation")
 	ErrNoArgs = errors.New("request is missing arguments")
+	ErrNoRM   = errors.New("could not remove file")
 	ErrSearch = errors.New("search request needs an expression")
 )
 
@@ -29,6 +30,35 @@ func Cleanup(c *dupe.Config, f *cmd.Flags) error {
 	if c == nil {
 		return dupe.ErrNilConfig
 	}
+	if err := checkF(f); err != nil {
+		return err
+	}
+	w := os.Stdout
+	if *f.Rm || *f.RmPlus || *f.Sensen {
+		s, err := c.Remove()
+		if err != nil {
+			return err
+		}
+		fmt.Fprint(w, s)
+	}
+	if *f.Sensen {
+		removes, err := c.Removes()
+		if err != nil {
+			return err
+		}
+		for _, name := range removes {
+			dupe.PrintRM(name, ErrNoRM)
+		}
+	}
+	if *f.RmPlus || *f.Sensen {
+		if err := c.Clean(w); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func checkF(f *cmd.Flags) error {
 	if f == nil {
 		return cmd.ErrNilFlag
 	}
@@ -43,41 +73,6 @@ func Cleanup(c *dupe.Config, f *cmd.Flags) error {
 	}
 	if f.Yes == nil {
 		return fmt.Errorf("%w: yes", cmd.ErrNilFlag)
-	}
-	if !*f.Sensen && !*f.Rm && !*f.RmPlus {
-		return nil
-	}
-	w := os.Stdout
-	if *f.Sensen {
-		c.Debugger("remove all non unique Windows and MS-DOS files.")
-		s, err := c.Remove()
-		if err != nil {
-			return err
-		}
-		fmt.Fprint(w, s)
-		removes, err := c.Removes()
-		if err != nil {
-			return err
-		}
-		for _, name := range removes {
-			err := errors.New("could not remove file")
-			dupe.PrintRM(name, err)
-		}
-		fmt.Fprint(w, s)
-		fmt.Fprint(w, c.Clean())
-		return nil
-	}
-	if *f.Rm || *f.RmPlus {
-		c.Debugger("remove duplicate files.")
-		s, err := c.Remove()
-		if err != nil {
-			return err
-		}
-		fmt.Fprint(w, s)
-		if *f.RmPlus {
-			c.Debugger("remove empty directories.")
-			fmt.Fprint(w, c.Clean())
-		}
 	}
 	return nil
 }

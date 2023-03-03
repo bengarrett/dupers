@@ -35,7 +35,6 @@ func TestConfig_Print(t *testing.T) {
 	c.Compare[sum] = item1
 	s, err := c.Print()
 	assert.Nil(t, err)
-	fmt.Println(s)
 	assert.Contains(t, s, "No duplicate files found")
 }
 
@@ -81,7 +80,8 @@ func TestConfig_Remove(t *testing.T) {
 
 func TestConfig_Clean(t *testing.T) {
 	c := dupe.Config{Test: true}
-	err := c.Clean()
+	var b bytes.Buffer
+	err := c.Clean(&b)
 	assert.Nil(t, err)
 
 	// copy file
@@ -94,7 +94,7 @@ func TestConfig_Clean(t *testing.T) {
 	c.SetSource(tmp)
 	err = os.MkdirAll(filepath.Join(tmp, "config-clean-empty-dir"), mock.PrivateDir)
 	assert.Nil(t, err)
-	err = c.Clean()
+	err = c.Clean(&b)
 	assert.Nil(t, err)
 }
 

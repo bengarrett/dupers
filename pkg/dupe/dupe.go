@@ -244,7 +244,8 @@ func (c *Config) Checksum(db *bolt.DB, name, bucket string) error {
 
 // Clean removes all empty directories from c.Source.
 // Directories containing hidden system directories or files are not considered empty.
-func (c *Config) Clean() error {
+func (c *Config) Clean(w io.Writer) error {
+	c.Debugger("remove all empty directories.")
 	path := c.GetSource()
 	if path == "" {
 		return nil
@@ -282,9 +283,8 @@ func (c *Config) Clean() error {
 	}); err != nil {
 		return err
 	}
-	w := os.Stdout
 	if count == 0 {
-		fmt.Fprintln(w, "Nothing required cleaning.")
+		fmt.Fprintln(w, "No empty directories required removal.")
 		return nil
 	}
 	fmt.Fprintf(w, "Removed %d empty directories in: '%s'\n", count, path)
@@ -292,9 +292,8 @@ func (c *Config) Clean() error {
 }
 
 // Print the results of a dupe request.
-func (c *Config) Print() (string, error) {
-	c.Debugger("print duplicate results")
-	c.Debugger(fmt.Sprintf("comparing %d sources against %d unique items to compare",
+func (c *Config) Print() (string, error) { //nolint:gocognit
+	c.Debugger(fmt.Sprintf("print duplicate results\ncomparing %d sources against %d unique items to compare",
 		len(c.Sources), len(c.Compare)))
 
 	w := new(bytes.Buffer)
@@ -315,7 +314,7 @@ func (c *Config) Print() (string, error) {
 			continue
 		}
 		c.Debugger("parse read path: " + root)
-		err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			c.Debugger("walker: " + path)
 			if err != nil {
 				c.Debugger("stat sources error: " + err.Error())
@@ -335,8 +334,7 @@ func (c *Config) Print() (string, error) {
 			}
 			finds++
 			return nil
-		})
-		if err != nil {
+		}); err != nil {
 			continue
 		}
 	}
@@ -364,17 +362,22 @@ func (c *Config) printer(w io.Writer, path string) error {
 
 // Remove duplicate files from the source directory.
 func (c *Config) Remove() (string, error) {
+	c.Debugger("remove all duplicate files.")
 	w := new(bytes.Buffer)
 	if len(c.Sources) == 0 || len(c.Compare) == 0 {
 		fmt.Fprintln(w, "No duplicate files to remove.          ")
 		return w.String(), nil
 	}
 	fmt.Fprintln(w)
-	for _, path := range c.Sources {
-		c.Debugger("remove read: " + path)
-		if _, err := os.Stat(path); os.IsNotExist(err) {
+	for i, path := range c.Sources {
+		c.Debugger(fmt.Sprintf(" %d. remove read: %s", i, path))
+		stat, err := os.Stat(path)
+		if os.IsNotExist(err) {
 			c.Debugger("path is not exist: " + path)
 			return "", err
+		}
+		if stat.IsDir() {
+			continue
 		}
 		checksum, err := parse.Read(path)
 		if err != nil {
@@ -383,7 +386,6 @@ func (c *Config) Remove() (string, error) {
 		if l := c.lookupOne(checksum); l == "" {
 			continue
 		}
-		c.Debugger("remove delete: " + path)
 		err = os.Remove(path)
 		fmt.Fprintln(w, PrintRM(path, err))
 	}
@@ -393,6 +395,7 @@ func (c *Config) Remove() (string, error) {
 // Removes the directories from the source that do not contain unique MS-DOS or Windows programs.
 // The strings contains the path of any undeletable files.
 func (c *Config) Removes() ([]string, error) {
+	c.Debugger("removes directories that don't contain any DOS or Windows apps.")
 	root := c.GetSource()
 	if _, err := os.Stat(root); errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("%w: %s", ErrPathNoFound, root)
@@ -406,8 +409,8 @@ func (c *Config) Removes() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	w := os.Stdout
 	if !c.Test {
-		w := os.Stdout
 		fmt.Fprintf(w, "%s %s\n", color.Secondary.Sprint("Target directory:"), color.Debug.Sprint(root))
 		fmt.Fprintln(w, "Delete everything in the target directory, except for directories"+
 			"\ncontaining unique Windows or MS-DOS programs and assets?")
@@ -416,19 +419,20 @@ func (c *Config) Removes() ([]string, error) {
 		}
 		fmt.Fprintln(w)
 	}
-	return Removes(root, files), nil
+	return Removes(w, root, files)
 }
 
 // Removes directories that do not contain MS-DOS or Windows programs.
 // The strings contains the path of any undeletable files.
-func Removes(root string, files []fs.DirEntry) []string {
+func Removes(w io.Writer, root string, files []fs.DirEntry) ([]string, error) {
 	s := []string{}
-
 	for _, item := range files {
+		path := filepath.Join(root, item.Name())
 		if !item.IsDir() {
+			err := os.Remove(path)
+			fmt.Fprintln(w, PrintRM(path, err))
 			continue
 		}
-		path := filepath.Join(root, item.Name())
 		exe, err := parse.Executable(path)
 		if err != nil {
 			printer.StderrCR(err)
@@ -437,11 +441,15 @@ func Removes(root string, files []fs.DirEntry) []string {
 		if exe {
 			continue
 		}
-		if err := os.RemoveAll(path); err != nil {
+		err = os.RemoveAll(path)
+		fmt.Fprintln(w, PrintRM(fmt.Sprintf("%s%s",
+			path, string(filepath.Separator)), err))
+		if err != nil {
 			s = append(s, path)
+			continue
 		}
 	}
-	return s
+	return s, nil
 }
 
 // Status summarizes the file totals and process duration.

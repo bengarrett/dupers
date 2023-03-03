@@ -129,13 +129,13 @@ tasks:
     cmds:
       - task: make-tmp
       - task: up-upplus
-  test-delete: # TODO broken?
+  test-delete:
     desc: runs the dupe command with the -delete flag
     silent: false
     cmds:
       - task: make-tmp
       - task: dupe-flag-delete
-  test-delete+: # TODO broken?
+  test-delete+:
     desc: runs the dupe command with the -delete+ flag
     silent: false
     cmds:
@@ -158,7 +158,7 @@ tasks:
     cmds:
       - task: make-tmp
       - task: searches
-  test-sensen: # TODO broken?
+  test-sensen:
     desc: runs the dupe command with the -sensen flag
     silent: false
     cmds:
@@ -182,8 +182,7 @@ tasks:
       - cmd: cp -a {{.FILE}} {{.USERDST}}/some-app/program.exe
         ignore_error: true
       - cmd: cp -R {{.SENSEN}} {{.USERDST}}
-   #  status: 
-   #    - test -d {{.DST}}
+      #- read -p wait && clear
   clean:
     silent: false
     internal: false
@@ -251,10 +250,9 @@ tasks:
       - go {{.RUNRACE}} up {{.USERTST}}
       - defer: go {{.RUNRACE}} -yes rm {{.USERTST}}
       - go {{.RUNRACE}} -delete -yes dupe {{.DST}} {{.USERTST}}
-      - echo -e "all files should be deleted"
-      - ls {{.DST}}
       - read -p wait && clear
       - defer: rmdir {{.DST}}
+      - task: dupe-flag-rm-files
   dupe-flag-delete+:
     silent: false
     internal: true
@@ -262,10 +260,10 @@ tasks:
       - go {{.RUNRACE}} up {{.USERTST}}
       - defer: go {{.RUNRACE}} -yes rm {{.USERTST}}
       - go {{.RUNRACE}} -delete+ -yes dupe {{.DST}} {{.USERTST}}
-      - echo -e "all duplicate files should be deleted"
-      - ls {{.DST}}
       - read -p wait && clear
       - defer: rmdir {{.DST}}
+      - task: dupe-flag-rm-dirs
+      - task: dupe-flag-rm-files
   dupe-flag-sensen:
     silent: false
     internal: true
@@ -273,15 +271,24 @@ tasks:
       - go {{.RUNRACE}} up {{.USERTST}}
       - defer: go {{.RUNRACE}} -yes rm {{.USERTST}}
       - go {{.RUNRACE}} -sensen -yes dupe {{.DST}} {{.USERTST}}
-      - echo -e "all duplicate files and empty dirs should be removed"
-      - cmd: ls -l {{.DST}}randomfiles.zip
-        ignore_error: true
+      - read -p wait && clear
+      - defer: rmdir {{.DST}}
+      - task: dupe-flag-rm-dirs
+      - task: dupe-flag-rm-files
+  dupe-flag-rm-dirs:
+    silent: true
+    internal: true
+    cmds:
       - cmd: test -d {{.DST}}zxcvbn && echo "(!) this directory should have been deleted"
         ignore_error: true
       - cmd: test -d {{.DST}}asdfgh && echo "(!) this directory should have been deleted"
         ignore_error: true
       - cmd: test -d {{.DST}}qwerty && echo "(!) this directory should have been deleted"
         ignore_error: true
+  dupe-flag-rm-files:
+    silent: true
+    internal: true
+    cmds:
       - cmd: test -f {{.DST}}example3/randomfiles.7z && echo "(!) this file should have been deleted"
         ignore_error: true
       - cmd: test -f {{.DST}}example3/subdir2/randomfiles.txt && echo "(!) this file should have been deleted"
@@ -296,7 +303,6 @@ tasks:
         ignore_error: true
       - cmd: test -f {{.DST}}randomfiles.zip && echo "(!) this file should have been deleted"
         ignore_error: true
-      - ls {{.DST}}
   searches:
     silent: false
     internal: true

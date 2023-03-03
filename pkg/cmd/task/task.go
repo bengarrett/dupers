@@ -256,7 +256,9 @@ func WalkScan(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
 	}
 	fmt.Fprint(os.Stdout, s)
 	// remove files
-	duplicate.Cleanup(c, f)
+	if err := duplicate.Cleanup(c, f); err != nil {
+		return err
+	}
 	// summaries
 	if !c.Quiet {
 		fmt.Fprintln(os.Stdout, c.Status())
