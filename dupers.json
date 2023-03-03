@@ -1,22 +1,22 @@
 {
-    "version": "1.0.1",
+    "version": "1.10",
     "architecture": {
         "32bit": {
-            "url": "https://github.com/bengarrett/dupers/releases/download/v1.0.1/dupers_Windows_32bit.zip",
+            "url": "https://github.com/bengarrett/dupers/releases/download/v1.10/dupers_windows_386.zip",
             "bin": [
                 "dupers.exe"
             ],
-            "hash": "3bdf40a888b8281e90e51bc457d0cd3ebb3236272fd4ceaf568d423ba75d23ca"
+            "hash": "35e2c5af593460b7e5820d8957ec71a9be94e33ad775b373b6a48daf3269a2fd"
         },
         "64bit": {
-            "url": "https://github.com/bengarrett/dupers/releases/download/v1.0.1/dupers_Windows_Intel.zip",
+            "url": "https://github.com/bengarrett/dupers/releases/download/v1.10/dupers_windows_amd64.zip",
             "bin": [
                 "dupers.exe"
             ],
-            "hash": "c4ac5816628051464166ab7d61720970649e4e1c386192b24b3f6b73c23e50a9"
+            "hash": "3be9823fce20ee74d6c6f9b73444dd3c990880121e7953de2e4ea009193d49da"
         }
     },
     "homepage": "https://github.com/bengarrett/dupers/",
     "license": "LGPL 3.0",
-    "description": "A batch viewer and extractor for large collections of zip archives."
+    "description": "The blazing-fast file duplicate checker and filename search."
 }
