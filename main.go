@@ -12,156 +12,239 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
+	"unicode/utf8"
 
-	"github.com/bengarrett/dupers/database"
-	"github.com/bengarrett/dupers/dupe"
-	"github.com/bengarrett/dupers/internal/cmd"
-	"github.com/bengarrett/dupers/internal/out"
-	"github.com/bengarrett/dupers/internal/task"
+	"github.com/bengarrett/dupers/internal/printer"
+	"github.com/bengarrett/dupers/pkg/cmd"
+	"github.com/bengarrett/dupers/pkg/cmd/task"
+	"github.com/bengarrett/dupers/pkg/database"
+	"github.com/bengarrett/dupers/pkg/dupe"
+	"github.com/carlmjohnson/versioninfo"
 	"github.com/gookit/color"
 )
 
 var ErrCmd = errors.New("command is unknown")
 
 // logo.txt by sensenstahl
-//go:embed logo.txt
+//
+//go:embed internal/logo.txt
 var brand string
 
-var (
-	version = "0.0.0"
-	commit  = "unset" // nolint: gochecknoglobals
-	date    = "unset" // nolint: gochecknoglobals
-)
+// version only gets updated when built using GoReleaser.
+var version = "0.0.0"
 
 const (
-	dbf  = "database"
-	dbs  = "db"
-	dbk  = "backup"
-	dcn  = "clean"
-	dex  = "export"
-	dim  = "import"
-	dls  = "ls"
-	dmv  = "mv"
-	drm  = "rm"
-	dup  = "up"
-	dupp = "up+"
-	fhlp = "-help"
+	author   = "Ben Garrett"
+	homepage = "https://github.com/bengarrett/dupers"
 )
+
+func tasks(selection string, a cmd.Aliases, c *dupe.Config, f cmd.Flags) error {
+	switch selection {
+	case task.Dupe_:
+		db, err := database.OpenWrite()
+		if err != nil {
+			return err
+		}
+		defer db.Close()
+		return task.Dupe(db, c, &f, flag.Args()...)
+	case task.Search_:
+		db, err := database.OpenRead()
+		if err != nil {
+			return err
+		}
+		defer db.Close()
+		return task.Search(db, &f, false, flag.Args()...)
+	case
+		task.Backup_,
+		task.Clean_,
+		task.Database_, task.DB_,
+		task.Export_,
+		task.LS_:
+		db, err := database.OpenRead()
+		if err != nil {
+			return err
+		}
+		defer db.Close()
+		return task.Database(db, c, flag.Args()...)
+	case
+		task.Import_,
+		task.MV_,
+		task.RM_,
+		task.Up_,
+		task.UpPlus_:
+		db, err := database.OpenWrite()
+		if err != nil {
+			return err
+		}
+		defer db.Close()
+		return task.Database(db, c, flag.Args()...)
+	default:
+		unknownExit(selection)
+	}
+	return fmt.Errorf("%w: %q", ErrCmd, selection)
+}
 
 func main() {
 	a, c, f := cmd.Aliases{}, dupe.Config{}, cmd.Flags{}
 	c.SetTimer()
-	cmd.Define(&f)
-	cmd.DefineShort(&a)
+	f.Define()
+	a.Define()
 	flag.Usage = func() {
 		task.Help()
 	}
 	flag.Parse()
-	parse(&a, &c, &f)
-	if err := task.ChkWinDirs(); err != nil {
-		out.ErrFatal(err)
-	}
-	selection := strings.ToLower(flag.Args()[0])
-	if c.Debug {
-		out.PBug("command selection: " + selection)
-	}
 
-	switch selection {
-	case "dupe":
-		if err := task.Dupe(&c, &f, flag.Args()...); err != nil {
-			out.ErrFatal(err)
-		}
-	case "search":
-		if err := task.Search(&f, false, flag.Args()...); err != nil {
-			out.ErrFatal(err)
-		}
-	case dbf, dbs, dbk, dcn, dex, dim, dls, dmv, drm, dup, dupp:
-		if err := task.Database(&c, *f.Quiet, flag.Args()...); err != nil {
-			if errors.Is(err, database.ErrDBNotFound) {
-				os.Exit(0)
-			}
-			if errors.Is(err, database.ErrDBZeroByte) {
-				os.Exit(1)
-			}
-			out.ErrFatal(err)
-		}
-	default:
-		defaultCmd(selection)
-	}
-}
-
-// parse the command aliases and flags and returns true if the program should exit.
-func parse(a *cmd.Aliases, c *dupe.Config, f *cmd.Flags) {
+	c = f.Aliases(&a, &c)
 	if *a.Mono || *f.Mono {
 		color.Enable = false
 	}
-	if s := options(a, f); s != "" {
-		fmt.Printf("%s", s)
+
+	help, err := taskHelpVer(&a, &f)
+	if err != nil {
+		printer.ErrFatal(err)
+	}
+	if help != "" {
+		fmt.Fprint(os.Stdout, help)
 		os.Exit(0)
 	}
-	if *f.Debug {
-		c.Debug = true
+
+	if err := task.Directories(); err != nil {
+		printer.ErrFatal(err)
 	}
-	if *a.Quiet || *f.Quiet {
-		*f.Quiet = true
-		c.Quiet = true
-	}
-	if *a.Exact {
-		*f.Exact = true
-	}
-	if *a.Filename {
-		*f.Filename = true
-	}
-	if *a.Lookup {
-		*f.Lookup = true
+
+	selection := strings.ToLower(flag.Args()[0])
+	c.Debugger("command selection: " + selection)
+	if err := tasks(selection, a, &c, f); err != nil {
+		if errors.Is(err, database.ErrNotFound) {
+			os.Exit(0)
+		}
+		if errors.Is(err, database.ErrZeroByte) {
+			os.Exit(1)
+		}
+		c.Debugger("error details: " + fmt.Sprintf("%+V", err))
+		printer.ErrFatal(err)
 	}
 }
 
-func defaultCmd(selection string) {
-	out.ErrCont(ErrCmd)
-	fmt.Printf("Command: '%s'\n\nSee the help for the available commands and options:\n", selection)
-	out.Example("dupers " + fhlp)
-	out.ErrFatal(nil)
+// unknownExit prints the command is unknown helper error and exits.
+func unknownExit(s string) {
+	w := os.Stderr
+	printer.StderrCR(ErrCmd)
+	fmt.Fprintf(w, "Command: '%s'", s)
+	fmt.Fprintln(w)
+	fmt.Fprintln(w)
+	fmt.Fprint(w, "See the help for the available commands and options:")
+	fmt.Fprintln(w)
+	printer.Example("dupers -help")
+
+	os.Exit(1)
 }
 
-// options parses universal aliases, flags and any misuse.
-func options(a *cmd.Aliases, f *cmd.Flags) string {
+// taskHelpVer returns the help or version options.
+func taskHelpVer(a *cmd.Aliases, f *cmd.Flags) (string, error) {
+	noArgs := len(flag.Args()) == 0
+	if *f.Version && *f.Debug {
+		return task.Debug(a, f)
+	}
 	if *a.Help || *f.Help {
-		return task.Help()
-	}
-	// handle misuse when a flag is passed as an argument
-	for _, arg := range flag.Args() {
-		switch strings.ToLower(arg) {
-		case "-h", fhlp, "--help":
-			return task.Help()
-		case "-v", "-version", "--version":
-			return vers()
+		selection := ""
+		if !noArgs {
+			selection = strings.ToLower(flag.Args()[0])
+		}
+		switch selection {
+		case task.Dupe_:
+			return task.HelpDupe(), nil
+		case task.Search_:
+			return task.HelpSearch(), nil
+		case task.Database_, task.DB_:
+			return task.HelpDatabase(), nil
+		default:
+			return task.Help(), nil
 		}
 	}
 	if *a.Version || *f.Version {
-		return vers()
+		return about(*f.Quiet), nil
 	}
-	if len(flag.Args()) == 0 {
-		return task.Help()
+	// no commands or arguments, then always return help
+	if noArgs {
+		return task.Help(), nil
 	}
-	return ""
+	return "", nil
 }
 
-// vers prints out the program information and version.
-func vers() string {
-	const copyright, year = "\u00A9", "2021-22"
+// about returns the program branding and information.
+func about(quiet bool) string {
+	const width = 45
 	exe, err := cmd.Self()
 	if err != nil {
-		out.ErrCont(err)
+		printer.StderrCR(err)
 	}
 	w := new(bytes.Buffer)
-	fmt.Fprintln(w, brand+"\n")
-	fmt.Fprintf(w, "                                dupers v%s\n", version)
-	fmt.Fprintf(w, "                        %s %s Ben Garrett\n", copyright, year)
-	fmt.Fprintf(w, "         %s\n\n", color.Primary.Sprint("https://github.com/bengarrett/dupers"))
-	fmt.Fprintf(w, "  %s    %s (%s)\n", color.Secondary.Sprint("build:"), commit, date)
-	fmt.Fprintf(w, "  %s %s/%s\n", color.Secondary.Sprint("platform:"), runtime.GOOS, runtime.GOARCH)
-	fmt.Fprintf(w, "  %s       %s\n", color.Secondary.Sprint("go:"), strings.Replace(runtime.Version(), "go", "v", 1))
+	if !quiet {
+		fmt.Fprintln(w, brand+"\n")
+		fmt.Fprintln(w, ralign(width, "dupers v"+version))
+		fmt.Fprintln(w, ralign(width, fmt.Sprintf("%s %s", copyright(), author)))
+		fmt.Fprintln(w, color.Primary.Sprint(ralign(width, homepage)))
+		fmt.Fprintln(w)
+	}
+	fmt.Fprintf(w, "  %s    %s\n", color.Secondary.Sprint("build:"), commit())
+	fmt.Fprintf(w, "  %s %s/%s\n", color.Secondary.Sprint("platform:"),
+		runtime.GOOS, runtime.GOARCH)
+	fmt.Fprintf(w, "  %s       %s\n", color.Secondary.Sprint("go:"),
+		strings.Replace(runtime.Version(), "go", "v", 1))
 	fmt.Fprintf(w, "  %s     %s\n", color.Secondary.Sprint("path:"), exe)
 	return w.String()
+}
+
+// ralign aligns the string to the right of the terminal using space padding.
+func ralign(maxWidth int, s string) string {
+	l := utf8.RuneCountInString(s)
+	if l >= maxWidth {
+		return s
+	}
+	diff := maxWidth - l
+	return fmt.Sprintf("%s%s", strings.Repeat(" ", diff), s)
+}
+
+// copyright year range for this program.
+func copyright() string {
+	const initYear = 2021
+	t := versioninfo.LastCommit
+	s := fmt.Sprintf("© %d-", initYear)
+	if t.Year() > initYear {
+		s += t.Local().Format("06")
+	} else {
+		s += time.Now().Format("06")
+	}
+	return s
+}
+
+// commit returns a formatted, git commit description for this repository,
+// including tag version and date.
+func commit() string {
+	s := ""
+	c := versioninfo.Short()
+
+	if c == "devel" {
+		return c
+	}
+	if c != "" {
+		s += fmt.Sprintf("%s, ", c)
+	}
+	if l := lastCommit(); l != "" {
+		s += fmt.Sprintf("built on %s", l)
+	}
+	if s == "" {
+		return "n/a"
+	}
+	return strings.TrimSpace(s)
+}
+
+func lastCommit() string {
+	d := versioninfo.LastCommit
+	if d.IsZero() {
+		return ""
+	}
+	return d.Local().Format("2006 Jan 2 15:04")
 }

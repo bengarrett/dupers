@@ -1,0 +1,448 @@
+# https://taskfile.dev
+
+# This Task file uses relative paths and expects to be located in the root of the dupers repository.
+version: '3'
+
+vars:
+  FILE: ./test/files_to_check/qziD6WMRvPyk
+  USERDST: "{{.USER_WORKING_DIR}}/.task"
+  USERTST: "{{.USER_WORKING_DIR}}/test"
+  DST: ./.task/
+  DST2: ./task-number-2/
+  DST3: ./task-number-three/
+  TEST: ./test/
+  TMP: ./test/randomfiles.*
+  CHK: ./test/files_to_check/*
+  B1: ./test/bucket1/*
+  B2: ./test/bucket2/*
+  SENSEN: ./test/sensen/*
+  RUNRACE: run -race main.go
+
+tasks:
+  default:
+    silent: true
+    desc: this task, list all available tasks
+    cmds:
+     - task --list-all
+  errs:
+    silent: false
+    desc: runs the commands to force the return of errors
+    cmds:
+      - go {{.RUNRACE}} invalid-command
+      - read -p wait && clear
+      - go {{.RUNRACE}} invalid-command and-more-args
+      - read -p wait && clear
+    ignore_error: true
+  flags:
+    silent: false
+    desc: runs all the flags for the program and various commands
+    cmds:
+      - clear
+      - go run -race main.go
+      - read -p wait && clear
+      - go {{.RUNRACE}} -mono
+      - read -p wait && clear
+      - go {{.RUNRACE}} -h database
+      - read -p wait && clear
+      - go {{.RUNRACE}} search --help
+      - read -p wait && clear
+      - go {{.RUNRACE}} -help dupe
+      - read -p wait && clear
+      - go {{.RUNRACE}} -version
+      - read -p wait && clear
+      - go {{.RUNRACE}} -mono -version  
+      - read -p wait && clear    
+      - go {{.RUNRACE}} -mono -version -quiet
+      - read -p wait && clear
+      - go {{.RUNRACE}} -m -v -q
+      - read -p wait && clear
+      - go {{.RUNRACE}} database
+      - read -p wait && clear
+      - go {{.RUNRACE}} db -d -m
+      - read -p wait && clear
+      - go {{.RUNRACE}} -m -q -d -v -h -e -n -f -y
+      - read -p wait && clear
+      - go {{.RUNRACE}} -mono -quiet -debug -version -help -exact -name -fast -delete -delete+ -sensen -yes
+      - read -p wait && clear
+  lint:
+    silent: false
+    desc: runs a formatter and linter over the source code
+    cmds:
+      - cmd: clear
+      - cmd: gofumpt -w .
+      - cmd: golangci-lint run
+  race:
+    silent: false
+    desc: build a binary of this program with the race detection configuration
+    cmds:
+      - go build -v -race -o dupers main.go
+      - ./dupers --version
+  releases:
+    silent: false
+    desc: build the multiple distribution packages for this program by simulating a release
+    cmds:
+      - goreleaser release --clean --snapshot
+      - cmd: ./dist/Linux_linux_amd64_v1/dupers --version
+        platforms: [linux/amd64]
+      - cmd: ./dist/Linux_linux_arm64/dupers --version
+        platforms: [linux/arm64]
+      - cmd: ./dist/macOS_darwin_all/dupers --version
+        platforms: [darwin]
+      - cmd: ./dist/Windows_windows_amd64_v1/dupers --version
+        platforms: [windows/amd64]
+      - cmd: ./dist/Windows_windows_386/dupers --version
+        platforms: [windows/386]
+  tests:
+    desc: runs all of the test commands
+    silent: false
+    cmds:
+      - task: test-export
+      - task: test-db
+      - task: test-dupe
+      - task: test-file
+      - task: test-search
+      - task: test-clean
+      - task: test-backup
+  test-backup:
+    desc: runs the database backup command
+    silent: false
+    cmds:
+      - task: backups
+  test-clean:
+    desc: runs the compact and clean database command
+    silent: false
+    cmds:
+      - task: make-tmp
+      - task: clean-buckets
+  test-export:
+    desc: runs both the export and import commands
+    silent: false
+    cmds:
+      - task: make-tmp
+      - task: pre-export-import
+      - task: export-import
+      - task: export-invalid
+      - task: move-bucket
+  test-db:
+    desc: runs both the database db, up, up+ and ls commands
+    silent: false
+    cmds:
+      - task: make-tmp
+      - task: up-upplus
+  test-delete:
+    desc: runs the dupe command with the -delete flag
+    silent: false
+    cmds:
+      - task: make-tmp
+      - task: dupe-flag-delete
+  test-delete+:
+    desc: runs the dupe command with the -delete+ flag
+    silent: false
+    cmds:
+      - task: make-tmp
+      - task: dupe-flag-delete+
+  test-dupe:
+    desc: runs the dupe on directories scans
+    cmds:
+      - task: make-tmp
+      - task: dupe-directories
+  test-file:
+    desc: runs the dupe file scan
+    silent: false
+    cmds:
+      - task: make-tmp
+      - task: dupe-a-file
+  test-search:
+    desc: runs the search commands and flags
+    silent: false
+    cmds:
+      - task: make-tmp
+      - task: searches
+  test-sensen:
+    desc: runs the dupe command with the -sensen flag
+    silent: false
+    cmds:
+      - task: make-tmp
+      - cmd: mkdir -p {{.USERDST}}/zxcvbn
+      - cmd: mkdir -p {{.USERDST}}/asdfgh
+      - cmd: mkdir -p {{.USERDST}}/qwerty
+      - task: dupe-flag-sensen
+  make-tmp:
+    silent: false
+    internal: true
+    cmds:
+      - cmd: mkdir -v {{.DST}}
+        ignore_error: true
+      - cmd: cp -a {{.CHK}} {{.DST}}
+      - cmd: cp -a {{.TMP}} {{.DST}}
+      - cmd: cp -a {{.B1}} {{.DST}}
+      - cmd: cp -a {{.B2}} {{.DST}}
+      - cmd: cp -a {{.FILE}} {{.USERDST}}.runmenow.exe
+      - cmd: mkdir -p {{.USERDST}}/some-app
+      - cmd: cp -a {{.FILE}} {{.USERDST}}/some-app/program.exe
+        ignore_error: true
+      - cmd: cp -R {{.SENSEN}} {{.USERDST}}
+      #- read -p wait && clear
+  clean:
+    silent: false
+    internal: false
+    desc: remove the temporary hidden task directory used for the tests
+    cmds:
+      - cmd: rm -f -v -R {{.DST}}
+        platforms: [darwin]
+        ignore_error: true
+      - cmd: rm -f -v -R {{.DST}}
+        platforms: [linux]
+        ignore_error: true
+  clone-a-temp-file:
+    silent: false
+    internal: true
+    cmds:
+      - cp -a {{.FILE}} {{.DST}}/random-duplicate-file.tmp
+      - cp -a {{.FILE}} {{.DST}}/random_duplicate#file📁with+unicode.tmp
+  dupe-a-file:
+    silent: false
+    internal: true
+    cmds:
+      - go {{.RUNRACE}} up {{.USERDST}}
+      - defer: go {{.RUNRACE}} -yes rm {{.USERDST}}
+      - go {{.RUNRACE}} dupe {{.FILE}} {{.DST}}
+      - read -p wait && clear
+      - go {{.RUNRACE}} -fast dupe {{.FILE}} {{.DST}}
+      - read -p wait && clear
+  dupe-directories:
+    silent: false
+    internal: true
+    cmds:
+      - go {{.RUNRACE}} up {{.USERDST}}
+      - defer: go {{.RUNRACE}} -yes rm {{.USERDST}}
+      - go {{.RUNRACE}} -yes dupe {{.TEST}} {{.USERDST}}
+      - read -p wait && clear
+      - go {{.RUNRACE}} -yes -fast dupe {{.TEST}} {{.USERDST}}/
+      - read -p wait && clear
+      - go {{.RUNRACE}} -yes dupe {{.TEST}} {{.DST}}
+      - cmd: go {{.RUNRACE}} dupe {{.TEST}}xx {{.DST}}
+        ignore_error: true # the cmds with ignore_error should always fail
+      - read -p wait && clear
+      - cmd: go {{.RUNRACE}} -fast dupe xx{{.TEST}} {{.DST}}
+        ignore_error: true
+      - read -p wait && clear
+      - cmd: go {{.RUNRACE}} -yes dupe {{.TEST}} {{.DST2}} {{.DST3}}
+        ignore_error: true
+      - read -p wait && clear
+      - cmd: go {{.RUNRACE}} -yes dupe {{.TEST}} {{.DST2}} {{.DST3}} {{.DST}}
+        ignore_error: true
+      - read -p wait && clear
+      - cmd: go {{.RUNRACE}} -yes dupe {{.TEST}} {{.DST}} {{.DST2}} {{.DST3}}
+        ignore_error: true
+      - read -p wait && clear
+      - cmd: go {{.RUNRACE}} -yes dupe {{.DST}} # this scans all buckets, maybe make a note or a prompt? or change behavior
+      - read -p wait && clear
+      - task: clone-a-temp-file
+      - cmd: go {{.RUNRACE}} -yes dupe {{.DST}}  # this is also returning debug info, clean is only in READONLY mode
+      - read -p wait && clear
+      - cmd: go {{.RUNRACE}} -yes -fast dupe {{.DST}}
+      - read -p wait && clear
+  dupe-flag-delete:
+    silent: false
+    internal: true
+    cmds:
+      - go {{.RUNRACE}} up {{.USERTST}}
+      - defer: go {{.RUNRACE}} -yes rm {{.USERTST}}
+      - go {{.RUNRACE}} -delete -yes dupe {{.DST}} {{.USERTST}}
+      - read -p wait && clear
+      - defer: rmdir {{.DST}}
+      - task: dupe-flag-rm-files
+  dupe-flag-delete+:
+    silent: false
+    internal: true
+    cmds:
+      - go {{.RUNRACE}} up {{.USERTST}}
+      - defer: go {{.RUNRACE}} -yes rm {{.USERTST}}
+      - go {{.RUNRACE}} -delete+ -yes dupe {{.DST}} {{.USERTST}}
+      - read -p wait && clear
+      - defer: rmdir {{.DST}}
+      - task: dupe-flag-rm-dirs
+      - task: dupe-flag-rm-files
+  dupe-flag-sensen:
+    silent: false
+    internal: true
+    cmds:
+      - go {{.RUNRACE}} up {{.USERTST}}
+      - defer: go {{.RUNRACE}} -yes rm {{.USERTST}}
+      - go {{.RUNRACE}} -sensen -yes dupe {{.DST}} {{.USERTST}}
+      - read -p wait && clear
+      - defer: rmdir {{.DST}}
+      - task: dupe-flag-rm-dirs
+      - task: dupe-flag-rm-files
+  dupe-flag-rm-dirs:
+    silent: true
+    internal: true
+    cmds:
+      - cmd: test -d {{.DST}}zxcvbn && echo "(!) this directory should have been deleted"
+        ignore_error: true
+      - cmd: test -d {{.DST}}asdfgh && echo "(!) this directory should have been deleted"
+        ignore_error: true
+      - cmd: test -d {{.DST}}qwerty && echo "(!) this directory should have been deleted"
+        ignore_error: true
+  dupe-flag-rm-files:
+    silent: true
+    internal: true
+    cmds:
+      - cmd: test -f {{.DST}}example3/randomfiles.7z && echo "(!) this file should have been deleted"
+        ignore_error: true
+      - cmd: test -f {{.DST}}example3/subdir2/randomfiles.txt && echo "(!) this file should have been deleted"
+        ignore_error: true
+      - cmd: test -f {{.DST}}example3/subdir2/randomfiles.zip && echo "(!) this file should have been deleted"
+        ignore_error: true
+      - cmd: test -f {{.DST}}randomfiles.7z && echo "(!) this file should have been deleted"
+        ignore_error: true
+      - cmd: test -f {{.DST}}randomfiles.tar.xz && echo "(!) this file should have been deleted"
+        ignore_error: true
+      - cmd: test -f {{.DST}}randomfiles.txt && echo "(!) this file should have been deleted"
+        ignore_error: true
+      - cmd: test -f {{.DST}}randomfiles.zip && echo "(!) this file should have been deleted"
+        ignore_error: true
+  searches:
+    silent: false
+    internal: true
+    cmds:
+      - go {{.RUNRACE}} up {{.USERDST}}
+      - defer: go {{.RUNRACE}} -yes rm {{.USERDST}}
+      - cmd: go {{.RUNRACE}} -yes search
+        ignore_error: true
+      - read -p wait && clear
+      - go {{.RUNRACE}} -yes search asinglelineoftextwithoutspaces 
+      - read -p wait && clear
+      - go {{.RUNRACE}} -yes search 'a single line of text with spaces'
+      - read -p wait && clear
+      - go {{.RUNRACE}} -yes search "a single line of text with spaces"
+      - read -p wait && clear
+      - task: clone-a-temp-file
+      - go {{.RUNRACE}} -yes search with+unicode
+      - read -p wait && clear
+      - go {{.RUNRACE}} -yes search "with+unicode"
+      - read -p wait && clear
+      - go {{.RUNRACE}} -yes search "WiTh+UnIcOdE"
+      - read -p wait && clear
+      - go {{.RUNRACE}} -yes search file📁with # move emoji to .task/
+      - read -p wait && clear
+      - go {{.RUNRACE}} -yes -name search file📁with
+      - read -p wait && clear
+      - go {{.RUNRACE}} -yes -name -exact search file📁with
+      - read -p wait && clear
+      - go {{.RUNRACE}} -yes search ".task"
+      - read -p wait && clear
+      - go {{.RUNRACE}} -yes -name search ".task"
+      - read -p wait && clear
+      - go {{.RUNRACE}} -yes -exact search ".TASK"
+      - read -p wait && clear
+      - go {{.RUNRACE}} -yes search ".TASK"
+      - read -p wait && clear
+      - go {{.RUNRACE}} -yes search ".7Z"
+      - read -p wait && clear
+  up-upplus:
+    silent: false
+    internal: true
+    cmds:
+      - go {{.RUNRACE}} db
+      - read -p wait && clear
+      - cmd: go {{.RUNRACE}} -yes rm {{.USERDST}}
+        ignore_error: true
+      - go {{.RUNRACE}} up {{.USERDST}}
+      - go {{.RUNRACE}} -yes rm {{.USERDST}}
+      - read -p wait && clear
+      - go {{.RUNRACE}} up {{.USERDST}}
+      - go {{.RUNRACE}} up {{.USERDST}}
+      - read -p wait && clear
+      - go {{.RUNRACE}} ls {{.USERDST}}
+      - read -p wait && clear
+      - go {{.RUNRACE}} -yes rm {{.USERDST}}
+      - go {{.RUNRACE}} up+ {{.USERDST}}
+      - read -p wait && clear
+      - go {{.RUNRACE}} -yes rm {{.USERDST}}
+  clean-buckets:
+     silent: false
+     internal: true
+     cmds:
+      - task: pre-export-import
+      - go {{.RUNRACE}} db
+      - read -p wait && clear
+      - go {{.RUNRACE}} -quiet clean
+      - go {{.RUNRACE}} db
+      - read -p wait && clear
+  backups:
+     silent: false
+     internal: true
+     cmds:
+      - task: pre-export-import
+      - go {{.RUNRACE}} -yes rm {{.USERDST}}
+      - ls -l {{.EXPORTPATH}}
+      - defer: rm {{.EXPORTPATH}}
+     vars:
+       EXPORTPATH: # export the bucket and store the generated filename to EXPORTPATH
+         sh: go {{.RUNRACE}} -quiet backup {{.USERDST}}
+  pre-export-import:
+    silent: false
+    internal: true
+    desc: this command is required before exporting a database
+    cmds:
+     - cmd: go {{.RUNRACE}} -yes rm {{.USERDST}}
+       ignore_error: true
+     - task: make-tmp
+       ignore_error: true
+     - read -p wait && clear
+     - cmd: go {{.RUNRACE}} up {{.USERDST}}/
+     - read -p wait && clear
+     
+  export-import:
+    silent: false
+    internal: true
+    desc: runs both the export and import commands
+    cmds:
+      - defer: go {{.RUNRACE}} -yes rm {{.USERDST}}
+      - go {{.RUNRACE}} up {{.USERDST}}
+      - go {{.RUNRACE}} import {{.EXPORTPATH}}
+      - defer: rm {{.EXPORTPATH}}
+      - go {{.RUNRACE}} db
+      - read -p wait && clear
+    vars:
+      EXPORTPATH: # export the bucket and store the generated filename to EXPORTPATH
+        sh: go {{.RUNRACE}} -quiet export {{.USERDST}}
+  export-invalid:
+      silent: false
+      internal: true
+      desc: runs export commands with invalid args
+      cmds:
+      - cmd: go {{.RUNRACE}} export # no feedback
+        ignore_error: true
+      - read -p wait && clear
+      - cmd: go {{.RUNRACE}} export thisisaninvaliddatabasebucket
+        ignore_error: true
+      - read -p wait && clear
+      - cmd: go {{.RUNRACE}} export thisisaninvaliddatabasebucket thisisaninvaliddatabasebucket_1
+        ignore_error: true
+      - read -p wait && clear
+  move-bucket:
+      silent: false
+      internal: true
+      desc: runs the move bucket commands
+      cmds:
+      - go {{.RUNRACE}} up {{.USERDST}}
+      - cmd: go {{.RUNRACE}} mv
+        ignore_error: true
+      - read -p wait && clear
+      - cmd: go {{.RUNRACE}} mv {{.USERDST}}
+        ignore_error: true
+      - read -p wait && clear
+      - cmd: go {{.RUNRACE}} mv thisisaninvaliddatabasebucket thisisaninvaliddatabasebucket_1
+        ignore_error: true
+      - read -p wait && clear
+      - cmd: go {{.RUNRACE}} -yes mv {{.USERDST}} {{.USERDST}}
+        ignore_error: true
+      - read -p wait && clear
+      - go {{.RUNRACE}} db
+      - go {{.RUNRACE}} -yes mv {{.USERDST}} {{.USERDST}}📁zxcv
+      - defer: go {{.RUNRACE}} -yes rm {{.USERDST}}📁zxcv
+      - go {{.RUNRACE}} db
+      - read -p wait && clear

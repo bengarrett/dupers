@@ -5,6 +5,7 @@ package mock
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -15,127 +16,172 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/bengarrett/dupers/pkg/database"
 	bolt "go.etcd.io/bbolt"
 )
 
 const (
-	PrivateFile fs.FileMode = 0o600
-	PrivateDir  fs.FileMode = 0o700
-
-	csv1     = "test/export-bucket1.csv"
-	test1    = "test/bucket1"
-	test2    = "test/bucket2"
-	SevenZip = "test/randomfiles.7z"
-	source1  = "/0vlLaUEvzAWP"
-	dbName   = "dupers.db"
-	dbPath   = "dupers"
-	win      = "windows"
-	oneKb    = 1024
-	oneMb    = oneKb * oneKb
+	PrivateFile fs.FileMode = 0o600                 // PrivateFile mode means only the owner has read/write access.
+	PrivateDir  fs.FileMode = 0o700                 // PrivateDir mode means only the owner has read/write/dir access.
+	SevenZip                = "test/randomfiles.7z" //
+	NoSuchFile              = "qwertryuiop"         // NoSuchFile is a non-existent filename.
+	filename                = "dupers-*.db"         // filename of the mock database.
+	subdir                  = "dupers-mock"         // the sub-directory within config that houses the mock database.
+	win                     = "windows"
+	oneKb                   = 1024
+	oneMb                   = oneKb * oneKb
 )
 
 var (
-	ErrBucket = errors.New("bucket already exists")
-	ErrCreate = errors.New("create bucket")
+	ErrBucket    = errors.New("mock bucket number does not exist")
+	ErrExport    = errors.New("mock export number does not exist")
+	ErrExtension = errors.New("mock file for extension does not exist")
+	ErrItem      = errors.New("mock item number does not exist")
+	ErrLockedDB  = errors.New("mock database is locked by the Windows filesystem")
+	ErrNoRoot    = errors.New("could not determine the root directory")
 )
 
+var sources = map[int]string{
+	0: "/0vlLaUEvzAWP",
+	1: "/3a9dnxgSVEnJ",
+	2: "/12wZkDDR9CQ0",
+}
+
+var checksums = map[int]string{
+	0: "1a1d76a3187ccee147e6c807277273afbad5d2680f5eadf1012310743e148f22",
+	1: "1bdd103eace1a58d2429d447ac551030a9da424056d2d89a77b1366a04f1f1cc",
+	2: "c5f338d4057fb107793032de91b264707c3c27bf9970687a78a080a4bf095c26",
+}
+
+var extensions = map[string]string{
+	"7z":  "/randomfiles.7z",
+	"xz":  "/randomfiles.tar.xz",
+	"txt": "/randomfiles.txt",
+	"zip": "/randomfiles.zip",
+}
+
+var test = "test"
+
+// Database creates, opens and returns the mock database.
+func Database() (db *bolt.DB, path string, err error) {
+	path, err = Create()
+	if err != nil {
+		return nil, "", err
+	}
+	return Open(path)
+}
+
+// CSV returns the path to a mock exported comma-separated values file.
+func CSV() string {
+	root := RootDir()
+	const csv = "export-bucket1.csv"
+	return filepath.Join(root, test, csv)
+}
+
+// RootDir returns the root directory of the program's source code.
+// An empty string is returned if the directory cannot be determined.
 func RootDir() string {
-	_, b, _, ok := runtime.Caller(0)
+	_, file, _, ok := runtime.Caller(0)
 	if !ok {
 		return ""
 	}
-	return filepath.Join(filepath.Dir(b), "../..")
+	return filepath.Join(filepath.Dir(file), "..", "..")
 }
 
-// Bucket1 returns the absolute path of bucket test 1.
-func Bucket1() string {
-	path := filepath.Join(RootDir(), test1)
-	b, err := filepath.Abs(path)
+// TempDir returns a hidden tmp mock directory path within the
+// root directory of the program's source code.
+// If the directory doesn't exist, it is created.
+func TempDir() (string, error) {
+	root := RootDir()
+	if root == "" {
+		return "", ErrNoRoot
+	}
+	dir := filepath.Join(root, ".tmp")
+	tmp, err := os.MkdirTemp(dir, "mock-*")
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	if runtime.GOOS == win {
-		b = strings.ToLower(b)
-	}
-
-	return b
+	return tmp, nil
 }
 
-// Bucket2 returns the absolute path of bucket test 2.
-func Bucket2() string {
-	path := filepath.Join(RootDir(), test2)
-	b, err := filepath.Abs(path)
-	if err != nil {
-		log.Fatal(err)
+// Bucket returns the absolute path of test bucket.
+func Bucket(i int) (string, error) {
+	name := ""
+	const b1, b2, b3 = 1, 2, 3
+	switch i {
+	case b1:
+		name = "bucket1"
+	case b2:
+		name = "bucket2"
+	case b3:
+		name = "bucket3"
+	default:
+		return "", ErrBucket
 	}
-
-	if runtime.GOOS == win {
-		b = strings.ToLower(b)
-	}
-
-	return b
-}
-
-// CreateItem adds the bucket and the named file to the database.
-func CreateItem(bucket, file string, db *bolt.DB) error {
-	if db == nil {
-		return bolt.ErrDatabaseNotOpen
-	}
-
-	return db.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists([]byte(bucket))
-		if err != nil {
-			return err
-		}
-		sum256, err := Read(file)
-		if err != nil {
-			return err
-		}
-		return b.Put([]byte(file), sum256[:])
-	})
-}
-
-// Export1 returns the absolute path of export csv file 1.
-func Export1() string {
-	path := filepath.Join(RootDir(), csv1)
+	path := filepath.Join(RootDir(), test, name)
 	f, err := filepath.Abs(path)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return f
-}
-
-// Item1 returns the absolute path of test source file 1.
-func Item1() string {
-	path := filepath.Join(Bucket1(), source1)
-	b, err := filepath.Abs(path)
-	if err != nil {
-		log.Fatal(err)
+	if runtime.GOOS == win {
+		f = strings.ToLower(f)
 	}
 
-	return b
+	return f, nil
 }
 
-// Open and return the mock database.
-func Open() (*bolt.DB, error) {
-	path, err := Name()
+// Export returns the absolute path of export csv file for a bucket.
+func Export(i int) (string, error) {
+	if i >= len(sources) || i < 0 {
+		return "", ErrItem
+	}
+	name := fmt.Sprintf("export-bucket%d.csv", i)
+	path := filepath.Join(RootDir(), test, name)
+	f, err := filepath.Abs(path)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	fmt.Println("open mock db:", path)
-	db, err := bolt.Open(path, PrivateFile, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return db, nil
+	return f, nil
 }
 
-// Name returns the absolute path of the mock Bolt database.
-func Name() (string, error) {
+// Item returns the absolute path of test source file item.
+func Item(i int) (string, error) {
+	if i >= len(sources) || i < 0 {
+		return "", ErrItem
+	}
+	elem := sources[i]
+	bucket1, err := Bucket(1)
+	if err != nil {
+		return "", err
+	}
+	path := filepath.Join(bucket1, elem)
+	f, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+
+	return f, nil
+}
+
+// Extension returns the absolute path of a test file based on an extension.
+func Extension(ext string) (string, error) {
+	elem, ok := extensions[ext]
+	if !ok {
+		return "", ErrExtension
+	}
+	path := filepath.Join(RootDir(), test, elem)
+	f, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+
+	return f, nil
+}
+
+// NamedDB returns the absolute path of a mock Bolt database with a randomly generated filename.
+func NamedDB() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		dir, err = os.UserHomeDir()
@@ -145,16 +191,86 @@ func Name() (string, error) {
 		}
 	}
 
-	dir = filepath.Join(dir, dbPath, "test")
+	path := filepath.Join(dir, subdir)
 
-	_, err = os.Stat(dir)
-	if os.IsNotExist(err) {
-		if err1 := os.MkdirAll(dir, PrivateDir); err != nil {
-			return "", err1
+	if _, err = os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			if err := os.MkdirAll(path, PrivateDir); err != nil {
+				return "", fmt.Errorf("%w: %s", err, path)
+			}
 		}
+	} else if err != nil {
+		return "", err
 	}
 
-	return filepath.Join(dir, dbName), nil
+	f, err := os.CreateTemp(path, filename)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	return f.Name(), nil
+
+	// return filepath.Join(path, filename), nil
+}
+
+// Create the mock database and return its location.
+// Note: If this test fails under Windows, try running `go test ./...` after closing VS Code.
+// https://github.com/electron-userland/electron-builder/issues/3666
+func Create() (string, error) {
+	path, err := NamedDB()
+	if err != nil {
+		return "", err
+	}
+	db, err := bolt.Open(path, PrivateFile, nil)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", err, path)
+	}
+	defer db.Close()
+	err = db.Update(func(tx *bolt.Tx) error {
+		// delete any existing buckets from the mock database
+		if err := tx.ForEach(func(name []byte, b *bolt.Bucket) error {
+			return tx.DeleteBucket(name)
+		}); err != nil {
+			return err
+		}
+		// create the new mock bucket #1
+		bucket1, err := Bucket(1)
+		if err != nil {
+			return err
+		}
+		b, err := tx.CreateBucket([]byte(bucket1))
+		if err != nil {
+			return fmt.Errorf("%w: create bucket: %s", err, bucket1)
+		}
+		// create the new, but empty mock bucket #2
+		const item = 2
+		bucket2, err := Bucket(item)
+		if err != nil {
+			return err
+		}
+		_, err = tx.CreateBucket([]byte(bucket2))
+		if err != nil {
+			return fmt.Errorf("%w: create bucket: %s", err, bucket1)
+		}
+		for i := range sources {
+			item, err := Item(i)
+			if err != nil {
+				return fmt.Errorf("%w: get item %d", err, i)
+			}
+			sum256, err := Read(item)
+			if err != nil {
+				return fmt.Errorf("%w: read item %d: %s", err, i, item)
+			}
+			if err := b.Put([]byte(item), sum256[:]); err != nil {
+				return fmt.Errorf("%w: put item %d", err, i)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	return path, nil
 }
 
 // Read the named file and return its SHA256 checksum.
@@ -165,79 +281,142 @@ func Read(name string) (sum [32]byte, err error) {
 	}
 	defer f.Close()
 
-	buf, h := make([]byte, oneMb), sha256.New()
+	buf := make([]byte, oneMb)
+	h := sha256.New()
 	if _, err := io.CopyBuffer(h, f, buf); err != nil {
 		return [32]byte{}, err
 	}
 
-	copy(sum[:], h.Sum(nil))
+	// copy(sum[:], h.Sum(nil))
 
-	return sum, nil
+	// x := [32]byte(h.Sum(nil))
+
+	return [32]byte(h.Sum(nil)), nil
 }
 
-// TestOpen creates and opens the mock database, the test 1 bucket and adds the source 1 file.
-// The mock database is closed after the update.
-// Note: If this test fails under Windows, try running `go test ./...` after closing VS Code.
-// https://github.com/electron-userland/electron-builder/issues/3666
-func TestOpen() error {
-	path, err := Name()
-	if err != nil {
-		return err
-	}
-
+// Open the mock database.
+// This will need to be closed after use.
+func Open(path string) (*bolt.DB, string, error) {
 	db, err := bolt.Open(path, PrivateFile, nil)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
-	defer db.Close()
-
-	if err := db.Update(func(tx *bolt.Tx) error {
-		// delete any existing buckets from the mock database
-		if err := tx.ForEach(func(name []byte, b *bolt.Bucket) error {
-			return tx.DeleteBucket(name)
-		}); err != nil {
-			return err
-		}
-		// create the new mock bucket
-		b, err := tx.CreateBucket([]byte(Bucket1()))
-		if err != nil {
-			return err
-		}
-		sum256, err := Read(Item1())
-		if err != nil {
-			return err
-		}
-		return b.Put([]byte(Item1()), sum256[:])
-	}); err != nil {
-		return err
-	}
-
-	return db.Close()
+	return db, path, nil
 }
 
-// TestRemove deletes the mock database.
-func TestRemove() error {
-	path, err := Name()
+// Delete the mock database.
+func Delete(path string) error {
+	err := os.Remove(path)
 	if err != nil {
-		return err
-	}
-
-	err = os.Remove(path)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-
-	if runtime.GOOS == "windows" {
-		var e *os.PathError
-		if errors.As(err, &e) {
-			log.Printf("could not remove the mock database as the Windows filesystem has locked it: %s\n", path)
+		if errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
+		if runtime.GOOS == "windows" {
+			var e *os.PathError
+			if errors.Is(err, e) {
+				return fmt.Errorf("%w: %s", ErrLockedDB, path)
+			}
+		}
+		return fmt.Errorf("%w: %s", err, path)
 	}
-
-	if err != nil {
-		return err
-	}
-
 	return nil
+}
+
+// MirrorTmp recursively copies the directory content of src into the hidden tmp mock directory.
+func MirrorTmp(src string) (string, error) {
+	const dirAllAccess fs.FileMode = 0o777
+	from, err := filepath.Abs(src)
+	if err != nil {
+		return "", err
+	}
+	tmpDir, err := TempDir()
+	if err != nil {
+		return "", err
+	}
+	err = filepath.WalkDir(from, func(path string, d fs.DirEntry, err error) error {
+		if path == from {
+			return nil
+		}
+		dest := filepath.Join(tmpDir, strings.Replace(path, from, "", 1))
+		if d.IsDir() {
+			if errM := os.MkdirAll(dest, dirAllAccess); errM != nil {
+				log.Println(errM)
+			}
+			return nil
+		}
+		if !d.Type().IsRegular() {
+			return nil
+		}
+		if _, errC := database.CopyFile(path, dest); errC != nil {
+			log.Println(errC)
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	return tmpDir, nil
+}
+
+// RemoveTmp deletes the hidden tmp mock directory and returns the number of files deleted.
+func RemoveTmp(path string) (int, error) {
+	count := 0
+	err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
+			return nil
+		}
+		count++
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return count, os.RemoveAll(path)
+}
+
+// SensenTmp generates 25 subdirectories within a hidden tmp mock directory,
+// and copies a mock Windows/DOS .exe program file into one.
+// The returned int is the number of bytes copied.
+func SensenTmp(path string) (int64, error) {
+	const expected = 16
+	n := 0
+	dest := ""
+	for n < 25 {
+		n++
+		name := filepath.Join(path, fmt.Sprintf("mock-dir-%d", n))
+		if err := os.MkdirAll(name, PrivateDir); err != nil {
+			return 0, err
+		}
+		if n == expected {
+			dest = name
+		}
+	}
+	item, err := Item(1)
+	if err != nil {
+		return 0, err
+	}
+	i, err := database.CopyFile(item, filepath.Join(dest, "some-pretend-windows-app.exe"))
+	if err != nil {
+		return 0, err
+	}
+	return i, err
+}
+
+// Sum compares b against the expected SHA-256 binary checksum of the test source file item.
+func Sum(item int, b [32]byte) (bool, error) {
+	if item >= len(checksums) || item < 0 {
+		return false, ErrItem
+	}
+	if checksums[item] == hex.EncodeToString(b[:]) {
+		return true, nil
+	}
+	return false, nil
+}
+
+// ItemSum returns the SHA-256 binary checksum of the test source file item.
+func ItemSum(item int) (string, error) {
+	if item >= len(checksums) || item < 0 {
+		return "", ErrItem
+	}
+	return checksums[item], nil
 }

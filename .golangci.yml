@@ -5,22 +5,19 @@
 
 linters:
   enable-all: true
+  fast: true
   disable:
-    - interfacer # Deprecated
-    - scopelint # Deprecated
-    - golint # Deprecated
-    - maligned # Deprecated
-
-    - exhaustivestruct # 'It is not recommended to use it for all files in a project'
-    - forbidigo # forbids the use for fmt.Print(f|ln)
-    - nlreturn # opinionated
-    - paralleltest # causes tests to randomly fail
-    - testpackage # removes the ability to test internal functions
-    - varnamelen # opinionated
-    - wrapcheck # wrapping 3rd party errors such as those from bolt are unnecessary
-    - wsl # whitespace linter, slow, aggressive and opinionated
-
-linters-settings:
-  cyclop:
-    # the maximal code complexity to report
-    max-complexity: 15
+    # deprecated
+    - ifshort
+    - interfacer
+    - structcheck
+    - nosnakecase
+    - deadcode
+    - exhaustivestruct
+    - golint
+    - scopelint
+    - maligned
+    - varcheck
+    # opinionated
+    - nlreturn
+    - wsl

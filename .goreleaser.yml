@@ -1,84 +1,48 @@
 # .goreleaser.yml
 #
-# test the config:
+# To test this GoReleaser configuration:
 # goreleaser check
-# goreleaser release --skip-publish --skip-validate --rm-dist
-
+# goreleaser release --clean --snapshot
+project_name: dupers
 before:
   hooks:
     - go mod tidy
 builds:
-  - id: FreeBSD
-    goos: ['freebsd']
-    goarch: ['amd64']
-  - id: Linux Intel
+  - id: Linux
     goos: ['linux']
-    goarch: ['amd64']
+    goarch: ['amd64', 'arm64']
   - id: macOS
     goos: ['darwin']
     goarch: ['amd64', 'arm64']
   - id: Windows
     goos: ['windows']
-    goarch: ['386', 'amd64']
+    goarch: ['amd64', '386']
 universal_binaries:
   - id: macOS
     name_template: "{{ .ProjectName }}"
     replace: true
 
 archives:
-  - id: FreeBSD
-    builds: ['FreeBSD']
-    format: tar.gz
+  - name_template: '{{ .ProjectName }}_{{ if eq .Os "darwin" }}macos{{ else }}{{ tolower .Os }}_{{ tolower .Arch }}{{ end }}'
     files:
-    - none*
-    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
-    replacements:
-      amd64: Intel
-      freebsd: FreeBSD
-  - id: Linux Intel
-    builds: ['Linux Intel']
-    format: tar.gz
-    files:
-    - none*
-    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
-    replacements:
-      amd64: Intel
-      linux: Linux
-  - id: macOS
-    builds: ['macOS']
-    format: tar.gz
-    files:
-    - none*
-    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
-    replacements:
-      arm64: M-series
-      amd64: Intel
-      darwin: macOS
-  - id: Windows
-    builds: ['Windows']
-    format: zip
-    files:
-    - none*
-    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
-    replacements:
-      386: 32bit
-      amd64: Intel
-      windows: Windows
+    - src: internal/logo.txt
+      strip_parent: true
+    format_overrides:
+      - goos: windows
+        format: zip
+    rlcp: true
 
 nfpms:
-  - id: Linux
-    builds: ['Linux Intel']
-    file_name_template: "{{ .ProjectName }}"
-    replacements:
-      amd64: Intel
-      linux: Linux
+  - file_name_template: "{{ .ProjectName }}_{{ tolower .Arch }}"
     vendor: Ben Garrett.
     homepage: https://github.com/bengarrett/dupers
     maintainer: Ben Garrett <code.by.ben@gmail.com>
     description: The blazing-fast file duplicate checker and filename search.
     license: LGPL 3.0
+    section: utils
     formats:
       - apk
+      - archlinux
       - deb
       - rpm
 
@@ -86,19 +50,9 @@ scoop:
   bucket:
     owner: bengarrett
     name: dupers
-
-  commit_author:
-    name: goreleaserbot
-    email: goreleaser@carlosbecker.com
-
-  commit_msg_template: "Scoop update for {{ .ProjectName }} version {{ .Tag }}"
-
   homepage: "https://github.com/bengarrett/dupers/"
-
-  description: "A batch viewer and extractor for large collections of zip archives."
-
+  description: "The blazing-fast file duplicate checker and filename search."
   license: LGPL 3.0
-
   # Setting this will prevent goreleaser to actually try to commit the updated
   # manifest leaving the responsibility of publishing it to the user.
   # If set to auto, the release will not be uploaded to the scoop bucket
@@ -107,5 +61,14 @@ scoop:
   skip_upload: auto
 
 changelog:
-  skip: false
+  sort: asc
   use: git
+  filters:
+    exclude:
+    - '^test:'
+    - '^chore'
+    - 'merge conflict'
+    - Merge pull request
+    - Merge remote-tracking branch
+    - Merge branch
+    - go mod tidy
