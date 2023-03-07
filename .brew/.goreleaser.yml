@@ -7,7 +7,7 @@
 # 2) On GitHub publish a new release tag and let the GitHub Action finish.
 # 3) In a local terminal do the following:
 #
-# cd github/retrotxtgo
+# cd github/dupers
 # git pull
 # export GITHUB_TOKEN="YOUR_GH_TOKEN"
 # goreleaser release --skip-validate --rm-dist --config .brew/.goreleaser.yml
@@ -23,11 +23,9 @@ builds:
   - id: Linux
     goos: ['linux']
     goarch: ['amd64', 'arm64']
-    dir: ../
   - id: macOS
     goos: ['darwin']
     goarch: ['amd64', 'arm64']
-    dir: ../
 release:
   github:
     owner: bengarrett
