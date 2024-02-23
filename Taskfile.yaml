@@ -391,7 +391,6 @@ tasks:
      - cmd: go {{.RUNRACE}} -yes rm {{.USERDST}}
        ignore_error: true
      - task: make-tmp
-       ignore_error: true
      - read -p wait && clear
      - cmd: go {{.RUNRACE}} up {{.USERDST}}/
      - read -p wait && clear
