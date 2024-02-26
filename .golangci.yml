@@ -19,5 +19,8 @@ linters:
     - maligned
     - varcheck
     # opinionated
+    - depguard
     - nlreturn
+    - paralleltest
+    - varnamelen
     - wsl

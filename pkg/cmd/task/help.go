@@ -14,6 +14,8 @@ import (
 	"github.com/gookit/color"
 )
 
+const pad4 = "    "
+
 func Debug(a *cmd.Aliases, f *cmd.Flags) (string, error) {
 	if a == nil {
 		return "", cmd.ErrNilAlias
@@ -107,7 +109,7 @@ func DupeHelp(w io.Writer) {
 		fmt.Fprintf(w, "        -%s\t%s ", f.Name, color.Danger.Sprint(danger))
 		fmt.Fprintln(w, f.Usage)
 		fmt.Fprintln(w)
-		fmt.Fprintln(w, color.Danger.Sprint("    ", danger), "this option is potentionally dangerous")
+		fmt.Fprintln(w, color.Danger.Sprint(pad4, danger), "this option is potentionally dangerous")
 	}
 	DupeExample(w)
 }
@@ -189,14 +191,14 @@ func SearchExample(w io.Writer) {
 	const a = "    # search for the expression foo in your home directory"
 	fmt.Fprintln(w, color.Secondary.Sprint(a))
 	if runtime.GOOS == winOS {
-		fmt.Fprint(w, "    "+color.Info.Sprintf("dupers search \"foo\" \"%s\"", cmd.Home()))
+		fmt.Fprint(w, pad4+color.Info.Sprintf("dupers search \"foo\" \"%s\"", cmd.Home()))
 		fmt.Fprint(w, color.Secondary.Sprint("\n    # search for filenames containing .zip\n"))
-		fmt.Fprint(w, "    "+color.Info.Sprint("dupers -name search \".zip\""))
+		fmt.Fprint(w, pad4+color.Info.Sprint("dupers -name search \".zip\""))
 		fmt.Fprintln(w)
 		return
 	}
-	fmt.Fprint(w, "    "+color.Info.Sprintf("dupers search 'foo' '%s'", cmd.Home()))
+	fmt.Fprint(w, pad4+color.Info.Sprintf("dupers search 'foo' '%s'", cmd.Home()))
 	fmt.Fprint(w, color.Secondary.Sprint("\n    # search for filenames containing .zip\n"))
-	fmt.Fprint(w, "    "+color.Info.Sprint("dupers -name search '.zip'"))
+	fmt.Fprint(w, pad4+color.Info.Sprint("dupers -name search '.zip'"))
 	fmt.Fprintln(w)
 }

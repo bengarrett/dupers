@@ -32,9 +32,10 @@ import (
 const (
 	WinOS = "windows"
 
-	modFmt = "02 Jan 2006 15:04"
-	oneKb  = 1024
-	oneMb  = oneKb * oneKb
+	errRead = "error reading: "
+	modFmt  = "02 Jan 2006 15:04"
+	oneKb   = 1024
+	oneMb   = oneKb * oneKb
 )
 
 var (
@@ -131,7 +132,7 @@ func (c *Config) statSource() (isDir bool, files int, err error) {
 	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		c.Debugger("counting: " + path)
 		if err != nil {
-			c.Debugger("error reading: " + err.Error())
+			c.Debugger(errRead + err.Error())
 			return nil
 		}
 		if root == path {
@@ -164,7 +165,7 @@ func (c *Config) walkBucket(b parse.Bucket, files, buckets int) (int, error) {
 	c.Debugger("walking bucket: " + root)
 	return buckets, filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			c.Debugger("error reading: " + err.Error())
+			c.Debugger(errRead + err.Error())
 			return err
 		}
 		if root == path {
@@ -543,7 +544,7 @@ func (c *Config) walkDir(db *bolt.DB, root string, skip []string) error {
 			if errors.Is(err, fs.ErrPermission) {
 				return nil
 			}
-			c.Debugger("error reading: " + err.Error())
+			c.Debugger(errRead + err.Error())
 			return err
 		}
 		if path == root || skipSelf(path, skip...) {
@@ -871,7 +872,7 @@ func (c *Config) WalkArchiver(db *bolt.DB, name parse.Bucket) error {
 			if errors.Is(err, fs.ErrPermission) {
 				return nil
 			}
-			c.Debugger("error reading: " + err.Error())
+			c.Debugger(errRead + err.Error())
 			return err
 		}
 		if root == path || skipSelf(path, skip...) {

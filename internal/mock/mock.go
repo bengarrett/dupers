@@ -185,7 +185,6 @@ func NamedDB() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		dir, err = os.UserHomeDir()
-
 		if err != nil {
 			return "", err
 		}

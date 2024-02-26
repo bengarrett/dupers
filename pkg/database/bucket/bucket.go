@@ -90,7 +90,7 @@ type Parser struct {
 func (p *Parser) Parse(db *bolt.DB) (items, errs int, name string, debug bool) {
 	if db == nil {
 		printer.StderrCR(bolt.ErrDatabaseNotOpen)
-		return
+		return -1, -1, "", true
 	}
 	abs, err := Abs(p.Name)
 	if err != nil {
