@@ -38,17 +38,6 @@ Dupers is the blazing-fast file duplicate checker and filename search tool.
 
 #### Packages
 
-##### [Homebrew](https://brew.sh/) for macOS, Linux, on Intel and ARM
-```sh
-brew install bengarrett/tap/dupers
-```
-
-##### [Scoop](https://scoop.sh/) for Windows
-```ps
-scoop bucket add dupers https://github.com/bengarrett/dupers.git
-scoop install dupers
-```
-
 ##### [DEB (Debian package)](https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.deb)
 ```sh
 wget https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.deb
