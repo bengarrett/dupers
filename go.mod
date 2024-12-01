@@ -6,7 +6,7 @@ module github.com/bengarrett/dupers
 go 1.20
 
 require (
-	github.com/bodgit/sevenzip v1.5.2
+	github.com/bodgit/sevenzip v1.6.0
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/dustin/go-humanize v1.0.1
 	github.com/golang/snappy v0.0.4 // indirect
@@ -21,17 +21,17 @@ require (
 	go.etcd.io/bbolt v1.3.11
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
 	golang.org/x/sys v0.10.0 // indirect
-	golang.org/x/text v0.19.0
+	golang.org/x/text v0.20.0
 )
 
 require (
 	github.com/carlmjohnson/versioninfo v0.22.5
 	github.com/mholt/archiver/v3 v3.5.1
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 )
 
 require (
-	github.com/andybalholm/brotli v1.1.0 // indirect
+	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/bodgit/plumbing v1.3.0 // indirect
 	github.com/bodgit/windows v1.0.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
