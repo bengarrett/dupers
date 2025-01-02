@@ -3,6 +3,7 @@
 # To test this GoReleaser configuration:
 # goreleaser check
 # goreleaser release --clean --snapshot
+version: 2
 project_name: dupers
 before:
   hooks:

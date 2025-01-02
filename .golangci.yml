@@ -8,16 +8,6 @@ linters:
   fast: true
   disable:
     # deprecated
-    - ifshort
-    - interfacer
-    - structcheck
-    - nosnakecase
-    - deadcode
-    - exhaustivestruct
-    - golint
-    - scopelint
-    - maligned
-    - varcheck
     # opinionated
     - depguard
     - nlreturn

@@ -39,7 +39,7 @@ const (
 	homepage = "https://github.com/bengarrett/dupers"
 )
 
-func tasks(selection string, a cmd.Aliases, c *dupe.Config, f cmd.Flags) error {
+func tasks(selection string, c *dupe.Config, f cmd.Flags) error {
 	switch selection {
 	case task.Dupe_:
 		db, err := database.OpenWrite()
@@ -86,21 +86,21 @@ func tasks(selection string, a cmd.Aliases, c *dupe.Config, f cmd.Flags) error {
 }
 
 func main() {
-	a, c, f := cmd.Aliases{}, dupe.Config{}, cmd.Flags{}
-	c.SetTimer()
-	f.Define()
-	a.Define()
+	alias, cfg, flg := cmd.Aliases{}, dupe.Config{}, cmd.Flags{}
+	cfg.SetTimer()
+	flg.Define()
+	alias.Define()
 	flag.Usage = func() {
 		task.Help()
 	}
 	flag.Parse()
 
-	c = f.Aliases(&a, &c)
-	if *a.Mono || *f.Mono {
+	cfg = flg.Aliases(&alias, &cfg)
+	if *alias.Mono || *flg.Mono {
 		color.Enable = false
 	}
 
-	help, err := taskHelpVer(&a, &f)
+	help, err := taskHelpVer(&alias, &flg)
 	if err != nil {
 		printer.ErrFatal(err)
 	}
@@ -114,15 +114,15 @@ func main() {
 	}
 
 	selection := strings.ToLower(flag.Args()[0])
-	c.Debugger("command selection: " + selection)
-	if err := tasks(selection, a, &c, f); err != nil {
+	cfg.Debugger("command selection: " + selection)
+	if err := tasks(selection, &cfg, flg); err != nil {
 		if errors.Is(err, database.ErrNotFound) {
 			os.Exit(0)
 		}
 		if errors.Is(err, database.ErrZeroByte) {
 			os.Exit(1)
 		}
-		c.Debugger("error details: " + fmt.Sprintf("%+V", err))
+		cfg.Debugger("error details: " + fmt.Sprintf("%+V", err))
 		printer.ErrFatal(err)
 	}
 }
