@@ -198,7 +198,6 @@ func NamedDB() (string, error) {
 				return "", fmt.Errorf("%w: %s", err, path)
 			}
 		}
-	} else if err != nil {
 		return "", err
 	}
 

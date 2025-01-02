@@ -111,8 +111,8 @@ func (p *Parser) Parse(db *bolt.DB) (items, errs int, name string, debug bool) {
 		}
 
 		return p.Items, p.Errs, "", true
-	case err != nil:
-		printer.StderrCR(err)
+	case errS != nil:
+		printer.StderrCR(errS)
 		p.Errs++
 
 		return p.Items, p.Errs, "", true

@@ -468,7 +468,7 @@ func Info(db *bolt.DB) (string, error) {
 	}
 	fmt.Fprintln(w)
 	var bucketsB int
-	w, bucketsB, err = info(db, w, path)
+	w, bucketsB, err = info(db, w)
 	if err != nil {
 		fmt.Fprintln(w)
 		fmt.Fprintf(w, "\tDatabase error:\t%s", err.Error())
@@ -485,7 +485,7 @@ func Info(db *bolt.DB) (string, error) {
 	return b.String(), nil
 }
 
-func info(db *bolt.DB, w *tabwriter.Writer, name string) (*tabwriter.Writer, int, error) {
+func info(db *bolt.DB, w *tabwriter.Writer) (*tabwriter.Writer, int, error) {
 	if db == nil {
 		return nil, 0, bolt.ErrDatabaseNotOpen
 	}

@@ -87,7 +87,7 @@ func (c *Config) StatSource() (isDir bool, files, versus int, err error) {
 	c.Debugger(fmt.Sprintf("all buckets: %s", c.Buckets))
 	for _, bucket := range c.Buckets {
 		var err error
-		versus, err = c.walkBucket(bucket, files, versus)
+		versus, err = c.walkBucket(bucket, versus)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
@@ -150,7 +150,7 @@ func (c *Config) statSource() (isDir bool, files int, err error) {
 	return true, files, nil
 }
 
-func (c *Config) walkBucket(b parse.Bucket, files, buckets int) (int, error) {
+func (c *Config) walkBucket(b parse.Bucket, buckets int) (int, error) {
 	root := string(b)
 	stat, err := os.Stat(root)
 	if err != nil {
