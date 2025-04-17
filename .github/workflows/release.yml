@@ -21,9 +21,6 @@ jobs:
         run: git fetch --force --tags
       - name: Setup Go with cache
         uses: actions/setup-go@v5
-        with:
-          go-version: '>=1.23.4'
-          cache: true
       - name: GoReleaser run
         uses: goreleaser/goreleaser-action@v6
         with:

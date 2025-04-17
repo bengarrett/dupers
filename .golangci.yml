@@ -1,16 +1,90 @@
-# golangci-lint run
-# gofumpt -l -w .
-# gci -w .
-# go test -timeout 30s -coverprofile=/tmp/vscode-gohSFtcj/go-code-cover ./...
-
+version: "2"
 linters:
-  enable-all: true
-  fast: true
+  default: all
   disable:
-    # deprecated
-    # opinionated
+    - asasalint
+    - bodyclose
+    - canonicalheader
+    - containedctx
+    - contextcheck
     - depguard
+    - durationcheck
+    - err113
+    - errcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - exhaustive
+    - exhaustruct
+    - exptostd
+    - fatcontext
+    - forbidigo
+    - forcetypeassert
+    - ginkgolinter
+    - gochecknoglobals
+    - gochecksumtype
+    - gocritic
+    - gosec
+    - gosmopolitan
+    - govet
+    - iface
+    - importas
+    - intrange
+    - ireturn
+    - loggercheck
+    - makezero
+    - mirror
+    - musttag
+    - nilerr
+    - nilnesserr
+    - nilnil
     - nlreturn
+    - noctx
+    - nonamedreturns
     - paralleltest
+    - perfsprint
+    - protogetter
+    - reassign
+    - recvcheck
+    - revive
+    - rowserrcheck
+    - sloglint
+    - spancheck
+    - sqlclosecheck
+    - staticcheck
+    - tagliatelle
+    - testifylint
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - unused
+    - usetesting
     - varnamelen
+    - wastedassign
+    - wrapcheck
     - wsl
+    - zerologlint
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
