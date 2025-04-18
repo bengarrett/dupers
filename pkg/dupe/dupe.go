@@ -24,6 +24,7 @@ import (
 	"github.com/karrick/godirwalk"
 	"github.com/mholt/archiver/v3"
 	bolt "go.etcd.io/bbolt"
+	boltErr "go.etcd.io/bbolt/errors"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"golang.org/x/text/number"
@@ -101,85 +102,6 @@ func (c *Config) StatSource() (isDir bool, files, versus int, err error) {
 	return isDir, files, versus, nil
 }
 
-func (c *Config) statSource() (isDir bool, files int, err error) {
-	name := c.GetSource()
-	stat, err := os.Stat(name)
-	if err != nil {
-		c.Debugger("path is not found, but there is an absolute resolved path")
-		name, err = filepath.Abs(name)
-		if err != nil {
-			return false, 0, os.ErrNotExist
-		}
-		stat, err = os.Stat(name)
-		if err != nil {
-			return false, 0, err
-		}
-		if err = c.SetSource(stat.Name()); err != nil {
-			return false, 0, err
-		}
-	}
-	if !stat.IsDir() {
-		if stat.Size() == 0 {
-			return false, 1, ErrFileEmpty
-		}
-		return false, 1, nil
-	}
-	if err := SkipDirs(name); err != nil {
-		return false, 0, err
-	}
-	files = 0
-	root := name
-	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		c.Debugger("counting: " + path)
-		if err != nil {
-			c.Debugger(errRead + err.Error())
-			return nil
-		}
-		if root == path {
-			return nil
-		}
-		if err := SkipFS(true, false, true, d); err != nil {
-			return nil
-		}
-		files++
-		return nil
-	})
-	if err != nil {
-		return true, files, err
-	}
-	return true, files, nil
-}
-
-func (c *Config) walkBucket(b parse.Bucket, buckets int) (int, error) {
-	root := string(b)
-	stat, err := os.Stat(root)
-	if err != nil {
-		return 0, err
-	}
-	if !stat.IsDir() {
-		return 0, ErrPathIsFile
-	}
-	if err := SkipDirs(root); err != nil {
-		return 0, err
-	}
-	c.Debugger("walking bucket: " + root)
-	return buckets, filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			c.Debugger(errRead + err.Error())
-			return err
-		}
-		if root == path {
-			return nil
-		}
-		c.Debugger("walking bucket item: " + path)
-		if err := SkipFS(true, false, true, d); err != nil {
-			return nil
-		}
-		buckets++
-		return nil
-	})
-}
-
 // Check stats and returns the named file or directory.
 // If it does not exist, it looks up an absolute path and returns the result.
 // If the item is a file it returns both the named file and an ErrPathIsFile error.
@@ -215,7 +137,7 @@ func (c *Config) Check(name string) (isdir bool, path string, err error) {
 // Checksum the named file and save it to the bucket.
 func (c *Config) Checksum(db *bolt.DB, name, bucket string) error {
 	if db == nil {
-		return bolt.ErrDatabaseNotOpen
+		return boltErr.ErrDatabaseNotOpen
 	}
 	if len(c.Compare) == 0 {
 		c.Compare = make(parse.Checksums)
@@ -345,22 +267,6 @@ func (c *Config) Print() (string, error) { //nolint:gocognit
 	return w.String(), nil
 }
 
-func (c *Config) printer(w io.Writer, path string) error {
-	sum, err := parse.Read(path)
-	if err != nil {
-		return err
-	}
-	l := c.lookupOne(sum)
-	if l == "" {
-		return ErrNoMatch
-	}
-	if l == path {
-		return ErrNoMatch
-	}
-	fmt.Fprintln(w, Match(path, l))
-	return nil
-}
-
 // Remove duplicate files from the source directory.
 func (c *Config) Remove() (string, error) {
 	c.Debugger("remove all duplicate files.")
@@ -478,7 +384,7 @@ func (c *Config) Status() string {
 // WalkDirs walks the named bucket directories for any new files to add their checksums to the database.
 func (c *Config) WalkDirs(db *bolt.DB) error {
 	if db == nil {
-		return bolt.ErrDatabaseNotOpen
+		return boltErr.ErrDatabaseNotOpen
 	}
 	if err := c.init(db); err != nil {
 		return err
@@ -489,7 +395,7 @@ func (c *Config) WalkDirs(db *bolt.DB) error {
 		c.Debugger("walkdir bucket: " + s)
 		if err := c.WalkDir(db, bucket); err != nil {
 			if errors.Is(errors.Unwrap(err), ErrPathNoFound) &&
-				errors.Is(database.Exist(db, s), bolt.ErrBucketNotFound) {
+				errors.Is(database.Exist(db, s), boltErr.ErrBucketNotFound) {
 				printer.StderrCR(err)
 				continue
 			}
@@ -509,7 +415,7 @@ func (c *Config) WalkDirs(db *bolt.DB) error {
 // WalkDir walks the named bucket directory for any new files to add their checksums to the database.
 func (c *Config) WalkDir(db *bolt.DB, name parse.Bucket) error {
 	if db == nil {
-		return bolt.ErrDatabaseNotOpen
+		return boltErr.ErrDatabaseNotOpen
 	}
 	if name == "" {
 		return ErrNoNamedBucket
@@ -525,52 +431,6 @@ func (c *Config) WalkDir(db *bolt.DB, name parse.Bucket) error {
 	}
 	// walk the root directory
 	return c.walkDir(db, root, skip)
-}
-
-func (c *Config) walkDir(db *bolt.DB, root string, skip []string) error {
-	if db == nil {
-		return bolt.ErrDatabaseNotOpen
-	}
-	c.Debugger("walk directory: " + root)
-	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if c.Debug {
-			s := "walk file"
-			if d.IsDir() {
-				s = "walk subdirectory"
-			}
-			c.Debugger(fmt.Sprintf("%s: %s", s, path))
-		}
-		if err != nil {
-			if errors.Is(err, fs.ErrPermission) {
-				return nil
-			}
-			c.Debugger(errRead + err.Error())
-			return err
-		}
-		if path == root || skipSelf(path, skip...) {
-			return c.walkDebug(" -skip self", nil)
-		}
-		if err := SkipFS(false, true, true, d); err != nil {
-			return c.walkDebug(" -skip directory or system file", err)
-		}
-		c.Files++
-		if err := c.walkCompare(db, root, path); err != nil {
-			if errors.Is(err, ErrPathExist) {
-				return nil
-			}
-			return err
-		}
-		fmt.Fprint(os.Stdout, PrintWalk(false, c))
-		if err := c.Checksum(db, path, root); err != nil {
-			return err
-		}
-		return nil
-	})
-}
-
-func (c *Config) walkDebug(s string, err error) error {
-	c.Debugger(s)
-	return err
 }
 
 // WalkSource walks the source directory or a file to collect the hashed content for a future comparison.
@@ -594,101 +454,6 @@ func (c *Config) WalkSource() error {
 	}
 	c.Debugger("directories dupe check: " + strings.Join(c.Sources, " "))
 	return nil
-}
-
-func (c *Config) statSources(root string) error {
-	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		c.Debugger(path)
-		if err != nil {
-			c.Debugger("stat sources error: " + err.Error())
-			return err
-		}
-		if root == path {
-			return nil
-		}
-		if err := SkipFS(true, false, true, d); err != nil {
-			return nil
-		}
-		c.Sources = append(c.Sources, path)
-		return nil
-	})
-}
-
-// create a new, empty bucket in the database.
-func (c *Config) create(db *bolt.DB, name parse.Bucket) error {
-	if db == nil {
-		return bolt.ErrDatabaseNotOpen
-	}
-	if _, err := os.Stat(string(name)); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("%w: %s", ErrPathNoFound, name)
-		}
-		return err
-	}
-	return db.Update(func(tx *bolt.Tx) error {
-		if b := tx.Bucket([]byte(name)); b == nil {
-			_, err := tx.CreateBucket([]byte(name))
-			return err
-		}
-		return nil
-	})
-}
-
-// init initializes the Config maps and database.
-func (c *Config) init(db *bolt.DB) error {
-	if db == nil {
-		return bolt.ErrDatabaseNotOpen
-	}
-	// use all the buckets if no specific buckets are provided
-	if !c.Test && len(c.Buckets) == 0 {
-		if err := c.SetAllBuckets(db); err != nil {
-			return err
-		}
-	}
-	// normalise bucket names
-	for i, b := range c.Buckets {
-		abs, err := database.Abs(string(b))
-		if err != nil {
-			printer.StderrCR(err)
-			c.Buckets[i] = ""
-
-			continue
-		}
-		c.Buckets[i] = parse.Bucket(abs)
-	}
-	if c.Compare == nil {
-		c.Compare = make(parse.Checksums)
-	}
-	if !c.Test && c.Compare == nil {
-		for i, b := range c.Buckets {
-			_, err := c.SetCompares(db, b)
-			if err != nil {
-				return err
-			}
-			c.Debugger(fmt.Sprintf("init %d: %s", i, b))
-		}
-	}
-	return nil
-}
-
-// lookup the checksum value in c.compare and return the file path.
-func (c *Config) lookupOne(sum parse.Checksum) string {
-	if len(c.Compare) == 0 {
-		c.Compare = make(parse.Checksums)
-	}
-	c.Debugger(fmt.Sprintf("look up checksum in the compare data, %d items total: %x",
-		len(c.Compare), sum))
-	if f := c.Compare[sum]; f != "" {
-		c.Debugger("lookupOne match: " + f)
-		return f
-	}
-	return ""
-}
-
-// skipFiles returns the value of c.sources as strings.
-func (c *Config) skipFiles() (files []string) {
-	files = append(files, c.Sources...)
-	return files
 }
 
 // Match prints 'Found duplicate match'.
@@ -806,34 +571,6 @@ func skipSelf(path string, skip ...string) bool {
 	return false
 }
 
-// walkCompare walks the root directory and adds the checksums of the files to c.compare.
-func (c *Config) walkCompare(db *bolt.DB, root, path string) error {
-	if db == nil {
-		return bolt.ErrDatabaseNotOpen
-	}
-	if c.Compare == nil {
-		c.Compare = make(parse.Checksums)
-	}
-	return db.View(func(tx *bolt.Tx) error {
-		if !c.Test && !c.Quiet && !c.Debug {
-			fmt.Fprint(os.Stdout, printer.Status(c.Files, -1, printer.Scan))
-		}
-		b := tx.Bucket([]byte(root))
-		if b == nil {
-			return ErrNoNamedBucket
-		}
-		h := b.Get([]byte(path))
-		c.Debugger(fmt.Sprintf(" - %d/%d items: %x", len(c.Compare), c.Files, h))
-		if len(h) > 0 {
-			var sum parse.Checksum
-			copy(sum[:], h)
-			c.Compare[sum] = path
-			return ErrPathExist
-		}
-		return nil
-	})
-}
-
 // Print the results of the database comparisons.
 func Print(quiet, exact bool, term string, m *database.Matches) string {
 	return parse.Print(quiet, exact, term, m)
@@ -889,9 +626,268 @@ func (c *Config) WalkArchiver(db *bolt.DB, name parse.Bucket) error {
 	})
 }
 
+// Read7Zip opens the named 7-Zip archive, hashes and saves the content to the bucket.
+func (c *Config) Read7Zip(db *bolt.DB, b parse.Bucket, name string) error {
+	if db == nil {
+		return boltErr.ErrDatabaseNotOpen
+	}
+	c.Debugger("read 7zip: " + name)
+	r, err := sevenzip.OpenReader(name)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	cnt := 0
+	for _, f := range r.File {
+		if f.FileInfo().IsDir() {
+			continue
+		}
+		path := filepath.Join(name, f.Name)
+		if c.findItem(path) {
+			continue
+		}
+		rc, err := f.Open()
+		if err != nil {
+			printer.Stderr(err)
+			continue
+		}
+		defer rc.Close()
+		cnt++
+		buf, h := make([]byte, oneMb), sha256.New()
+		if _, err := io.CopyBuffer(h, rc, buf); err != nil {
+			printer.Stderr(err)
+			continue
+		}
+		var sum parse.Checksum
+		copy(sum[:], h.Sum(nil))
+		if err := c.update(db, b, path, sum); err != nil {
+			return err
+		}
+	}
+	if cnt > 0 {
+		c.Debugger(fmt.Sprintf("read %d items within the 7-Zip archive", cnt))
+	}
+	return nil
+}
+
+// Read opens the named archive, hashes and saves the content to the bucket.
+func (c *Config) Read(db *bolt.DB, b parse.Bucket, name, mimeExt string) error {
+	if db == nil {
+		return boltErr.ErrDatabaseNotOpen
+	}
+	c.Debugger("read archiver: " + name)
+	// catch any archiver panics such as opening unsupported ZIP compression formats
+	defer c.readRecover(name)
+	cnt, lookup := 0, name
+	if mimeExt != "" {
+		lookup = mimeExt
+	}
+	// get the format by filename extension
+	tars := []string{".gz", ".br", ".bz2", ".lz4", ".sz", ".xz", ".zz", ".zst"}
+	for _, t := range tars {
+		if strings.HasSuffix(name, ".tar"+t) {
+			lookup = ".tar" + t
+			break
+		}
+	}
+	f, err := archiver.ByExtension(strings.ToLower(lookup))
+	if err != nil {
+		printer.StderrCR(err)
+		return nil
+	}
+	switch archive.Supported(f) {
+	case true:
+		w, ok := f.(archiver.Walker)
+		if !ok {
+			printer.StderrCR(fmt.Errorf("%w: %s: %s", archive.ErrType, lookup, name))
+			return nil
+		}
+		cnt, err = c.readWalk(db, b, name, cnt, w)
+		if err != nil {
+			printer.Stderr(err)
+		}
+	default:
+		color.Warn.Printf("Unsupported archive: '%s'\n", name)
+		return nil
+	}
+	if cnt > 0 {
+		c.Debugger(fmt.Sprintf("read %d items within the archive", cnt))
+	}
+	return nil
+}
+
+func (c *Config) walkDir(db *bolt.DB, root string, skip []string) error {
+	if db == nil {
+		return boltErr.ErrDatabaseNotOpen
+	}
+	c.Debugger("walk directory: " + root)
+	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if c.Debug {
+			s := "walk file"
+			if d.IsDir() {
+				s = "walk subdirectory"
+			}
+			c.Debugger(fmt.Sprintf("%s: %s", s, path))
+		}
+		if err != nil {
+			if errors.Is(err, fs.ErrPermission) {
+				return nil
+			}
+			c.Debugger(errRead + err.Error())
+			return err
+		}
+		if path == root || skipSelf(path, skip...) {
+			return c.walkDebug(" -skip self", nil)
+		}
+		if err := SkipFS(false, true, true, d); err != nil {
+			return c.walkDebug(" -skip directory or system file", err)
+		}
+		c.Files++
+		if err := c.walkCompare(db, root, path); err != nil {
+			if errors.Is(err, ErrPathExist) {
+				return nil
+			}
+			return err
+		}
+		fmt.Fprint(os.Stdout, PrintWalk(false, c))
+		if err := c.Checksum(db, path, root); err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+func (c *Config) statSources(root string) error {
+	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		c.Debugger(path)
+		if err != nil {
+			c.Debugger("stat sources error: " + err.Error())
+			return err
+		}
+		if root == path {
+			return nil
+		}
+		if err := SkipFS(true, false, true, d); err != nil {
+			return nil
+		}
+		c.Sources = append(c.Sources, path)
+		return nil
+	})
+}
+
+// create a new, empty bucket in the database.
+func (c *Config) create(db *bolt.DB, name parse.Bucket) error {
+	if db == nil {
+		return boltErr.ErrDatabaseNotOpen
+	}
+	if _, err := os.Stat(string(name)); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("%w: %s", ErrPathNoFound, name)
+		}
+		return err
+	}
+	return db.Update(func(tx *bolt.Tx) error {
+		if b := tx.Bucket([]byte(name)); b == nil {
+			_, err := tx.CreateBucket([]byte(name))
+			return err
+		}
+		return nil
+	})
+}
+
+// init initializes the Config maps and database.
+func (c *Config) init(db *bolt.DB) error {
+	if db == nil {
+		return boltErr.ErrDatabaseNotOpen
+	}
+	// use all the buckets if no specific buckets are provided
+	if !c.Test && len(c.Buckets) == 0 {
+		if err := c.SetAllBuckets(db); err != nil {
+			return err
+		}
+	}
+	// normalise bucket names
+	for i, b := range c.Buckets {
+		abs, err := database.Abs(string(b))
+		if err != nil {
+			printer.StderrCR(err)
+			c.Buckets[i] = ""
+
+			continue
+		}
+		c.Buckets[i] = parse.Bucket(abs)
+	}
+	if c.Compare == nil {
+		c.Compare = make(parse.Checksums)
+	}
+	if !c.Test && c.Compare == nil {
+		for i, b := range c.Buckets {
+			_, err := c.SetCompares(db, b)
+			if err != nil {
+				return err
+			}
+			c.Debugger(fmt.Sprintf("init %d: %s", i, b))
+		}
+	}
+	return nil
+}
+
+// lookup the checksum value in c.compare and return the file path.
+func (c *Config) lookupOne(sum parse.Checksum) string {
+	if len(c.Compare) == 0 {
+		c.Compare = make(parse.Checksums)
+	}
+	c.Debugger(fmt.Sprintf("look up checksum in the compare data, %d items total: %x",
+		len(c.Compare), sum))
+	if f := c.Compare[sum]; f != "" {
+		c.Debugger("lookupOne match: " + f)
+		return f
+	}
+	return ""
+}
+
+// skipFiles returns the value of c.sources as strings.
+func (c *Config) skipFiles() (files []string) {
+	files = append(files, c.Sources...)
+	return files
+}
+
+// walkCompare walks the root directory and adds the checksums of the files to c.compare.
+func (c *Config) walkCompare(db *bolt.DB, root, path string) error {
+	if db == nil {
+		return boltErr.ErrDatabaseNotOpen
+	}
+	if c.Compare == nil {
+		c.Compare = make(parse.Checksums)
+	}
+	return db.View(func(tx *bolt.Tx) error {
+		if !c.Test && !c.Quiet && !c.Debug {
+			fmt.Fprint(os.Stdout, printer.Status(c.Files, -1, printer.Scan))
+		}
+		b := tx.Bucket([]byte(root))
+		if b == nil {
+			return ErrNoNamedBucket
+		}
+		h := b.Get([]byte(path))
+		c.Debugger(fmt.Sprintf(" - %d/%d items: %x", len(c.Compare), c.Files, h))
+		if len(h) > 0 {
+			var sum parse.Checksum
+			copy(sum[:], h)
+			c.Compare[sum] = path
+			return ErrPathExist
+		}
+		return nil
+	})
+}
+
+func (c *Config) walkDebug(s string, err error) error {
+	c.Debugger(s)
+	return err
+}
+
 func (c *Config) readArchive(db *bolt.DB, b parse.Bucket, path string) error {
 	if db == nil {
-		return bolt.ErrDatabaseNotOpen
+		return boltErr.ErrDatabaseNotOpen
 	}
 	// detect archive type by file extension
 	mimeExt := strings.ToLower(filepath.Ext(path))
@@ -943,7 +939,7 @@ func (c *Config) findItem(abs string) bool {
 // listItems sets c.sources to list all the filenames used in the bucket.
 func (c *Config) listItems(db *bolt.DB, bucket string) error {
 	if db == nil {
-		return bolt.ErrDatabaseNotOpen
+		return boltErr.ErrDatabaseNotOpen
 	}
 	c.Debugger("list bucket items: " + bucket)
 	abs, err := database.AbsB(bucket)
@@ -963,7 +959,7 @@ func (c *Config) listItems(db *bolt.DB, bucket string) error {
 		})
 		return err
 	}); err != nil {
-		if errors.Is(err, bolt.ErrBucketNotFound) {
+		if errors.Is(err, boltErr.ErrBucketNotFound) {
 			return fmt.Errorf("%w: '%s'", err, abs)
 		}
 		return err
@@ -971,94 +967,99 @@ func (c *Config) listItems(db *bolt.DB, bucket string) error {
 	return nil
 }
 
-// Read7Zip opens the named 7-Zip archive, hashes and saves the content to the bucket.
-func (c *Config) Read7Zip(db *bolt.DB, b parse.Bucket, name string) error {
-	if db == nil {
-		return bolt.ErrDatabaseNotOpen
-	}
-	c.Debugger("read 7zip: " + name)
-	r, err := sevenzip.OpenReader(name)
+func (c *Config) printer(w io.Writer, path string) error {
+	sum, err := parse.Read(path)
 	if err != nil {
 		return err
 	}
-	defer r.Close()
-	cnt := 0
-	for _, f := range r.File {
-		if f.FileInfo().IsDir() {
-			continue
-		}
-		path := filepath.Join(name, f.Name)
-		if c.findItem(path) {
-			continue
-		}
-		rc, err := f.Open()
-		if err != nil {
-			printer.Stderr(err)
-			continue
-		}
-		defer rc.Close()
-		cnt++
-		buf, h := make([]byte, oneMb), sha256.New()
-		if _, err := io.CopyBuffer(h, rc, buf); err != nil {
-			printer.Stderr(err)
-			continue
-		}
-		var sum parse.Checksum
-		copy(sum[:], h.Sum(nil))
-		if err := c.update(db, b, path, sum); err != nil {
-			return err
-		}
+	l := c.lookupOne(sum)
+	if l == "" {
+		return ErrNoMatch
 	}
-	if cnt > 0 {
-		c.Debugger(fmt.Sprintf("read %d items within the 7-Zip archive", cnt))
+	if l == path {
+		return ErrNoMatch
 	}
+	fmt.Fprintln(w, Match(path, l))
 	return nil
 }
 
-// Read opens the named archive, hashes and saves the content to the bucket.
-func (c *Config) Read(db *bolt.DB, b parse.Bucket, name, mimeExt string) error {
-	if db == nil {
-		return bolt.ErrDatabaseNotOpen
-	}
-	c.Debugger("read archiver: " + name)
-	// catch any archiver panics such as opening unsupported ZIP compression formats
-	defer c.readRecover(name)
-	cnt, lookup := 0, name
-	if mimeExt != "" {
-		lookup = mimeExt
-	}
-	// get the format by filename extension
-	tars := []string{".gz", ".br", ".bz2", ".lz4", ".sz", ".xz", ".zz", ".zst"}
-	for _, t := range tars {
-		if strings.HasSuffix(name, ".tar"+t) {
-			lookup = ".tar" + t
-			break
+func (c *Config) statSource() (isDir bool, files int, err error) {
+	name := c.GetSource()
+	stat, err := os.Stat(name)
+	if err != nil {
+		c.Debugger("path is not found, but there is an absolute resolved path")
+		name, err = filepath.Abs(name)
+		if err != nil {
+			return false, 0, os.ErrNotExist
+		}
+		stat, err = os.Stat(name)
+		if err != nil {
+			return false, 0, err
+		}
+		if err = c.SetSource(stat.Name()); err != nil {
+			return false, 0, err
 		}
 	}
-	f, err := archiver.ByExtension(strings.ToLower(lookup))
-	if err != nil {
-		printer.StderrCR(err)
-		return nil
+	if !stat.IsDir() {
+		if stat.Size() == 0 {
+			return false, 1, ErrFileEmpty
+		}
+		return false, 1, nil
 	}
-	switch archive.Supported(f) {
-	case true:
-		w, ok := f.(archiver.Walker)
-		if !ok {
-			printer.StderrCR(fmt.Errorf("%w: %s: %s", archive.ErrType, lookup, name))
+	if err := SkipDirs(name); err != nil {
+		return false, 0, err
+	}
+	files = 0
+	root := name
+	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		c.Debugger("counting: " + path)
+		if err != nil {
+			c.Debugger(errRead + err.Error())
 			return nil
 		}
-		cnt, err = c.readWalk(db, b, name, cnt, w)
-		if err != nil {
-			printer.Stderr(err)
+		if root == path {
+			return nil
 		}
-	default:
-		color.Warn.Printf("Unsupported archive: '%s'\n", name)
+		if err := SkipFS(true, false, true, d); err != nil {
+			return nil
+		}
+		files++
 		return nil
+	})
+	if err != nil {
+		return true, files, err
 	}
-	if cnt > 0 {
-		c.Debugger(fmt.Sprintf("read %d items within the archive", cnt))
+	return true, files, nil
+}
+
+func (c *Config) walkBucket(b parse.Bucket, buckets int) (int, error) {
+	root := string(b)
+	stat, err := os.Stat(root)
+	if err != nil {
+		return 0, err
 	}
-	return nil
+	if !stat.IsDir() {
+		return 0, ErrPathIsFile
+	}
+	if err := SkipDirs(root); err != nil {
+		return 0, err
+	}
+	c.Debugger("walking bucket: " + root)
+	return buckets, filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			c.Debugger(errRead + err.Error())
+			return err
+		}
+		if root == path {
+			return nil
+		}
+		c.Debugger("walking bucket item: " + path)
+		if err := SkipFS(true, false, true, d); err != nil {
+			return nil
+		}
+		buckets++
+		return nil
+	})
 }
 
 func (c *Config) readRecover(archive string) {
@@ -1075,7 +1076,7 @@ func (c *Config) readRecover(archive string) {
 
 func (c *Config) readWalk(db *bolt.DB, b parse.Bucket, archive string, cnt int, w archiver.Walker) (int, error) {
 	if db == nil {
-		return -1, bolt.ErrDatabaseNotOpen
+		return -1, boltErr.ErrDatabaseNotOpen
 	}
 	return cnt, w.Walk(archive, func(f archiver.File) error {
 		notFile := f.IsDir() || !f.FileInfo.Mode().IsRegular()
@@ -1104,7 +1105,7 @@ func (c *Config) readWalk(db *bolt.DB, b parse.Bucket, archive string, cnt int, 
 // update saves the checksum and path values to the bucket.
 func (c *Config) update(db *bolt.DB, b parse.Bucket, path string, sum parse.Checksum) error {
 	if db == nil {
-		return bolt.ErrDatabaseNotOpen
+		return boltErr.ErrDatabaseNotOpen
 	}
 	if len(c.Compare) == 0 {
 		c.Compare = make(parse.Checksums)
@@ -1113,7 +1114,7 @@ func (c *Config) update(db *bolt.DB, b parse.Bucket, path string, sum parse.Chec
 	if err := db.Update(func(tx *bolt.Tx) error {
 		b1 := tx.Bucket([]byte(b))
 		if b1 == nil {
-			return bolt.ErrBucketNotFound
+			return boltErr.ErrBucketNotFound
 		}
 		return b1.Put([]byte(path), sum[:])
 	}); err != nil {

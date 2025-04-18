@@ -10,7 +10,7 @@ import (
 	"github.com/bengarrett/dupers/pkg/cmd/task/search"
 	"github.com/bengarrett/dupers/pkg/database"
 	"github.com/stretchr/testify/assert"
-	bolt "go.etcd.io/bbolt"
+	boltErr "go.etcd.io/bbolt/errors"
 )
 
 func TestCmdErr(t *testing.T) {
@@ -29,9 +29,9 @@ func TestErr(t *testing.T) {
 	assert.Nil(t, err)
 	err = search.Error(database.ErrEmpty)
 	assert.Nil(t, err)
-	err = search.Error(bolt.ErrBucketNotFound)
+	err = search.Error(boltErr.ErrBucketNotFound)
 	assert.NotNil(t, err)
-	err = search.Error(bolt.ErrDatabaseNotOpen)
+	err = search.Error(boltErr.ErrDatabaseNotOpen)
 	assert.NotNil(t, err)
 }
 

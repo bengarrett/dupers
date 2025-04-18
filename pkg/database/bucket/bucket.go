@@ -12,6 +12,7 @@ import (
 	"github.com/bengarrett/dupers/internal/printer"
 	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"
+	boltErr "go.etcd.io/bbolt/errors"
 )
 
 var (
@@ -38,7 +39,7 @@ type Cleaner struct {
 // Clean the stale items from database buckets.
 func (c *Cleaner) Clean(db *bolt.DB) (items, finds, errors int, err error) {
 	if db == nil {
-		return 0, 0, 0, bolt.ErrDatabaseNotOpen
+		return 0, 0, 0, boltErr.ErrDatabaseNotOpen
 	}
 	if err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(c.Name))
@@ -89,7 +90,7 @@ type Parser struct {
 
 func (p *Parser) Parse(db *bolt.DB) (items, errs int, name string, debug bool) {
 	if db == nil {
-		printer.StderrCR(bolt.ErrDatabaseNotOpen)
+		printer.StderrCR(boltErr.ErrDatabaseNotOpen)
 		return -1, -1, "", true
 	}
 	abs, err := Abs(p.Name)
@@ -155,7 +156,7 @@ func printStat(debug, quiet bool, cnt, total int, k []byte) {
 // Count the number of records in the bucket.
 func Count(db *bolt.DB, name string) (int, error) {
 	if db == nil {
-		return 0, bolt.ErrDatabaseNotOpen
+		return 0, boltErr.ErrDatabaseNotOpen
 	}
 	items := 0
 	return items, db.View(func(tx *bolt.Tx) error {
@@ -174,7 +175,7 @@ func Count(db *bolt.DB, name string) (int, error) {
 
 func count(db *bolt.DB, b *bolt.Bucket) (int, error) {
 	if db == nil {
-		return 0, bolt.ErrDatabaseNotOpen
+		return 0, boltErr.ErrDatabaseNotOpen
 	}
 	if b == nil {
 		return 0, bolt.ErrBucketNotFound
@@ -267,7 +268,7 @@ func Stat(name string, assumeYes, test bool) string {
 // Total returns the sum total of the items in the named buckets.
 func Total(db *bolt.DB, buckets []string) (int, error) {
 	if db == nil {
-		return 0, bolt.ErrDatabaseNotOpen
+		return 0, boltErr.ErrDatabaseNotOpen
 	}
 	if len(buckets) == 0 {
 		return 0, ErrNilBucket

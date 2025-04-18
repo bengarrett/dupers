@@ -14,6 +14,7 @@ import (
 	"github.com/bengarrett/dupers/pkg/dupe"
 	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"
+	boltErr "go.etcd.io/bbolt/errors"
 )
 
 var (
@@ -108,7 +109,7 @@ func Check(args, buckets, minArgs int) {
 // WalkScanSave both cleans and then updates the buckets with file system changes.
 func WalkScanSave(db *bolt.DB, c *dupe.Config, f *cmd.Flags) error {
 	if db == nil {
-		return bolt.ErrDatabaseNotOpen
+		return boltErr.ErrDatabaseNotOpen
 	}
 	if c == nil {
 		return dupe.ErrNilConfig
@@ -175,7 +176,7 @@ func normalise(db *bolt.DB, c *dupe.Config) error {
 
 func Lookup(db *bolt.DB, c *dupe.Config) error {
 	if db == nil {
-		return bolt.ErrDatabaseNotOpen
+		return boltErr.ErrDatabaseNotOpen
 	}
 	if c == nil {
 		return dupe.ErrNilConfig

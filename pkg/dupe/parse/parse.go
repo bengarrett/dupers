@@ -19,6 +19,7 @@ import (
 	"github.com/bengarrett/dupers/pkg/database"
 	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"
+	boltErr "go.etcd.io/bbolt/errors"
 )
 
 type (
@@ -50,7 +51,7 @@ func (p *Scanner) Compares() int {
 // SetAllBuckets sets all the database buckets for use with the dupe or search commands.
 func (p *Scanner) SetAllBuckets(db *bolt.DB) error {
 	if db == nil {
-		return bolt.ErrDatabaseNotOpen
+		return boltErr.ErrDatabaseNotOpen
 	}
 	names, err := database.All(db)
 	if err != nil {
@@ -102,7 +103,7 @@ func (p *Scanner) SetBuckets(names ...string) error {
 // SetCompares fetches item names an checksums from the named bucket and stores them in the Compare Scanner.
 func (p *Scanner) SetCompares(db *bolt.DB, name Bucket) (int, error) {
 	if db == nil {
-		return 0, bolt.ErrDatabaseNotOpen
+		return 0, boltErr.ErrDatabaseNotOpen
 	}
 	ls, err := database.List(db, string(name))
 	if err != nil {

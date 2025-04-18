@@ -11,6 +11,7 @@ import (
 	"github.com/bengarrett/dupers/pkg/cmd"
 	"github.com/bengarrett/dupers/pkg/database"
 	bolt "go.etcd.io/bbolt"
+	boltErr "go.etcd.io/bbolt/errors"
 )
 
 var (
@@ -37,7 +38,7 @@ func CmdErr(lenArgs int, test bool) error {
 
 func Compare(db *bolt.DB, f *cmd.Flags, term string, buckets []string) (*database.Matches, error) {
 	if db == nil {
-		return nil, bolt.ErrDatabaseNotOpen
+		return nil, boltErr.ErrDatabaseNotOpen
 	}
 	if f == nil {
 		return nil, ErrNoFlags

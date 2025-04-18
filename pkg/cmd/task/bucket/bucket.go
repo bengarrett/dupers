@@ -13,6 +13,7 @@ import (
 	"github.com/bengarrett/dupers/pkg/dupe"
 	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"
+	boltErr "go.etcd.io/bbolt/errors"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"golang.org/x/text/number"
@@ -63,7 +64,7 @@ func checkBucket(cmd, name string, err error) error {
 // Export the bucket as a CSV file.
 func Export(db *bolt.DB, quiet bool, args [2]string) error {
 	if db == nil {
-		return bolt.ErrDatabaseNotOpen
+		return boltErr.ErrDatabaseNotOpen
 	}
 	const x = "export"
 	if code := Check(x, x, args[1]); code > 0 {
@@ -92,7 +93,7 @@ func Export(db *bolt.DB, quiet bool, args [2]string) error {
 // Import a CSV file into the database.
 func Import(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
 	if db == nil {
-		return bolt.ErrDatabaseNotOpen
+		return boltErr.ErrDatabaseNotOpen
 	}
 	help := fmt.Sprintf("\ndupers %s <filepath>", dim)
 	if args[1] == "" {
@@ -124,7 +125,7 @@ func Import(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
 // List the content of a bucket to the stdout.
 func List(db *bolt.DB, quiet bool, args [2]string) error {
 	if db == nil {
-		return bolt.ErrDatabaseNotOpen
+		return boltErr.ErrDatabaseNotOpen
 	}
 	if code := Check("list", dls, args[1]); code > 0 {
 		return ErrBucketNil
@@ -162,7 +163,7 @@ func List(db *bolt.DB, quiet bool, args [2]string) error {
 // Move renames a bucket by duplicating it to a new bucket location.
 func Move(db *bolt.DB, c *dupe.Config, assumeYes bool, src, dest string) error {
 	if db == nil {
-		return bolt.ErrDatabaseNotOpen
+		return boltErr.ErrDatabaseNotOpen
 	}
 	if c == nil {
 		return dupe.ErrNilConfig
@@ -286,7 +287,7 @@ func notFound(db *bolt.DB, name string, err error) error {
 // Rescan the bucket for changes with the file system.
 func Rescan(db *bolt.DB, c *dupe.Config, archives bool, args [2]string) error {
 	if db == nil {
-		return bolt.ErrDatabaseNotOpen
+		return boltErr.ErrDatabaseNotOpen
 	}
 	cmd := dup
 	if archives {

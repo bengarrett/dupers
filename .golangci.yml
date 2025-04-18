@@ -76,6 +76,9 @@ linters:
       - third_party$
       - builtin$
       - examples$
+  settings:
+    cyclop:
+      max-complexity: 15
 formatters:
   enable:
     - gci
