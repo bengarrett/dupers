@@ -6,14 +6,12 @@ module github.com/bengarrett/dupers
 go 1.24.1
 
 require (
-	github.com/bodgit/sevenzip v1.6.0
+	github.com/bodgit/sevenzip v1.6.1
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/dustin/go-humanize v1.0.1
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/gookit/color v1.5.4
 	github.com/h2non/filetype v1.1.3
-	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/karrick/godirwalk v1.17.0
 	github.com/nwaples/rardecode v1.1.3 // indirect
 	github.com/ulikunitz/xz v0.5.12 // indirect
@@ -40,6 +38,7 @@ require (
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/spf13/afero v1.11.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
