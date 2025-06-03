@@ -19,7 +19,7 @@ require (
 	go.etcd.io/bbolt v1.4.0
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
 	golang.org/x/sys v0.32.0 // indirect
-	golang.org/x/text v0.24.0
+	golang.org/x/text v0.25.0
 )
 
 require (
