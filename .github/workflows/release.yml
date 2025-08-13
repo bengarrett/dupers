@@ -1,14 +1,11 @@
 name: GoReleaser
-
 on:
   push:
     tags:
       - "v*"
   workflow_dispatch:
-  
 permissions:
   contents: write
-
 jobs:
   goreleaser:
     runs-on: ubuntu-latest

@@ -1,8 +1,8 @@
 # https://taskfile.dev
-
-# This Task file uses relative paths and expects to be located in the root of the dupers repository.
+#
+# This Task file uses relative paths and expects to be located 
+# in the root of the dupers repository.
 version: '3'
-
 vars:
   FILE: ./test/files_to_check/qziD6WMRvPyk
   USERDST: "{{.USER_WORKING_DIR}}/.task"
@@ -17,13 +17,46 @@ vars:
   B2: ./test/bucket2/*
   SENSEN: ./test/sensen/*
   RUNRACE: run -race main.go
-
 tasks:
   default:
     silent: true
-    desc: this task, list all available tasks
+    desc: Task runner for the dupers source code.
     cmds:
-     - task --list-all
+      - task --list-all
+  release:
+    desc: "GoReleaser"
+    cmds:
+      - cmd: goreleaser release --snapshot --clean
+  doc:
+    desc: "Generate and browse the application module documentation."
+    cmds:
+      - cmd: pkgsite -http localhost:8090
+    silent: true
+  lint:
+    silent: false
+    desc: Runs the go formatter and lints the source code.
+    cmds:
+      - cmd: clear
+      - cmd: gci write ./..
+      - cmd: gofumpt -w .
+      - cmd: golangci-lint run
+  nil:
+    desc: "Run the static analysis techniques to catch Nil dereferences."
+    cmds:
+      - go tool nilaway -test=false ./...
+  pkg-patch:
+    silent: false
+    desc: Update and apply patches to the dependencies.
+    cmds:
+      - cmd: go get -u=patch -x
+      - cmd: go mod verify
+  pkg-update:
+    silent: false
+    desc: Update the dependencies.
+    cmds:
+      - cmd: go get -u -x
+      - cmd: go mod verify
+        # tests and errors
   errs:
     silent: false
     desc: runs the commands to force the return of errors
@@ -50,8 +83,8 @@ tasks:
       - read -p wait && clear
       - go {{.RUNRACE}} -version
       - read -p wait && clear
-      - go {{.RUNRACE}} -mono -version  
-      - read -p wait && clear    
+      - go {{.RUNRACE}} -mono -version
+      - read -p wait && clear
       - go {{.RUNRACE}} -mono -version -quiet
       - read -p wait && clear
       - go {{.RUNRACE}} -m -v -q
@@ -64,19 +97,6 @@ tasks:
       - read -p wait && clear
       - go {{.RUNRACE}} -mono -quiet -debug -version -help -exact -name -fast -delete -delete+ -sensen -yes
       - read -p wait && clear
-  lint:
-    silent: false
-    desc: runs a formatter and linter over the source code
-    cmds:
-      - cmd: clear
-      - cmd: gofumpt -w .
-      - cmd: golangci-lint run
-  race:
-    silent: false
-    desc: build a binary of this program with the race detection configuration
-    cmds:
-      - go build -v -race -o dupers main.go
-      - ./dupers --version
   releases:
     silent: false
     desc: build the multiple distribution packages for this program by simulating a release
@@ -183,7 +203,7 @@ tasks:
       - cmd: cp -a {{.FILE}} {{.USERDST}}/some-app/program.exe
         ignore_error: true
       - cmd: cp -R {{.SENSEN}} {{.USERDST}}
-      #- read -p wait && clear
+        #- read -p wait && clear
   clean:
     silent: false
     internal: false
@@ -240,7 +260,7 @@ tasks:
       - cmd: go {{.RUNRACE}} -yes dupe {{.DST}} # this scans all buckets, maybe make a note or a prompt? or change behavior
       - read -p wait && clear
       - task: clone-a-temp-file
-      - cmd: go {{.RUNRACE}} -yes dupe {{.DST}}  # this is also returning debug info, clean is only in READONLY mode
+      - cmd: go {{.RUNRACE}} -yes dupe {{.DST}} # this is also returning debug info, clean is only in READONLY mode
       - read -p wait && clear
       - cmd: go {{.RUNRACE}} -yes -fast dupe {{.DST}}
       - read -p wait && clear
@@ -313,7 +333,7 @@ tasks:
       - cmd: go {{.RUNRACE}} -yes search
         ignore_error: true
       - read -p wait && clear
-      - go {{.RUNRACE}} -yes search asinglelineoftextwithoutspaces 
+      - go {{.RUNRACE}} -yes search asinglelineoftextwithoutspaces
       - read -p wait && clear
       - go {{.RUNRACE}} -yes search 'a single line of text with spaces'
       - read -p wait && clear
@@ -363,9 +383,9 @@ tasks:
       - read -p wait && clear
       - go {{.RUNRACE}} -yes rm {{.USERDST}}
   clean-buckets:
-     silent: false
-     internal: true
-     cmds:
+    silent: false
+    internal: true
+    cmds:
       - task: pre-export-import
       - go {{.RUNRACE}} db
       - read -p wait && clear
@@ -373,28 +393,27 @@ tasks:
       - go {{.RUNRACE}} db
       - read -p wait && clear
   backups:
-     silent: false
-     internal: true
-     cmds:
+    silent: false
+    internal: true
+    cmds:
       - task: pre-export-import
       - go {{.RUNRACE}} -yes rm {{.USERDST}}
       - ls -l {{.EXPORTPATH}}
       - defer: rm {{.EXPORTPATH}}
-     vars:
-       EXPORTPATH: # export the bucket and store the generated filename to EXPORTPATH
-         sh: go {{.RUNRACE}} -quiet backup {{.USERDST}}
+    vars:
+      EXPORTPATH: # export the bucket and store the generated filename to EXPORTPATH
+        sh: go {{.RUNRACE}} -quiet backup {{.USERDST}}
   pre-export-import:
     silent: false
     internal: true
     desc: this command is required before exporting a database
     cmds:
-     - cmd: go {{.RUNRACE}} -yes rm {{.USERDST}}
-       ignore_error: true
-     - task: make-tmp
-     - read -p wait && clear
-     - cmd: go {{.RUNRACE}} up {{.USERDST}}/
-     - read -p wait && clear
-     
+      - cmd: go {{.RUNRACE}} -yes rm {{.USERDST}}
+        ignore_error: true
+      - task: make-tmp
+      - read -p wait && clear
+      - cmd: go {{.RUNRACE}} up {{.USERDST}}/
+      - read -p wait && clear
   export-import:
     silent: false
     internal: true
@@ -410,10 +429,10 @@ tasks:
       EXPORTPATH: # export the bucket and store the generated filename to EXPORTPATH
         sh: go {{.RUNRACE}} -quiet export {{.USERDST}}
   export-invalid:
-      silent: false
-      internal: true
-      desc: runs export commands with invalid args
-      cmds:
+    silent: false
+    internal: true
+    desc: runs export commands with invalid args
+    cmds:
       - cmd: go {{.RUNRACE}} export # no feedback
         ignore_error: true
       - read -p wait && clear
@@ -424,10 +443,10 @@ tasks:
         ignore_error: true
       - read -p wait && clear
   move-bucket:
-      silent: false
-      internal: true
-      desc: runs the move bucket commands
-      cmds:
+    silent: false
+    internal: true
+    desc: runs the move bucket commands
+    cmds:
       - go {{.RUNRACE}} up {{.USERDST}}
       - cmd: go {{.RUNRACE}} mv
         ignore_error: true

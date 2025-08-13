@@ -300,7 +300,7 @@ func (c *Config) Remove() (string, error) {
 }
 
 // Removes the directories from the source that do not contain unique MS-DOS or Windows programs.
-// The strings contains the path of any undeletable files.
+// The strings contains the path of any non-deletable files.
 func (c *Config) Removes() ([]string, error) {
 	c.Debugger("removes directories that don't contain any DOS or Windows apps.")
 	root := c.GetSource()
@@ -513,7 +513,7 @@ func PrintWalk(lookup bool, c *Config) string {
 // A true regular value will skip all non-files such as symlinks.
 func SkipFS(dir, file, regular bool, d fs.DirEntry) error {
 	if dir && d.IsDir() {
-		// skip directorires
+		// skip directories
 		return filepath.SkipDir
 	}
 	if file && SkipFile(d.Name()) {
