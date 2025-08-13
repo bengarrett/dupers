@@ -5,92 +5,93 @@ package mock_test
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/bengarrett/dupers/internal/mock"
-	"github.com/stretchr/testify/assert"
+	"github.com/nalgeon/be"
 )
 
 func TestRootDir(t *testing.T) {
 	dir, err := os.Stat(mock.RootDir())
-	assert.Nil(t, err)
-	assert.NotEqual(t, "", dir)
+	be.Equal(t, err, nil)
+	be.True(t, dir != nil)
 }
 
 func TestBuckets(t *testing.T) {
 	bucket1, err := mock.Bucket(1)
-	assert.Nil(t, err)
+	be.Equal(t, err, nil)
 	bucket2, err := mock.Bucket(2)
-	assert.Nil(t, err)
+	be.Equal(t, err, nil)
 	dir, err := os.Stat(bucket1)
-	assert.Nil(t, err)
-	assert.NotEqual(t, "", dir)
+	be.Equal(t, err, nil)
+	be.True(t, dir != nil)
 	dir, err = os.Stat(bucket2)
-	assert.Nil(t, err)
-	assert.NotEqual(t, "", dir)
+	be.Equal(t, err, nil)
+	be.True(t, dir != nil)
 }
 
 func TestExport(t *testing.T) {
 	export1, err := mock.Export(1)
-	assert.Nil(t, err)
+	be.Equal(t, err, nil)
 	dir, err := os.Stat(export1)
-	assert.Nil(t, err)
-	assert.NotEqual(t, "", dir)
+	be.Equal(t, err, nil)
+	be.True(t, dir != nil)
 	export2, err := mock.Export(2)
-	assert.Nil(t, err)
+	be.Equal(t, err, nil)
 	dir, err = os.Stat(export2)
-	assert.NotNil(t, err)
-	assert.Nil(t, dir)
+	be.Err(t, err)
+	be.True(t, dir == nil)
 }
 
 func TestNamedDB(t *testing.T) {
 	// delete mock db if it exists
 	file, err := mock.NamedDB()
-	assert.Nil(t, err)
-	assert.NotEqual(t, "", file)
+	be.Equal(t, err, nil)
+	be.True(t, file != "")
 	stat, err := os.Stat(file)
-	assert.Nil(t, err)
-	assert.NotNil(t, stat)
+	be.Equal(t, err, nil)
+	be.True(t, stat != nil)
 	// create an empty db for more tests
 	path, err := mock.Create()
 	defer mock.Delete(path)
-	assert.Nil(t, err, "expected a database at: "+file)
-	assert.NotEqual(t, "", path)
+	be.Equal(t, err, nil)
+	be.True(t, path != "")
 	stat, err = os.Stat(file)
-	assert.Nil(t, err)
-	assert.NotNil(t, stat)
+	be.Equal(t, err, nil)
+	be.True(t, stat != nil)
 }
 
 func TestDatabase(t *testing.T) {
 	db, path, err := mock.Database()
-	assert.Nil(t, err)
+	be.Equal(t, err, nil)
 	defer db.Close()
 	defer os.Remove(path)
-	assert.NotEqual(t, "", db.Path())
-	assert.NotEqual(t, "", db.String())
+	p, s := db.Path(), db.String()
+	be.True(t, p != "")
+	be.True(t, s != "")
 }
 
 func TestOpen(t *testing.T) {
 	path, err := mock.Create()
-	assert.Nil(t, err)
+	be.Equal(t, err, nil)
 	defer os.Remove(path)
 	db, _, err := mock.Open(path)
-	assert.Nil(t, err)
+	be.Equal(t, err, nil)
 	defer db.Close()
-	assert.NotEqual(t, "", db.Path())
-	assert.NotEqual(t, "", db.String())
+	p, s := db.Path(), db.String()
+	be.True(t, p != "")
+	be.True(t, s != "")
 }
 
 func TestExtension(t *testing.T) {
 	ext, err := mock.Extension("")
-	assert.NotNil(t, err)
-	assert.Equal(t, "", ext)
-
+	be.Err(t, err)
+	be.Equal(t, ext, "")
 	ext, err = mock.Extension("arc")
-	assert.NotNil(t, err)
-	assert.Equal(t, "", ext)
-
+	be.Err(t, err)
+	be.Equal(t, ext, "")
 	ext, err = mock.Extension("7z")
-	assert.Nil(t, err)
-	assert.Contains(t, ext, "randomfiles.7z")
+	be.Equal(t, err, nil)
+	be.True(t, strings.Contains(ext, "randomfiles.7z"))
 }

@@ -14,7 +14,7 @@ import (
 	"golang.org/x/text/number"
 )
 
-// YND is the YN default value to use when there is no input given.
+// YN default value to use when there is no input given.
 type YN uint
 
 const (
@@ -191,7 +191,7 @@ func Status(count, total int, m Mode) string {
 
 // AskYN prints the question to stdout and prompts for a yes or no reply.
 // The prompt will loop unless a y or n value is given or Ctrl-C is pressed.
-// alwaysYes will display the question but automatically input "y" onbehalf of the user.
+// alwaysYes will display the question but automatically input "y" on behalf of the user.
 func AskYN(question string, alwaysYes bool, recommend YN) bool {
 	const no, yes = "n", "y"
 
