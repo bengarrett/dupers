@@ -11,91 +11,78 @@ import (
 
 	"github.com/bengarrett/dupers/internal/mock"
 	"github.com/bengarrett/dupers/pkg/database/csv"
-	"github.com/stretchr/testify/assert"
+	"github.com/nalgeon/be"
 )
 
 func TestBucket(t *testing.T) {
 	s := csv.Bucket("")
-	assert.Equal(t, "", s)
-
+	be.Equal(t, s, "")
 	const badHeader = "this is an invalid csv file header"
 	s = csv.Bucket(badHeader)
-	assert.Equal(t, "", s)
-
+	be.Equal(t, s, "")
 	s = csv.Bucket(csv.Header)
-	assert.Equal(t, "", s, "header is missing directory info and should return an empty string")
-
+	be.Equal(t, s, "")
 	bucket1, err := mock.Bucket(1)
-	assert.Nil(t, err)
+	be.Err(t, err, nil)
 	s = csv.Bucket(csv.Header + bucket1)
-	assert.Equal(t, bucket1, s)
+	be.Equal(t, s, bucket1)
 }
 
 func TestChecker(t *testing.T) {
 	err := csv.Checker(nil)
-	assert.NotNil(t, err)
-
+	be.Err(t, err)
 	item1, err := mock.Item(1)
-	assert.Nil(t, err)
+	be.Err(t, err, nil)
 	binary, err := os.Open(item1)
-	assert.Nil(t, err)
+	be.Err(t, err, nil)
 	defer binary.Close()
 	err = csv.Checker(binary)
-	assert.NotNil(t, err, "binary files should return an error")
-
+	be.Err(t, err)
 	text, err := os.Open(mock.CSV())
-	assert.Nil(t, err)
+	be.Err(t, err, nil)
 	defer binary.Close()
 	err = csv.Checker(text)
-	assert.Nil(t, err)
+	be.Err(t, err, nil)
 }
 
 func TestChecksum(t *testing.T) {
 	var empty [32]byte
 	zeros := strings.Repeat("0", 32)
-
 	b, err := csv.Checksum("")
-	assert.NotNil(t, err)
-	assert.Equal(t, empty, b)
-
+	be.Err(t, err)
+	be.Equal(t, b, empty)
 	b, err = csv.Checksum(zeros)
-	assert.NotNil(t, err)
-	assert.Equal(t, empty, b)
-
+	be.Err(t, err)
+	be.Equal(t, b, empty)
 	sum, err := mock.ItemSum(1)
-	assert.Nil(t, err)
+	be.Err(t, err, nil)
 	b, err = csv.Checksum(sum)
-	assert.Nil(t, err)
+	be.Err(t, err, nil)
 	s := hex.EncodeToString(b[:])
-	assert.Equal(t, sum, s)
+	be.Equal(t, s, sum)
 }
 
 func TestImport(t *testing.T) {
 	var empty [32]byte
-
 	s, path, err := csv.Import("", "")
-	assert.NotNil(t, err)
-	assert.Equal(t, "", path)
-	assert.Equal(t, empty, s)
-
+	be.Err(t, err)
+	be.Equal(t, path, "")
+	be.Equal(t, s, empty)
 	bucket1, err := mock.Bucket(1)
-	assert.Nil(t, err)
-
+	be.Err(t, err, nil)
 	_, _, err = csv.Import("", bucket1)
-	assert.NotNil(t, err)
-
+	be.Err(t, err)
 	_, _, err = csv.Import(mock.NoSuchFile, bucket1)
-	assert.NotNil(t, err)
-
+	be.Err(t, err)
 	sum, err := mock.ItemSum(0)
-	assert.Nil(t, err)
+	be.Err(t, err, nil)
 	file, err := mock.Extension("txt")
-	assert.Nil(t, err)
+	be.Err(t, err, nil)
 	mockCSVLine := strings.Join([]string{sum, file}, ",")
-
 	_, path, err = csv.Import(mockCSVLine, bucket1)
-	assert.Nil(t, err)
-	assert.Contains(t, path, filepath.Base(file))
+	be.Err(t, err, nil)
+	ok := strings.Contains(path, filepath.Base(file))
+	be.True(t, ok)
 }
 
 func TestPathWindows(t *testing.T) {
@@ -117,7 +104,7 @@ func TestPathWindows(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := csv.PathWindows(tt.path)
-			assert.Equal(t, tt.want, got)
+			be.Equal(t, got, tt.want)
 		})
 	}
 }
@@ -139,7 +126,7 @@ func TestPathPosix(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := csv.PathPosix(tt.path)
-			assert.Equal(t, tt.want, got)
+			be.Equal(t, got, tt.want)
 		})
 	}
 }

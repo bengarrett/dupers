@@ -26,26 +26,22 @@ require (
 	github.com/carlmjohnson/versioninfo v0.22.5
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/nalgeon/be v0.2.0
-	github.com/stretchr/testify v1.10.0
 )
 
 require (
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/bodgit/plumbing v1.3.0 // indirect
 	github.com/bodgit/windows v1.0.1 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/spf13/afero v1.14.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.uber.org/nilaway v0.0.0-20250805202745-8ad05f089790 // indirect
 	golang.org/x/mod v0.26.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect
 	golang.org/x/tools v0.35.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 tool go.uber.org/nilaway/cmd/nilaway

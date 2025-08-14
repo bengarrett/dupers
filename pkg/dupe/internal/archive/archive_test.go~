@@ -1,6 +1,8 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
 package archive_test
 
+// TODO: this is temp disabled as the core package might be replaced
+
 import (
 	"os"
 	"testing"
