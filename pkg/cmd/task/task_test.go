@@ -33,8 +33,7 @@ func TestHelps(t *testing.T) {
 func TestWalkScan(t *testing.T) {
 	err := task.WalkScan(nil, nil, nil, "")
 	be.Err(t, err)
-	db, path, err := mock.Database()
-	be.Err(t, err, nil)
+	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
 	err = task.WalkScan(db, nil, nil, "")
@@ -42,9 +41,9 @@ func TestWalkScan(t *testing.T) {
 	c := dupe.Config{}
 	err = task.WalkScan(db, &c, nil, "")
 	be.Err(t, err)
-	bucket1, err := mock.Bucket(1)
+	bucket1, err := mock.Bucket(t, 1)
 	be.Err(t, err, nil)
-	bucket2, err := mock.Bucket(2)
+	bucket2, err := mock.Bucket(t, 2)
 	be.Err(t, err, nil)
 	args := []string{bucket2}
 	err = task.WalkScan(db, &c, nil, args...)
@@ -63,8 +62,7 @@ func TestWalkScan(t *testing.T) {
 func TestSetStat(t *testing.T) {
 	err := task.SetStat(nil, nil, "")
 	be.Err(t, err)
-	db, path, err := mock.Database()
-	be.Err(t, err, nil)
+	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
 	err = task.SetStat(db, nil, "")
@@ -75,7 +73,7 @@ func TestSetStat(t *testing.T) {
 	args := []string{"placeholder 1", "placeholder 2"}
 	err = task.SetStat(db, &c, args...)
 	be.Err(t, err, nil)
-	bucket1, err := mock.Bucket(1)
+	bucket1, err := mock.Bucket(t, 1)
 	be.Err(t, err, nil)
 	args = []string{"placeholder 1", "placeholder 2", bucket1}
 	err = task.SetStat(db, &c, args...)
@@ -85,8 +83,7 @@ func TestSetStat(t *testing.T) {
 func TestSearch(t *testing.T) {
 	err := task.Search(nil, nil, true, "")
 	be.Err(t, err)
-	db, path, err := mock.Database()
-	be.Err(t, err, nil)
+	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
 	err = task.Search(db, nil, true, "")
@@ -96,7 +93,7 @@ func TestSearch(t *testing.T) {
 	be.Err(t, err)
 	// Usage:
 	// dupers [options] search <search expression> [optional, buckets to search]
-	bucket1, err := mock.Bucket(1)
+	bucket1, err := mock.Bucket(t, 1)
 	be.Err(t, err, nil)
 	args := []string{"hello", bucket1}
 	err = task.Search(db, &f, true, args...)
@@ -112,8 +109,7 @@ func TestSearch(t *testing.T) {
 func TestDupe(t *testing.T) {
 	err := task.Dupe(nil, nil, nil, "")
 	be.Err(t, err)
-	db, path, err := mock.Database()
-	be.Err(t, err, nil)
+	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
 	err = task.Dupe(db, nil, nil, "")
@@ -131,8 +127,7 @@ func TestDupe(t *testing.T) {
 func TestDatabase(t *testing.T) {
 	err := task.Database(nil, nil, "")
 	be.Err(t, err)
-	db, path, err := mock.Database()
-	be.Err(t, err, nil)
+	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
 	err = task.Database(db, nil, "")
@@ -148,7 +143,7 @@ func TestDatabase(t *testing.T) {
 	}
 	err = task.Database(db, &c, args...)
 	be.Err(t, err)
-	bucket1, err := mock.Bucket(1)
+	bucket1, err := mock.Bucket(t, 1)
 	be.Err(t, err, nil)
 	args = []string{"ls", bucket1}
 	err = task.Database(db, &c, args...)
@@ -158,8 +153,7 @@ func TestDatabase(t *testing.T) {
 func TestCleanupDB(t *testing.T) {
 	err := task.CleanupDB(nil, nil)
 	be.Err(t, err)
-	db, path, err := mock.Database()
-	be.Err(t, err, nil)
+	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
 	err = task.CleanupDB(db, nil)

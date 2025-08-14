@@ -22,8 +22,7 @@ func TestParse(t *testing.T) {
 	be.Equal(t, name, "")
 	be.True(t, debug)
 
-	db, path, err := mock.Database()
-	be.Err(t, err, nil)
+	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
 
@@ -33,7 +32,7 @@ func TestParse(t *testing.T) {
 	be.Equal(t, name, "")
 	be.True(t, debug)
 
-	bucket1, err := mock.Bucket(1)
+	bucket1, err := mock.Bucket(t, 1)
 	be.Err(t, err, nil)
 	p = bucket.Parser{
 		Name: bucket1,
@@ -53,7 +52,7 @@ func TestParse(t *testing.T) {
 	be.Equal(t, name, "")
 	be.True(t, debug)
 
-	item1, err := mock.Item(1)
+	item1, err := mock.Item(t, 1)
 	be.Err(t, err, nil)
 	p = bucket.Parser{
 		Name: item1,
@@ -73,8 +72,7 @@ func TestCleaner_Clean(t *testing.T) {
 	be.Equal(t, finds, 0)
 	be.Equal(t, errs, 0)
 
-	db, path, err := mock.Database()
-	be.Err(t, err, nil)
+	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
 
@@ -84,7 +82,7 @@ func TestCleaner_Clean(t *testing.T) {
 	be.Equal(t, finds, 0)
 	be.Equal(t, errs, 1)
 
-	bucket1, err := mock.Bucket(1)
+	bucket1, err := mock.Bucket(t, 1)
 	be.Err(t, err, nil)
 	c = bucket.Cleaner{
 		Name: bucket1,
@@ -111,8 +109,7 @@ func TestCount(t *testing.T) {
 	be.Err(t, err)
 	be.Equal(t, val, 0)
 
-	db, path, err := mock.Database()
-	be.Err(t, err, nil)
+	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
 
@@ -122,13 +119,13 @@ func TestCount(t *testing.T) {
 	_, err = bucket.Count(db, mock.NoSuchFile)
 	be.Err(t, err)
 
-	bucket1, err := mock.Bucket(1)
+	bucket1, err := mock.Bucket(t, 1)
 	be.Err(t, err, nil)
 	val, err = bucket.Count(db, bucket1)
 	be.Err(t, err, nil)
 	be.Equal(t, val, 3)
 
-	bucket2, err := mock.Bucket(2)
+	bucket2, err := mock.Bucket(t, 2)
 	be.Err(t, err, nil)
 	val, err = bucket.Count(db, bucket2)
 	be.Err(t, err, nil)
@@ -139,7 +136,7 @@ func TestStat(t *testing.T) {
 	s := bucket.Stat("", false, true)
 	be.Equal(t, s, "")
 
-	bucket1, err := mock.Bucket(1)
+	bucket1, err := mock.Bucket(t, 1)
 	be.Err(t, err, nil)
 	s = bucket.Stat(bucket1, true, true)
 	be.Equal(t, s, bucket1)
@@ -150,8 +147,7 @@ func TestTotal(t *testing.T) {
 	be.Err(t, err)
 	be.Equal(t, i, 0)
 
-	db, path, err := mock.Database()
-	be.Err(t, err, nil)
+	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
 
@@ -163,9 +159,9 @@ func TestTotal(t *testing.T) {
 	be.Err(t, err)
 	be.Equal(t, i, 0)
 
-	bucket1, err := mock.Bucket(1)
+	bucket1, err := mock.Bucket(t, 1)
 	be.Err(t, err, nil)
-	bucket2, err := mock.Bucket(2)
+	bucket2, err := mock.Bucket(t, 2)
 	be.Err(t, err, nil)
 
 	i, err = bucket.Total(db, []string{bucket1, bucket2})

@@ -19,9 +19,9 @@ import (
 )
 
 func TestConfig_Print(t *testing.T) {
-	item1, err := mock.Item(1)
+	item1, err := mock.Item(t, 1)
 	be.Err(t, err, nil)
-	item2, err := mock.Item(2)
+	item2, err := mock.Item(t, 2)
 	be.Err(t, err, nil)
 	c := dupe.Config{}
 	c.Sources = []string{item1, item2}
@@ -36,7 +36,7 @@ func TestConfig_Print(t *testing.T) {
 }
 
 func copyfile(t *testing.T, i int) (string, string) {
-	item, err := mock.Item(i)
+	item, err := mock.Item(t, i)
 	be.Err(t, err, nil)
 	tmpdir := t.TempDir()
 	dest := filepath.Join(tmpdir, "configremovefile")
@@ -100,10 +100,9 @@ func TestConfig_Status(t *testing.T) {
 
 func TestConfig_WalkDirs(t *testing.T) {
 	c := dupe.Config{Test: true, Debug: true}
-	bucket1, err := mock.Bucket(1)
+	bucket1, err := mock.Bucket(t, 1)
 	be.Err(t, err, nil)
-	db, path, err := mock.Database()
-	be.Err(t, err, nil)
+	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
 	c.SetBuckets(bucket1)
@@ -114,12 +113,11 @@ func TestConfig_WalkDirs(t *testing.T) {
 
 func TestConfig_WalkDir(t *testing.T) {
 	c := dupe.Config{Test: true, Debug: false}
-	bucket1, err := mock.Bucket(1)
+	bucket1, err := mock.Bucket(t, 1)
 	be.Err(t, err, nil)
-	item1, err := mock.Item(1)
+	item1, err := mock.Item(t, 1)
 	be.Err(t, err, nil)
-	db, path, err := mock.Database()
-	be.Err(t, err, nil)
+	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
 	err = c.WalkDir(db, "")
@@ -132,7 +130,7 @@ func TestConfig_WalkDir(t *testing.T) {
 
 func TestConfig_WalkSource(t *testing.T) {
 	c := dupe.Config{}
-	bucket2, err := mock.Bucket(2)
+	bucket2, err := mock.Bucket(t, 2)
 	be.Err(t, err, nil)
 	err = c.WalkSource()
 	be.Err(t, err)
@@ -163,7 +161,7 @@ func TestRemovers(t *testing.T) {
 	tmpDir := t.TempDir()
 	_, err := mock.RemoveTmp(tmpDir)
 	be.Err(t, err, nil)
-	bucket1, err := mock.Bucket(1)
+	bucket1, err := mock.Bucket(t, 1)
 	be.Err(t, err, nil)
 	be.True(t, bucket1 != "")
 	path := t.TempDir() // NOTE: placehodler
@@ -172,7 +170,7 @@ func TestRemovers(t *testing.T) {
 	c := dupe.Config{Test: true, Quiet: false, Debug: false}
 	err = c.SetSource(path) // TODO: not currently working
 	be.Err(t, err, nil)
-	i, err := mock.SensenTmp(path)
+	i, err := mock.SensenTmp(t, path)
 	be.Err(t, err, nil)
 	be.Equal(t, int64(20), i)
 	paths, err := c.Removes()
@@ -186,13 +184,12 @@ func TestRemovers(t *testing.T) {
 
 func TestChecksum(t *testing.T) {
 	c := dupe.Config{Test: true, Quiet: false, Debug: false}
-	bucket1, err := mock.Bucket(1)
+	bucket1, err := mock.Bucket(t, 1)
 	be.Err(t, err, nil)
-	db, path, err := mock.Database()
-	be.Err(t, err, nil)
+	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
-	item, err := mock.Item(1)
+	item, err := mock.Item(t, 1)
 	be.Err(t, err, nil)
 	be.True(t, item != "")
 	err = c.Checksum(nil, "", "")
@@ -209,10 +206,9 @@ func TestChecksum(t *testing.T) {
 
 func TestConfig_WalkArchiver(t *testing.T) {
 	c := dupe.Config{Test: true, Quiet: false, Debug: false}
-	bucket1, err := mock.Bucket(1)
+	bucket1, err := mock.Bucket(t, 1)
 	be.Err(t, err, nil)
-	db, path, err := mock.Database()
-	be.Err(t, err, nil)
+	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
 	err = c.WalkArchiver(nil, "")
@@ -241,7 +237,7 @@ func TestConfig_StatSource(t *testing.T) {
 	be.Err(t, err)
 	be.Equal(t, files, 0)
 	be.Equal(t, buckets, 0)
-	bucket1, err := mock.Bucket(1)
+	bucket1, err := mock.Bucket(t, 1)
 	be.Err(t, err, nil)
 	err = c.SetSource(bucket1)
 	be.Err(t, err, nil)
@@ -262,7 +258,7 @@ func TestMatch(t *testing.T) {
 	s = dupe.Match(tmpDir, item)
 	ok := strings.Contains(s, item)
 	be.True(t, ok)
-	item1, err := mock.Item(1)
+	item1, err := mock.Item(t, 1)
 	be.Err(t, err, nil)
 	s = dupe.Match(tmpDir, item1)
 	ok = strings.Contains(s, item1)

@@ -44,8 +44,7 @@ func TestCompare(t *testing.T) {
 		Filename: &val,
 		Exact:    &val,
 	}
-	db, path, err := mock.Database()
-	be.Err(t, err, nil)
+	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
 	m, err = search.Compare(db, &f, "", nil)

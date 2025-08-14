@@ -38,8 +38,7 @@ func TestCleanup(t *testing.T) {
 func TestWalkScanSave(t *testing.T) {
 	err := duplicate.WalkScanSave(nil, nil, nil)
 	be.Err(t, err)
-	db, path, err := mock.Database()
-	be.Err(t, err, nil)
+	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
 	err = duplicate.WalkScanSave(db, nil, nil)
@@ -62,8 +61,7 @@ func TestWalkScanSave(t *testing.T) {
 func TestLookup(t *testing.T) {
 	err := duplicate.Lookup(nil, nil)
 	be.Err(t, err)
-	db, path, err := mock.Database()
-	be.Err(t, err, nil)
+	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
 	err = duplicate.Lookup(db, nil)

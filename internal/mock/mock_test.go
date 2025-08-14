@@ -13,15 +13,15 @@ import (
 )
 
 func TestRootDir(t *testing.T) {
-	dir, err := os.Stat(mock.RootDir())
+	dir, err := os.Stat(mock.RootDir(t))
 	be.Equal(t, err, nil)
 	be.True(t, dir != nil)
 }
 
 func TestBuckets(t *testing.T) {
-	bucket1, err := mock.Bucket(1)
+	bucket1, err := mock.Bucket(t, 1)
 	be.Equal(t, err, nil)
-	bucket2, err := mock.Bucket(2)
+	bucket2, err := mock.Bucket(t, 2)
 	be.Equal(t, err, nil)
 	dir, err := os.Stat(bucket1)
 	be.Equal(t, err, nil)
@@ -32,12 +32,12 @@ func TestBuckets(t *testing.T) {
 }
 
 func TestExport(t *testing.T) {
-	export1, err := mock.Export(1)
+	export1, err := mock.Export(t, 1)
 	be.Equal(t, err, nil)
 	dir, err := os.Stat(export1)
 	be.Equal(t, err, nil)
 	be.True(t, dir != nil)
-	export2, err := mock.Export(2)
+	export2, err := mock.Export(t, 2)
 	be.Equal(t, err, nil)
 	dir, err = os.Stat(export2)
 	be.Err(t, err)
@@ -46,14 +46,14 @@ func TestExport(t *testing.T) {
 
 func TestNamedDB(t *testing.T) {
 	// delete mock db if it exists
-	file, err := mock.NamedDB()
+	file, err := mock.NamedDB(t)
 	be.Equal(t, err, nil)
 	be.True(t, file != "")
 	stat, err := os.Stat(file)
 	be.Equal(t, err, nil)
 	be.True(t, stat != nil)
 	// create an empty db for more tests
-	path, err := mock.Create()
+	path, err := mock.Create(t)
 	defer mock.Delete(path)
 	be.Equal(t, err, nil)
 	be.True(t, path != "")
@@ -63,8 +63,7 @@ func TestNamedDB(t *testing.T) {
 }
 
 func TestDatabase(t *testing.T) {
-	db, path, err := mock.Database()
-	be.Equal(t, err, nil)
+	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
 	p, s := db.Path(), db.String()
@@ -73,11 +72,10 @@ func TestDatabase(t *testing.T) {
 }
 
 func TestOpen(t *testing.T) {
-	path, err := mock.Create()
+	path, err := mock.Create(t)
 	be.Equal(t, err, nil)
 	defer os.Remove(path)
-	db, _, err := mock.Open(path)
-	be.Equal(t, err, nil)
+	db, _ := mock.Open(t, path)
 	defer db.Close()
 	p, s := db.Path(), db.String()
 	be.True(t, p != "")
@@ -85,13 +83,13 @@ func TestOpen(t *testing.T) {
 }
 
 func TestExtension(t *testing.T) {
-	ext, err := mock.Extension("")
+	ext, err := mock.Extension(t, "")
 	be.Err(t, err)
 	be.Equal(t, ext, "")
-	ext, err = mock.Extension("arc")
+	ext, err = mock.Extension(t, "arc")
 	be.Err(t, err)
 	be.Equal(t, ext, "")
-	ext, err = mock.Extension("7z")
+	ext, err = mock.Extension(t, "7z")
 	be.Equal(t, err, nil)
 	be.True(t, strings.Contains(ext, "randomfiles.7z"))
 }

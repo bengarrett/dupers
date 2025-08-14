@@ -21,3 +21,4 @@ dist/
 dupers
 .task
 .tmp/
+.mock*/

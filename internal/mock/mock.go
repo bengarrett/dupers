@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"testing"
 
 	"github.com/bengarrett/dupers/pkg/database"
 	bolt "go.etcd.io/bbolt"
@@ -60,29 +61,32 @@ var extensions = map[string]string{
 	"zip": "/randomfiles.zip",
 }
 
-var test = "test"
+var test = "test" // TODO: rename to testdata
+
+var ErrRuntime = errors.New("runtime caller failed")
 
 // Database creates, opens and returns the mock database.
-func Database() (db *bolt.DB, path string, err error) {
-	path, err = Create()
+func Database(t *testing.T) (db *bolt.DB, path string) {
+	const msg = "mock database creator"
+	path, err := Create(t)
 	if err != nil {
-		return nil, "", err
+		t.Errorf("%s: %s", msg, err)
 	}
-	return Open(path)
+	return Open(t, path)
 }
 
 // CSV returns the path to a mock exported comma-separated values file.
-func CSV() string {
-	root := RootDir()
+func CSV(t *testing.T) string {
+	root := RootDir(t)
 	const csv = "export-bucket1.csv"
 	return filepath.Join(root, test, csv)
 }
 
 // RootDir returns the root directory of the program's source code.
-// An empty string is returned if the directory cannot be determined.
-func RootDir() string {
+func RootDir(t *testing.T) string {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
+		t.Error(ErrRuntime)
 		return ""
 	}
 	return filepath.Join(filepath.Dir(file), "..", "..")
@@ -91,21 +95,19 @@ func RootDir() string {
 // TempDir returns a hidden tmp mock directory path within the
 // root directory of the program's source code.
 // If the directory doesn't exist, it is created.
-func TempDir() (string, error) {
-	root := RootDir()
-	if root == "" {
-		return "", ErrNoRoot
-	}
-	dir := filepath.Join(root, ".tmp")
-	tmp, err := os.MkdirTemp(dir, "mock-*")
+func TempDir(t *testing.T) string {
+	const msg = "mock temporary directory"
+	root := RootDir(t)
+	tmp, err := os.MkdirTemp(root, ".mock-*")
 	if err != nil {
-		log.Fatal(err)
+		t.Errorf("%s: %s", msg, err)
 	}
-	return tmp, nil
+	return tmp
 }
 
 // Bucket returns the absolute path of test bucket.
-func Bucket(i int) (string, error) {
+func Bucket(t *testing.T, i int) (string, error) {
+	const msg = "mock bucket path"
 	name := ""
 	const b1, b2, b3 = 1, 2, 3
 	switch i {
@@ -118,26 +120,24 @@ func Bucket(i int) (string, error) {
 	default:
 		return "", ErrBucket
 	}
-	path := filepath.Join(RootDir(), test, name)
+	path := filepath.Join(RootDir(t), test, name)
 	f, err := filepath.Abs(path)
 	if err != nil {
-		log.Fatal(err)
+		t.Errorf("%s: %e", msg, err)
 	}
-
 	if runtime.GOOS == win {
 		f = strings.ToLower(f)
 	}
-
 	return f, nil
 }
 
 // Export returns the absolute path of export csv file for a bucket.
-func Export(i int) (string, error) {
+func Export(t *testing.T, i int) (string, error) {
 	if i >= len(sources) || i < 0 {
 		return "", ErrItem
 	}
 	name := fmt.Sprintf("export-bucket%d.csv", i)
-	path := filepath.Join(RootDir(), test, name)
+	path := filepath.Join(RootDir(t), test, name)
 	f, err := filepath.Abs(path)
 	if err != nil {
 		return "", err
@@ -147,12 +147,12 @@ func Export(i int) (string, error) {
 }
 
 // Item returns the absolute path of test source file item.
-func Item(i int) (string, error) {
+func Item(t *testing.T, i int) (string, error) {
 	if i >= len(sources) || i < 0 {
 		return "", ErrItem
 	}
 	elem := sources[i]
-	bucket1, err := Bucket(1)
+	bucket1, err := Bucket(t, 1)
 	if err != nil {
 		return "", err
 	}
@@ -166,12 +166,12 @@ func Item(i int) (string, error) {
 }
 
 // Extension returns the absolute path of a test file based on an extension.
-func Extension(ext string) (string, error) {
+func Extension(t *testing.T, ext string) (string, error) {
 	elem, ok := extensions[ext]
 	if !ok {
 		return "", ErrExtension
 	}
-	path := filepath.Join(RootDir(), test, elem)
+	path := filepath.Join(RootDir(t), test, elem)
 	f, err := filepath.Abs(path)
 	if err != nil {
 		return "", err
@@ -181,41 +181,26 @@ func Extension(ext string) (string, error) {
 }
 
 // NamedDB returns the absolute path of a mock Bolt database with a randomly generated filename.
-func NamedDB() (string, error) {
-	dir, err := os.UserConfigDir()
-	if err != nil {
-		dir, err = os.UserHomeDir()
-		if err != nil {
-			return "", err
-		}
-	}
-
+func NamedDB(t *testing.T) (string, error) {
+	const msg = "mock named database"
+	dir := t.TempDir()
 	path := filepath.Join(dir, subdir)
-
-	if _, err = os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
-			if err := os.MkdirAll(path, PrivateDir); err != nil {
-				return "", fmt.Errorf("%w: %s", err, path)
-			}
-		}
-		return "", err
+	if err := os.MkdirAll(path, PrivateDir); err != nil {
+		return "", fmt.Errorf("%s: %w", msg, err)
 	}
-
 	f, err := os.CreateTemp(path, filename)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%s create temp using %q: %w", msg, filename, err)
 	}
 	defer f.Close()
 	return f.Name(), nil
-
-	// return filepath.Join(path, filename), nil
 }
 
 // Create the mock database and return its location.
 // Note: If this test fails under Windows, try running `go test ./...` after closing VS Code.
 // https://github.com/electron-userland/electron-builder/issues/3666
-func Create() (string, error) {
-	path, err := NamedDB()
+func Create(t *testing.T) (string, error) {
+	path, err := NamedDB(t)
 	if err != nil {
 		return "", err
 	}
@@ -232,7 +217,7 @@ func Create() (string, error) {
 			return err
 		}
 		// create the new mock bucket #1
-		bucket1, err := Bucket(1)
+		bucket1, err := Bucket(t, 1)
 		if err != nil {
 			return err
 		}
@@ -242,7 +227,7 @@ func Create() (string, error) {
 		}
 		// create the new, but empty mock bucket #2
 		const item = 2
-		bucket2, err := Bucket(item)
+		bucket2, err := Bucket(t, item)
 		if err != nil {
 			return err
 		}
@@ -251,7 +236,7 @@ func Create() (string, error) {
 			return fmt.Errorf("%w: create bucket: %s", err, bucket1)
 		}
 		for i := range sources {
-			item, err := Item(i)
+			item, err := Item(t, i)
 			if err != nil {
 				return fmt.Errorf("%w: get item %d", err, i)
 			}
@@ -294,12 +279,13 @@ func Read(name string) (sum [32]byte, err error) {
 
 // Open the mock database.
 // This will need to be closed after use.
-func Open(path string) (*bolt.DB, string, error) {
+func Open(t *testing.T, path string) (*bolt.DB, string) {
+	const msg = "mock open database"
 	db, err := bolt.Open(path, PrivateFile, nil)
 	if err != nil {
-		return nil, "", err
+		t.Errorf("%s: %s", msg, err)
 	}
-	return db, path, nil
+	return db, path
 }
 
 // Delete the mock database.
@@ -321,16 +307,13 @@ func Delete(path string) error {
 }
 
 // MirrorTmp recursively copies the directory content of src into the hidden tmp mock directory.
-func MirrorTmp(src string) (string, error) {
+func MirrorTmp(t *testing.T, src string) (string, error) {
 	const dirAllAccess fs.FileMode = 0o777
 	from, err := filepath.Abs(src)
 	if err != nil {
 		return "", err
 	}
-	tmpDir, err := TempDir()
-	if err != nil {
-		return "", err
-	}
+	tmpDir := TempDir(t)
 	err = filepath.WalkDir(from, func(path string, d fs.DirEntry, err error) error {
 		if path == from {
 			return nil
@@ -375,7 +358,7 @@ func RemoveTmp(path string) (int, error) {
 // SensenTmp generates 25 subdirectories within a hidden tmp mock directory,
 // and copies a mock Windows/DOS .exe program file into one.
 // The returned int is the number of bytes copied.
-func SensenTmp(path string) (int64, error) {
+func SensenTmp(t *testing.T, path string) (int64, error) {
 	const expected = 16
 	n := 0
 	dest := ""
@@ -389,7 +372,7 @@ func SensenTmp(path string) (int64, error) {
 			dest = name
 		}
 	}
-	item, err := Item(1)
+	item, err := Item(t, 1)
 	if err != nil {
 		return 0, err
 	}
