@@ -19,10 +19,8 @@ import (
 )
 
 func TestConfig_Print(t *testing.T) {
-	item1, err := mock.Item(t, 1)
-	be.Err(t, err, nil)
-	item2, err := mock.Item(t, 2)
-	be.Err(t, err, nil)
+	item1 := mock.Item(t, 1)
+	item2 := mock.Item(t, 2)
 	c := dupe.Config{}
 	c.Sources = []string{item1, item2}
 	sum, err := parse.Read(item1)
@@ -36,8 +34,7 @@ func TestConfig_Print(t *testing.T) {
 }
 
 func copyfile(t *testing.T, i int) (string, string) {
-	item, err := mock.Item(t, i)
-	be.Err(t, err, nil)
+	item := mock.Item(t, i)
 	tmpdir := t.TempDir()
 	dest := filepath.Join(tmpdir, "configremovefile")
 	b, err := database.CopyFile(item, dest)
@@ -115,8 +112,7 @@ func TestConfig_WalkDir(t *testing.T) {
 	c := dupe.Config{Test: true, Debug: false}
 	bucket1, err := mock.Bucket(t, 1)
 	be.Err(t, err, nil)
-	item1, err := mock.Item(t, 1)
-	be.Err(t, err, nil)
+	item1 := mock.Item(t, 1)
 	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
@@ -159,27 +155,24 @@ func TestPrintWalk(t *testing.T) {
 
 func TestRemovers(t *testing.T) {
 	tmpDir := t.TempDir()
-	_, err := mock.RemoveTmp(tmpDir)
-	be.Err(t, err, nil)
+	count := mock.RemoveTmp(t, tmpDir)
+	be.Equal(t, count, 0)
 	bucket1, err := mock.Bucket(t, 1)
 	be.Err(t, err, nil)
 	be.True(t, bucket1 != "")
-	path := t.TempDir() // NOTE: placehodler
-	// path, err := mock.MirrorTmp(tmpDir)//TODO: not working
-	// be.Err(t, err)
+	path := mock.MirrorData(t)
 	c := dupe.Config{Test: true, Quiet: false, Debug: false}
-	err = c.SetSource(path) // TODO: not currently working
+	err = c.SetSource(path)
 	be.Err(t, err, nil)
-	i, err := mock.SensenTmp(t, path)
-	be.Err(t, err, nil)
+	i := mock.SensenTmp(t, path)
 	be.Equal(t, int64(20), i)
 	paths, err := c.Removes()
 	be.Err(t, err, nil)
 	be.Equal(t, len(paths), 0)
 	removed := 0
-	removed, err = mock.RemoveTmp(path)
-	be.Err(t, err, nil)
-	be.Equal(t, removed, 1)
+	removed = mock.RemoveTmp(t, path)
+	const expected = 33
+	be.Equal(t, removed, expected)
 }
 
 func TestChecksum(t *testing.T) {
@@ -189,8 +182,7 @@ func TestChecksum(t *testing.T) {
 	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
-	item, err := mock.Item(t, 1)
-	be.Err(t, err, nil)
+	item := mock.Item(t, 1)
 	be.True(t, item != "")
 	err = c.Checksum(nil, "", "")
 	be.Err(t, err)
@@ -258,8 +250,7 @@ func TestMatch(t *testing.T) {
 	s = dupe.Match(tmpDir, item)
 	ok := strings.Contains(s, item)
 	be.True(t, ok)
-	item1, err := mock.Item(t, 1)
-	be.Err(t, err, nil)
+	item1 := mock.Item(t, 1)
 	s = dupe.Match(tmpDir, item1)
 	ok = strings.Contains(s, item1)
 	be.True(t, ok)

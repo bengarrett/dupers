@@ -52,8 +52,7 @@ func TestParse(t *testing.T) {
 	be.Equal(t, name, "")
 	be.True(t, debug)
 
-	item1, err := mock.Item(t, 1)
-	be.Err(t, err, nil)
+	item1 := mock.Item(t, 1)
 	p = bucket.Parser{
 		Name: item1,
 	}

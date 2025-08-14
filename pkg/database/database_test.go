@@ -66,7 +66,7 @@ func TestCompare(t *testing.T) {
 	if results != nil {
 		be.Equal(t, len(*results), 0)
 	}
-	item, err := mock.Item(t, 1)
+	item := mock.Item(t, 1)
 	be.Err(t, err, nil)
 	results, err = database.Compare(db, item, bucket1)
 	be.Err(t, err, nil)
@@ -104,8 +104,7 @@ func TestCompareBases(t *testing.T) {
 	results, err = database.CompareBase(db, "", bucket1)
 	be.Err(t, err)
 	be.Equal(t, results, nil)
-	item1, err := mock.Item(t, 1)
-	be.Err(t, err, nil)
+	item1 := mock.Item(t, 1)
 	base := filepath.Base(item1)
 	results, err = database.CompareBase(db, base, bucket1)
 	be.Err(t, err, nil)
@@ -231,7 +230,7 @@ func TestRename(t *testing.T) {
 func TestCreate(t *testing.T) {
 	err := database.Create("")
 	be.Err(t, err)
-	tmpDir := mock.TempDir(t)
+	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "test-create-bbolt-database.db")
 	err = database.Create(path)
 	be.Err(t, err, nil)

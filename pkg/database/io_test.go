@@ -24,13 +24,11 @@ func TestCopyFile(t *testing.T) {
 	written, err := database.CopyFile("", "")
 	be.Err(t, err)
 	be.Equal(t, int64(0), written)
-	item1, err := mock.Item(t, 1)
-	be.Err(t, err, nil)
+	item1 := mock.Item(t, 1)
 	written, err = database.CopyFile(item1, "")
 	be.Err(t, err)
 	be.Equal(t, int64(0), written)
-	tmpDir := mock.TempDir(t)
-	defer mock.RemoveTmp(tmpDir)
+	tmpDir := t.TempDir()
 	const expected = int64(20)
 	dest := filepath.Join(tmpDir, "some-random-file.stuff")
 	written, err = database.CopyFile(item1, dest)
@@ -85,11 +83,9 @@ func TestCSVImport(t *testing.T) {
 }
 
 func TestImport(t *testing.T) {
-	export1, err := mock.Export(t, 1)
-	be.Err(t, err, nil)
+	export1 := mock.Export(t, 1)
 	be.True(t, export1 != "")
 	db, path := mock.Database(t)
-	be.Err(t, err, nil)
 	defer db.Close()
 	defer os.Remove(path)
 	imported, err := database.Import(db, "", nil)

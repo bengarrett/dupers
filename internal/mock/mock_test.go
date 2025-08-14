@@ -32,13 +32,11 @@ func TestBuckets(t *testing.T) {
 }
 
 func TestExport(t *testing.T) {
-	export1, err := mock.Export(t, 1)
-	be.Equal(t, err, nil)
+	export1 := mock.Export(t, 1)
 	dir, err := os.Stat(export1)
 	be.Equal(t, err, nil)
 	be.True(t, dir != nil)
-	export2, err := mock.Export(t, 2)
-	be.Equal(t, err, nil)
+	export2 := mock.Export(t, 2)
 	dir, err = os.Stat(export2)
 	be.Err(t, err)
 	be.True(t, dir == nil)
@@ -46,16 +44,13 @@ func TestExport(t *testing.T) {
 
 func TestNamedDB(t *testing.T) {
 	// delete mock db if it exists
-	file, err := mock.NamedDB(t)
-	be.Equal(t, err, nil)
+	file := mock.NamedDB(t)
 	be.True(t, file != "")
 	stat, err := os.Stat(file)
 	be.Equal(t, err, nil)
 	be.True(t, stat != nil)
 	// create an empty db for more tests
-	path, err := mock.Create(t)
-	defer mock.Delete(path)
-	be.Equal(t, err, nil)
+	path := mock.Create(t)
 	be.True(t, path != "")
 	stat, err = os.Stat(file)
 	be.Equal(t, err, nil)
@@ -72,8 +67,7 @@ func TestDatabase(t *testing.T) {
 }
 
 func TestOpen(t *testing.T) {
-	path, err := mock.Create(t)
-	be.Equal(t, err, nil)
+	path := mock.Create(t)
 	defer os.Remove(path)
 	db, _ := mock.Open(t, path)
 	defer db.Close()
@@ -83,13 +77,10 @@ func TestOpen(t *testing.T) {
 }
 
 func TestExtension(t *testing.T) {
-	ext, err := mock.Extension(t, "")
-	be.Err(t, err)
+	ext := mock.Extension(t, "")
 	be.Equal(t, ext, "")
-	ext, err = mock.Extension(t, "arc")
-	be.Err(t, err)
+	ext = mock.Extension(t, "arc")
 	be.Equal(t, ext, "")
-	ext, err = mock.Extension(t, "7z")
-	be.Equal(t, err, nil)
+	ext = mock.Extension(t, "7z")
 	be.True(t, strings.Contains(ext, "randomfiles.7z"))
 }
