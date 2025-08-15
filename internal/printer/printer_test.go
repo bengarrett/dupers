@@ -10,8 +10,7 @@ import (
 )
 
 func TestStatus(t *testing.T) {
-	s := ""
-	s = printer.Status(-1, -1, 0)
+	s := printer.Status(-1, -1, 0)
 	be.Equal(t, s, "")
 	s, _ = strings.CutPrefix(printer.Status(0, 0, 0), printer.Eraser)
 	be.Equal(t, s, "")

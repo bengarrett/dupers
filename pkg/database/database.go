@@ -19,7 +19,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"
-	boltErr "go.etcd.io/bbolt/errors"
+	bberr "go.etcd.io/bbolt/errors"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"golang.org/x/text/number"
@@ -75,13 +75,13 @@ func AbsB(name string) ([]byte, error) {
 // All returns every stored bucket within the database.
 func All(db *bolt.DB) ([]string, error) {
 	if db == nil {
-		return nil, boltErr.ErrDatabaseNotOpen
+		return nil, bberr.ErrDatabaseNotOpen
 	}
 	var names []string
 	if err := db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 			if v := tx.Bucket(name); v == nil {
-				return fmt.Errorf("%w: %s", bolt.ErrBucketNotFound, string(name))
+				return fmt.Errorf("%w: %s", bberr.ErrBucketNotFound, string(name))
 			}
 			names = append(names, string(name))
 			return nil
@@ -120,12 +120,12 @@ func Check() (int64, error) {
 // Exist returns an error if the bucket does not exists in the database.
 func Exist(db *bolt.DB, bucket string) error {
 	if db == nil {
-		return boltErr.ErrDatabaseNotOpen
+		return bberr.ErrDatabaseNotOpen
 	}
 	return db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
 		if b == nil {
-			return bolt.ErrBucketNotFound
+			return bberr.ErrBucketNotFound
 		}
 		return nil
 	})
@@ -135,7 +135,7 @@ func Exist(db *bolt.DB, bucket string) error {
 // Stale items are file pointers that no longer exist on the host file system.
 func Clean(db *bolt.DB, quiet, debug bool, buckets ...string) error {
 	if db == nil {
-		return boltErr.ErrDatabaseNotOpen
+		return bberr.ErrDatabaseNotOpen
 	}
 	cleanDebug(debug, buckets)
 
@@ -207,7 +207,7 @@ func cleanDebug(debug bool, buckets []string) {
 
 func cleaner(db *bolt.DB, debug bool, buckets []string) ([]string, error) {
 	if db == nil {
-		return nil, boltErr.ErrDatabaseNotOpen
+		return nil, bberr.ErrDatabaseNotOpen
 	}
 	if len(buckets) > 0 {
 		return buckets, nil
@@ -227,7 +227,7 @@ func cleaner(db *bolt.DB, debug bool, buckets []string) ([]string, error) {
 // Compact the database by reclaiming internal space.
 func Compact(db *bolt.DB, debug bool) error {
 	if db == nil {
-		return boltErr.ErrDatabaseNotOpen
+		return bberr.ErrDatabaseNotOpen
 	}
 	printer.Debug(debug, "running database compact")
 	// make a temporary database
@@ -303,7 +303,7 @@ func CompareNoCase(db *bolt.DB, s string, buckets ...string) (*Matches, error) {
 
 func compare(db *bolt.DB, ignoreCase, pathBase bool, term []byte, buckets ...string) (*Matches, error) {
 	if db == nil {
-		return nil, boltErr.ErrDatabaseNotOpen
+		return nil, bberr.ErrDatabaseNotOpen
 	}
 	if len(term) == 0 {
 		return nil, ErrNoTerm
@@ -321,7 +321,7 @@ func compare(db *bolt.DB, ignoreCase, pathBase bool, term []byte, buckets ...str
 		err = db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket(abs)
 			if b == nil {
-				return bolt.ErrBucketNotFound
+				return bberr.ErrBucketNotFound
 			}
 			s := term
 			if ignoreCase {
@@ -344,7 +344,7 @@ func compare(db *bolt.DB, ignoreCase, pathBase bool, term []byte, buckets ...str
 			return err
 		})
 		if err != nil {
-			if errors.Is(err, bolt.ErrBucketNotFound) {
+			if errors.Is(err, bberr.ErrBucketNotFound) {
 				return nil, fmt.Errorf("%w: '%s'", err, abs)
 			}
 			return nil, err
@@ -355,7 +355,7 @@ func compare(db *bolt.DB, ignoreCase, pathBase bool, term []byte, buckets ...str
 
 func checker(db *bolt.DB, buckets []string) ([]string, error) {
 	if db == nil {
-		return nil, boltErr.ErrDatabaseNotOpen
+		return nil, bberr.ErrDatabaseNotOpen
 	}
 	if len(buckets) != 0 {
 		return buckets, nil
@@ -381,7 +381,7 @@ func compareKey(key []byte, ignoreCase bool) []byte {
 // Count the number of records in the named bucket.
 func Count(db *bolt.DB, name string) (int, error) {
 	if db == nil {
-		return 0, boltErr.ErrDatabaseNotOpen
+		return 0, bberr.ErrDatabaseNotOpen
 	}
 	return bucket.Count(db, name)
 }
@@ -440,7 +440,7 @@ func Create(path string) error {
 // Info returns a printout of the buckets and their statistics.
 func Info(db *bolt.DB) (string, error) {
 	if db == nil {
-		return "", boltErr.ErrDatabaseNotOpen
+		return "", bberr.ErrDatabaseNotOpen
 	}
 	path, err := DB()
 	if err != nil {
@@ -488,7 +488,7 @@ func Info(db *bolt.DB) (string, error) {
 
 func info(db *bolt.DB, w *tabwriter.Writer) (*tabwriter.Writer, int, error) {
 	if db == nil {
-		return nil, 0, boltErr.ErrDatabaseNotOpen
+		return nil, 0, bberr.ErrDatabaseNotOpen
 	}
 	type (
 		vals struct {
@@ -509,7 +509,7 @@ func info(db *bolt.DB, w *tabwriter.Writer) (*tabwriter.Writer, int, error) {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 			v := tx.Bucket(name)
 			if v == nil {
-				return fmt.Errorf("%w: %s", bolt.ErrBucketNotFound, string(name))
+				return fmt.Errorf("%w: %s", bberr.ErrBucketNotFound, string(name))
 			}
 			cnt++
 			sizes += v.Stats().LeafAlloc
@@ -541,10 +541,10 @@ func info(db *bolt.DB, w *tabwriter.Writer) (*tabwriter.Writer, int, error) {
 	return w, sizes, nil
 }
 
-// IsEmpty returns a bolt.ErrBucketNotFound error when the database has no buckets.
+// IsEmpty returns a bberr.ErrBucketNotFound error when the database has no buckets.
 func IsEmpty(db *bolt.DB) error {
 	if db == nil {
-		return boltErr.ErrDatabaseNotOpen
+		return bberr.ErrDatabaseNotOpen
 	}
 	cnt := 0
 	if err := db.View(func(tx *bolt.Tx) error {
@@ -556,7 +556,7 @@ func IsEmpty(db *bolt.DB) error {
 		return err
 	}
 	if cnt == 0 {
-		return bolt.ErrBucketNotFound
+		return bberr.ErrBucketNotFound
 	}
 	return nil
 }
@@ -564,13 +564,13 @@ func IsEmpty(db *bolt.DB) error {
 // List returns the filepaths and SHA256 checksums stored in the bucket.
 func List(db *bolt.DB, bucket string) (Lists, error) {
 	if db == nil {
-		return nil, boltErr.ErrDatabaseNotOpen
+		return nil, bberr.ErrDatabaseNotOpen
 	}
 	lists := make(Lists)
 	if err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
 		if b == nil {
-			return bolt.ErrBucketNotFound
+			return bberr.ErrBucketNotFound
 		}
 		h := [32]byte{}
 		return b.ForEach(func(k, v []byte) error {
@@ -587,7 +587,7 @@ func List(db *bolt.DB, bucket string) (Lists, error) {
 // Rename the named bucket in the database to use a new, target directory path.
 func Rename(db *bolt.DB, name, target string) error {
 	if db == nil {
-		return boltErr.ErrDatabaseNotOpen
+		return bberr.ErrDatabaseNotOpen
 	}
 	if name == target {
 		return ErrSameName
@@ -595,7 +595,7 @@ func Rename(db *bolt.DB, name, target string) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(name))
 		if b == nil {
-			return bolt.ErrBucketNotFound
+			return bberr.ErrBucketNotFound
 		}
 		ren, errRen := tx.CreateBucket([]byte(target))
 		if errRen != nil {
@@ -613,11 +613,11 @@ func Rename(db *bolt.DB, name, target string) error {
 // Remove the named bucket from the database.
 func Remove(db *bolt.DB, name string) error {
 	if db == nil {
-		return boltErr.ErrDatabaseNotOpen
+		return bberr.ErrDatabaseNotOpen
 	}
 	return db.Update(func(tx *bolt.Tx) error {
 		if b := tx.Bucket([]byte(name)); b == nil {
-			return bolt.ErrBucketNotFound
+			return bberr.ErrBucketNotFound
 		}
 		return tx.DeleteBucket([]byte(name))
 	})

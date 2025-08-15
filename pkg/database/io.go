@@ -17,7 +17,7 @@ import (
 	"github.com/bengarrett/dupers/pkg/database/csv"
 	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"
-	boltErr "go.etcd.io/bbolt/errors"
+	bberr "go.etcd.io/bbolt/errors"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"golang.org/x/text/number"
@@ -87,7 +87,7 @@ func CopyFile(name, dest string) (int64, error) {
 // The generated file is RFC 4180 compatible using comma-separated values.
 func CSVExport(db *bolt.DB, bucket string) (string, error) {
 	if db == nil {
-		return "", boltErr.ErrDatabaseNotOpen
+		return "", bberr.ErrDatabaseNotOpen
 	}
 	dir, err := Home()
 	if err != nil {
@@ -128,7 +128,7 @@ func export() string {
 // CSVImport reads the named csv export file and imports its content to the database.
 func CSVImport(db *bolt.DB, name string, assumeYes bool) (int, error) {
 	if db == nil {
-		return 0, boltErr.ErrDatabaseNotOpen
+		return 0, bberr.ErrDatabaseNotOpen
 	}
 
 	file, err := os.Open(name)
@@ -177,7 +177,7 @@ func Home() (string, error) {
 // If the named bucket does not exist, it is created.
 func Import(db *bolt.DB, name Bucket, ls *Lists) (imported int, err error) {
 	if db == nil {
-		return 0, boltErr.ErrDatabaseNotOpen
+		return 0, bberr.ErrDatabaseNotOpen
 	}
 	if ls == nil {
 		return 0, ErrImportList
@@ -208,7 +208,7 @@ func Import(db *bolt.DB, name Bucket, ls *Lists) (imported int, err error) {
 
 func (batch Lists) iterate(db *bolt.DB, name Bucket, imported, total int) (int, error) {
 	if db == nil {
-		return 0, boltErr.ErrDatabaseNotOpen
+		return 0, bberr.ErrDatabaseNotOpen
 	}
 	for path, sum := range batch {
 		if err := db.Update(func(tx *bolt.Tx) error {
@@ -306,7 +306,7 @@ func Scanner(file *os.File) (string, *Lists, error) {
 // Usage checks the validity and usage of the named bucket in the database.
 func Usage(db *bolt.DB, name string, assumeYes bool) (string, error) {
 	if db == nil {
-		return "", boltErr.ErrDatabaseNotOpen
+		return "", bberr.ErrDatabaseNotOpen
 	}
 	if name == "" {
 		return "", ErrNoBucket

@@ -67,7 +67,6 @@ var ErrRuntime = errors.New("runtime caller failed")
 
 // Database creates, opens and returns the mock database.
 func Database(t *testing.T) (*bolt.DB, string) {
-	const msg = "mock database creator"
 	path := Create(t)
 	return Open(t, path)
 }
@@ -105,7 +104,7 @@ func TempDir(t *testing.T) string {
 // Bucket returns the absolute path of test bucket.
 func Bucket(t *testing.T, i int) (string, error) {
 	const msg = "mock bucket path"
-	name := ""
+	var name string
 	const b1, b2, b3 = 1, 2, 3
 	switch i {
 	case b1:

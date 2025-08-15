@@ -21,7 +21,7 @@ before:
     - go mod tidy
 builds:
   - id: dupers
-    binary: retrotxt
+    binary: dupers
     env:
       - CGO_ENABLED=0
     targets:
@@ -68,4 +68,3 @@ release:
     ---
 
     Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
-

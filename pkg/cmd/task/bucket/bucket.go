@@ -13,7 +13,7 @@ import (
 	"github.com/bengarrett/dupers/pkg/dupe"
 	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"
-	boltErr "go.etcd.io/bbolt/errors"
+	bberr "go.etcd.io/bbolt/errors"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"golang.org/x/text/number"
@@ -53,7 +53,7 @@ func Check(term, cmd, name string) int {
 }
 
 func checkBucket(cmd, name string, err error) error {
-	if errors.Is(err, bolt.ErrBucketNotFound) {
+	if errors.Is(err, bberr.ErrBucketNotFound) {
 		printer.StderrCR(ErrDatabaseName)
 		fmt.Fprintf(os.Stdout, "Bucket name: %s\n", name)
 		printer.Example("\ndupers " + cmd + " <bucket name>")
@@ -64,7 +64,7 @@ func checkBucket(cmd, name string, err error) error {
 // Export the bucket as a CSV file.
 func Export(db *bolt.DB, quiet bool, args [2]string) error {
 	if db == nil {
-		return boltErr.ErrDatabaseNotOpen
+		return bberr.ErrDatabaseNotOpen
 	}
 	const x = "export"
 	if code := Check(x, x, args[1]); code > 0 {
@@ -93,7 +93,7 @@ func Export(db *bolt.DB, quiet bool, args [2]string) error {
 // Import a CSV file into the database.
 func Import(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
 	if db == nil {
-		return boltErr.ErrDatabaseNotOpen
+		return bberr.ErrDatabaseNotOpen
 	}
 	help := fmt.Sprintf("\ndupers %s <filepath>", dim)
 	if args[1] == "" {
@@ -125,7 +125,7 @@ func Import(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
 // List the content of a bucket to the stdout.
 func List(db *bolt.DB, quiet bool, args [2]string) error {
 	if db == nil {
-		return boltErr.ErrDatabaseNotOpen
+		return bberr.ErrDatabaseNotOpen
 	}
 	if code := Check("list", dls, args[1]); code > 0 {
 		return ErrBucketNil
@@ -163,7 +163,7 @@ func List(db *bolt.DB, quiet bool, args [2]string) error {
 // Move renames a bucket by duplicating it to a new bucket location.
 func Move(db *bolt.DB, c *dupe.Config, assumeYes bool, src, dest string) error {
 	if db == nil {
-		return boltErr.ErrDatabaseNotOpen
+		return bberr.ErrDatabaseNotOpen
 	}
 	if c == nil {
 		return dupe.ErrNilConfig
@@ -177,7 +177,7 @@ func Move(db *bolt.DB, c *dupe.Config, assumeYes bool, src, dest string) error {
 	}
 	w := os.Stdout
 	if err := database.Exist(db, name); err != nil {
-		if errors.Is(err, bolt.ErrBucketNotFound) {
+		if errors.Is(err, bberr.ErrBucketNotFound) {
 			printer.StderrCR(ErrDatabaseName)
 			fmt.Fprintf(w, "\nBucket name: %s\n", name)
 			printer.Example("dupers mv <bucket name> <new directory>")
@@ -215,7 +215,7 @@ func Move(db *bolt.DB, c *dupe.Config, assumeYes bool, src, dest string) error {
 // Remove the bucket from the database.
 func Remove(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
 	if db == nil {
-		return bolt.ErrBucketNotFound
+		return bberr.ErrBucketNotFound
 	}
 	bucket := args[1]
 	if code := Check("remove", drm, bucket); code > 0 {
@@ -251,10 +251,10 @@ func Remove(db *bolt.DB, quiet, assumeYes bool, args [2]string) error {
 
 func rmBucket(db *bolt.DB, name, retry string) error {
 	err := database.Remove(db, name)
-	if errors.Is(err, bolt.ErrBucketNotFound) {
+	if errors.Is(err, bberr.ErrBucketNotFound) {
 		// retry with the original argument
 		if err1 := database.Remove(db, retry); err1 != nil {
-			if errors.Is(err1, bolt.ErrBucketNotFound) {
+			if errors.Is(err1, bberr.ErrBucketNotFound) {
 				return notFound(db, name, err1)
 			}
 			return err
@@ -265,7 +265,7 @@ func rmBucket(db *bolt.DB, name, retry string) error {
 
 func notFound(db *bolt.DB, name string, err error) error {
 	if db == nil {
-		return bolt.ErrBucketNotFound
+		return bberr.ErrBucketNotFound
 	}
 	printer.StderrCR(err)
 	w := os.Stdout
@@ -287,7 +287,7 @@ func notFound(db *bolt.DB, name string, err error) error {
 // Rescan the bucket for changes with the file system.
 func Rescan(db *bolt.DB, c *dupe.Config, archives bool, args [2]string) error {
 	if db == nil {
-		return boltErr.ErrDatabaseNotOpen
+		return bberr.ErrDatabaseNotOpen
 	}
 	cmd := dup
 	if archives {

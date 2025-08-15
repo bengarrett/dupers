@@ -11,7 +11,7 @@ import (
 	"github.com/bengarrett/dupers/pkg/cmd"
 	"github.com/bengarrett/dupers/pkg/database"
 	bolt "go.etcd.io/bbolt"
-	boltErr "go.etcd.io/bbolt/errors"
+	bberr "go.etcd.io/bbolt/errors"
 )
 
 var (
@@ -38,7 +38,7 @@ func CmdErr(lenArgs int, test bool) error {
 
 func Compare(db *bolt.DB, f *cmd.Flags, term string, buckets []string) (*database.Matches, error) {
 	if db == nil {
-		return nil, boltErr.ErrDatabaseNotOpen
+		return nil, bberr.ErrDatabaseNotOpen
 	}
 	if f == nil {
 		return nil, ErrNoFlags
@@ -75,12 +75,12 @@ func Error(err error) error {
 		printer.StderrCR(err)
 		return nil
 	}
-	if errors.Is(err, bolt.ErrBucketNotFound) {
+	if errors.Is(err, bberr.ErrBucketNotFound) {
 		printer.StderrCR(err)
 		fmt.Fprintln(os.Stdout, "To add this directory as a bucket to the database, run:")
 		dir := err.Error()
 		if errors.Unwrap(err) != nil {
-			s := fmt.Sprintf("%s: ", bolt.ErrBucketNotFound.Error())
+			s := fmt.Sprintf("%s: ", bberr.ErrBucketNotFound.Error())
 			dir = strings.ReplaceAll(dir, s, "")
 		}
 		s := fmt.Sprintf("dupers up %s\n", dir)

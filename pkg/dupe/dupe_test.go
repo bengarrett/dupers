@@ -169,8 +169,7 @@ func TestRemovers(t *testing.T) {
 	paths, err := c.Removes()
 	be.Err(t, err, nil)
 	be.Equal(t, len(paths), 0)
-	removed := 0
-	removed = mock.RemoveTmp(t, path)
+	removed := mock.RemoveTmp(t, path)
 	const expected = 33
 	be.Equal(t, removed, expected)
 }

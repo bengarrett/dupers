@@ -12,7 +12,7 @@ import (
 	"github.com/bengarrett/dupers/internal/printer"
 	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"
-	boltErr "go.etcd.io/bbolt/errors"
+	bberr "go.etcd.io/bbolt/errors"
 )
 
 var (
@@ -39,12 +39,12 @@ type Cleaner struct {
 // Clean the stale items from database buckets.
 func (c *Cleaner) Clean(db *bolt.DB) (items, finds, errors int, err error) {
 	if db == nil {
-		return 0, 0, 0, boltErr.ErrDatabaseNotOpen
+		return 0, 0, 0, bberr.ErrDatabaseNotOpen
 	}
 	if err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(c.Name))
 		if b == nil {
-			return fmt.Errorf("%w: %s", bolt.ErrBucketNotFound, c.Name)
+			return fmt.Errorf("%w: %s", bberr.ErrBucketNotFound, c.Name)
 		}
 		err := b.ForEach(func(k, v []byte) error {
 			c.Items++
@@ -90,7 +90,7 @@ type Parser struct {
 
 func (p *Parser) Parse(db *bolt.DB) (items, errs int, name string, debug bool) {
 	if db == nil {
-		printer.StderrCR(boltErr.ErrDatabaseNotOpen)
+		printer.StderrCR(bberr.ErrDatabaseNotOpen)
 		return -1, -1, "", true
 	}
 	abs, err := Abs(p.Name)
@@ -156,13 +156,13 @@ func printStat(debug, quiet bool, cnt, total int, k []byte) {
 // Count the number of records in the bucket.
 func Count(db *bolt.DB, name string) (int, error) {
 	if db == nil {
-		return 0, boltErr.ErrDatabaseNotOpen
+		return 0, bberr.ErrDatabaseNotOpen
 	}
 	items := 0
 	return items, db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(name))
 		if b == nil {
-			return bolt.ErrBucketNotFound
+			return bberr.ErrBucketNotFound
 		}
 		var err error
 		items, err = count(db, b)
@@ -175,15 +175,15 @@ func Count(db *bolt.DB, name string) (int, error) {
 
 func count(db *bolt.DB, b *bolt.Bucket) (int, error) {
 	if db == nil {
-		return 0, boltErr.ErrDatabaseNotOpen
+		return 0, bberr.ErrDatabaseNotOpen
 	}
 	if b == nil {
-		return 0, bolt.ErrBucketNotFound
+		return 0, bberr.ErrBucketNotFound
 	}
 	records := 0
 	return records, db.View(func(tx *bolt.Tx) error {
 		if b == nil {
-			return bolt.ErrBucketNotFound
+			return bberr.ErrBucketNotFound
 		}
 		c := b.Cursor()
 		for k, _ := c.First(); k != nil; k, _ = c.Next() {
@@ -268,7 +268,7 @@ func Stat(name string, assumeYes, test bool) string {
 // Total returns the sum total of the items in the named buckets.
 func Total(db *bolt.DB, buckets []string) (int, error) {
 	if db == nil {
-		return 0, boltErr.ErrDatabaseNotOpen
+		return 0, bberr.ErrDatabaseNotOpen
 	}
 	if len(buckets) == 0 {
 		return 0, ErrNilBucket

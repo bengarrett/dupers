@@ -23,7 +23,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"
-	boltErr "go.etcd.io/bbolt/errors"
+	bberr "go.etcd.io/bbolt/errors"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
@@ -86,7 +86,7 @@ func Directories() error {
 // Database parses the commands that interact with the database.
 func Database(db *bolt.DB, c *dupe.Config, args ...string) error {
 	if db == nil {
-		return boltErr.ErrDatabaseNotOpen
+		return bberr.ErrDatabaseNotOpen
 	}
 	if c == nil {
 		return dupe.ErrNilConfig
@@ -148,7 +148,7 @@ func move(db *bolt.DB, c *dupe.Config, assumeYes bool, args ...string) error {
 // Dupe parses the dupe command.
 func Dupe(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
 	if db == nil {
-		return boltErr.ErrDatabaseNotOpen
+		return bberr.ErrDatabaseNotOpen
 	}
 	if f == nil || f.Version == nil {
 		return ErrNilFlags
@@ -192,7 +192,7 @@ func Dupe(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
 // SetStat sets and stats directories and files to scan, a bucket is the name given to database tables.
 func SetStat(db *bolt.DB, c *dupe.Config, args ...string) error {
 	if db == nil {
-		return boltErr.ErrDatabaseNotOpen
+		return bberr.ErrDatabaseNotOpen
 	}
 	if c == nil {
 		return dupe.ErrNilConfig
@@ -212,7 +212,7 @@ func SetStat(db *bolt.DB, c *dupe.Config, args ...string) error {
 	if err := c.SetBuckets(buckets...); err != nil {
 		var pathError *fs.PathError
 		if errors.As(err, &pathError) {
-			printer.StderrCR(bolt.ErrBucketNotFound)
+			printer.StderrCR(bberr.ErrBucketNotFound)
 			fmt.Fprintf(os.Stdout, "Bucket: %s\n", pathError.Path)
 			printer.Example("\ndupers dupe " + args[1] + " [buckets to lookup]")
 		}
@@ -233,7 +233,7 @@ func SetStat(db *bolt.DB, c *dupe.Config, args ...string) error {
 
 func WalkScan(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
 	if db == nil {
-		return boltErr.ErrDatabaseNotOpen
+		return bberr.ErrDatabaseNotOpen
 	}
 	if c == nil {
 		return dupe.ErrNilConfig
@@ -320,7 +320,7 @@ func HelpSearch() string {
 // Search parses the commands that handle search.
 func Search(db *bolt.DB, f *cmd.Flags, test bool, args ...string) error {
 	if db == nil {
-		return boltErr.ErrDatabaseNotOpen
+		return bberr.ErrDatabaseNotOpen
 	}
 	if f == nil {
 		return ErrNilFlags
@@ -373,7 +373,7 @@ func backupDB(quiet bool) error {
 // cleanupDB cleans and compacts the database.
 func CleanupDB(db *bolt.DB, c *dupe.Config) error {
 	if db == nil {
-		return boltErr.ErrDatabaseNotOpen
+		return bberr.ErrDatabaseNotOpen
 	}
 	if c == nil {
 		return dupe.ErrNilConfig
