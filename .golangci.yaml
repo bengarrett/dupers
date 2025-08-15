@@ -6,6 +6,8 @@ linters:
     - exhaustruct
     - nlreturn
     - noinlineerr
+    - paralleltest
+    - revive # false positives?
     - varnamelen
     - wrapcheck
     - wsl

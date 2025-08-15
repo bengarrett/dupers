@@ -230,10 +230,10 @@ func commit() string {
 		return c
 	}
 	if c != "" {
-		s += fmt.Sprintf("%s, ", c)
+		s += c + ", "
 	}
 	if l := lastCommit(); l != "" {
-		s += fmt.Sprintf("built on %s", l)
+		s += "built on " + l
 	}
 	if s == "" {
 		return "n/a"

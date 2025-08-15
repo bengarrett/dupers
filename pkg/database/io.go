@@ -4,6 +4,7 @@ package database
 import (
 	"bufio"
 	csvEnc "encoding/csv"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -110,7 +111,7 @@ func CSVExport(db *bolt.DB, bucket string) (string, error) {
 	}
 	for file, sum := range ls {
 		rel := strings.TrimPrefix(string(file), bucket)
-		records = append(records, []string{fmt.Sprintf("%x", sum), rel})
+		records = append(records, []string{hex.EncodeToString(sum[:]), rel})
 	}
 	w := csvEnc.NewWriter(dest)
 	if err := w.WriteAll(records); err != nil {

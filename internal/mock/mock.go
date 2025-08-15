@@ -67,12 +67,14 @@ var ErrRuntime = errors.New("runtime caller failed")
 
 // Database creates, opens and returns the mock database.
 func Database(t *testing.T) (*bolt.DB, string) {
+	t.Helper()
 	path := Create(t)
 	return Open(t, path)
 }
 
 // CSV returns the path to a mock exported comma-separated values file.
 func CSV(t *testing.T) string {
+	t.Helper()
 	root := RootDir(t)
 	const csv = "export-bucket1.csv"
 	return filepath.Join(root, test, csv)
@@ -80,6 +82,7 @@ func CSV(t *testing.T) string {
 
 // RootDir returns the root directory of the program's source code.
 func RootDir(t *testing.T) string {
+	t.Helper()
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Error(ErrRuntime)
@@ -92,6 +95,7 @@ func RootDir(t *testing.T) string {
 // root directory of the program's source code.
 // If the directory doesn't exist, it is created.
 func TempDir(t *testing.T) string {
+	t.Helper()
 	const msg = "mock temporary directory"
 	root := RootDir(t)
 	tmp, err := os.MkdirTemp(root, ".mock-*")
@@ -103,6 +107,7 @@ func TempDir(t *testing.T) string {
 
 // Bucket returns the absolute path of test bucket.
 func Bucket(t *testing.T, i int) (string, error) {
+	t.Helper()
 	const msg = "mock bucket path"
 	var name string
 	const b1, b2, b3 = 1, 2, 3
@@ -129,6 +134,7 @@ func Bucket(t *testing.T, i int) (string, error) {
 
 // Export returns the absolute path of export csv file for a bucket.
 func Export(t *testing.T, i int) string {
+	t.Helper()
 	const msg = "mock export csv"
 	if i >= len(sources) || i < 0 {
 		t.Errorf("%s: %s", msg, ErrItem)
@@ -144,6 +150,7 @@ func Export(t *testing.T, i int) string {
 
 // Item returns the absolute path of test source file item.
 func Item(t *testing.T, i int) string {
+	t.Helper()
 	const msg = "mock item absolute path"
 	if i >= len(sources) || i < 0 {
 		t.Errorf("%s: %s", msg, ErrItem)
@@ -164,6 +171,7 @@ func Item(t *testing.T, i int) string {
 
 // Extension returns the absolute path of a test file based on an extension.
 func Extension(t *testing.T, ext string) string {
+	t.Helper()
 	const msg = "mock extension"
 	elem, ok := extensions[ext]
 	if !ok || elem == "" {
@@ -179,6 +187,7 @@ func Extension(t *testing.T, ext string) string {
 
 // NamedDB returns the absolute path of a mock Bolt database with a randomly generated filename.
 func NamedDB(t *testing.T) string {
+	t.Helper()
 	const msg = "mock named database"
 	dir := t.TempDir()
 	path := filepath.Join(dir, subdir)
@@ -197,6 +206,7 @@ func NamedDB(t *testing.T) string {
 // Note: If this test fails under Windows, try running `go test ./...` after closing VS Code.
 // https://github.com/electron-userland/electron-builder/issues/3666
 func Create(t *testing.T) string {
+	t.Helper()
 	const msg = "mock database creation"
 	path := NamedDB(t)
 	db, err := bolt.Open(path, PrivateFile, nil)
@@ -266,6 +276,7 @@ func read(name string) (sum [32]byte, err error) {
 // Open the mock database.
 // This will need to be closed after use.
 func Open(t *testing.T, path string) (*bolt.DB, string) {
+	t.Helper()
 	const msg = "mock open database"
 	db, err := bolt.Open(path, PrivateFile, nil)
 	if err != nil {
@@ -276,6 +287,7 @@ func Open(t *testing.T, path string) (*bolt.DB, string) {
 
 // MirrorData recursively copies the directory content of src into the hidden tmp mock directory.
 func MirrorData(t *testing.T) string {
+	t.Helper()
 	const msg = "mock mirror temporary testdata"
 	const dirAllAccess fs.FileMode = 0o777
 	src := filepath.Join(RootDir(t), test)
@@ -311,6 +323,7 @@ func MirrorData(t *testing.T) string {
 
 // RemoveTmp deletes the hidden tmp mock directory and returns the number of files deleted.
 func RemoveTmp(t *testing.T, path string) int {
+	t.Helper()
 	const msg = "mock remove temporary path"
 	count := 0
 	err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
@@ -334,6 +347,7 @@ func RemoveTmp(t *testing.T, path string) int {
 // and copies a mock Windows/DOS .exe program file into one.
 // The returned int is the number of bytes copied.
 func SensenTmp(t *testing.T, path string) int64 {
+	t.Helper()
 	const msg = "mock sensen temporary"
 	const expected = 16
 	n := 0
@@ -358,6 +372,7 @@ func SensenTmp(t *testing.T, path string) int64 {
 
 // Sum compares b against the expected SHA-256 binary checksum of the test source file item.
 func Sum(t *testing.T, item int, b [32]byte) bool {
+	t.Helper()
 	const msg = "mock sum sha-256 checksum"
 	if item >= len(checksums) || item < 0 {
 		t.Errorf("%s %d: %s", msg, item, ErrItem)
@@ -370,6 +385,7 @@ func Sum(t *testing.T, item int, b [32]byte) bool {
 
 // ItemSum returns the SHA-256 binary checksum of the test source file item.
 func ItemSum(t *testing.T, item int) string {
+	t.Helper()
 	const msg = "mock item sha-256 checksum"
 	if item >= len(checksums) || item < 0 {
 		t.Errorf("%s %d: %s", msg, item, ErrItem)

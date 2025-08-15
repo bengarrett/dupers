@@ -254,17 +254,17 @@ func SearchSummary(total int, term string, exact, filename bool) string {
 	}
 	t := color.Primary.Sprint(total)
 	if exact && filename {
-		s += fmt.Sprintf(" exact filename %s", r)
+		s += " exact filename " + r
 		return str(t, s, term)
 	}
 	if exact {
-		s += fmt.Sprintf(" exact %s", r)
+		s += " exact " + r
 		return str(t, s, term)
 	}
 	if filename {
-		s += fmt.Sprintf(" filename %s", r)
+		s += " filename " + r
 		return str(t, s, term)
 	}
-	s += fmt.Sprintf(" %s", r)
+	s += " " + r
 	return str(t, s, term)
 }

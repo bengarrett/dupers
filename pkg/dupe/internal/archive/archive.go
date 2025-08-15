@@ -3,7 +3,6 @@ package archive
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -74,7 +73,7 @@ func Extension(find string) string {
 			return ext
 		}
 		if !strings.HasPrefix(find, ".") {
-			if ext == fmt.Sprintf(".%s", lfind) {
+			if ext == "."+lfind {
 				return ext
 			}
 		}

@@ -33,7 +33,8 @@ func TestConfig_Print(t *testing.T) {
 	be.True(t, ok)
 }
 
-func copyfile(t *testing.T, i int) (string, string) {
+func copyfile(t *testing.T, i int) string {
+	t.Helper()
 	item := mock.Item(t, i)
 	tmpdir := t.TempDir()
 	dest := filepath.Join(tmpdir, "configremovefile")
@@ -41,7 +42,7 @@ func copyfile(t *testing.T, i int) (string, string) {
 	be.Err(t, err, nil)
 	const written = int64(20)
 	be.Equal(t, b, written)
-	return item, dest
+	return dest
 }
 
 func TestConfig_Remove(t *testing.T) {
@@ -53,7 +54,7 @@ func TestConfig_Remove(t *testing.T) {
 	ok := strings.Contains(s, "No duplicate files to remove")
 	be.True(t, ok)
 	// copy file
-	_, dest := copyfile(t, 1)
+	dest := copyfile(t, 1)
 	defer os.Remove(dest)
 	// setup mock sources
 	c.Sources = append(c.Sources, dest)
@@ -74,7 +75,7 @@ func TestConfig_Clean(t *testing.T) {
 	err := c.Clean(&b)
 	be.Err(t, err, nil)
 	// copy file
-	_, dest := copyfile(t, 1)
+	dest := copyfile(t, 1)
 	defer os.Remove(dest)
 	// make empty dir
 	tmp := t.TempDir()

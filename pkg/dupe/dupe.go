@@ -463,16 +463,14 @@ func Match(path, match string) string {
 	}
 	s := "\n"
 	s += color.Info.Sprint("Match") +
-		":" +
-		fmt.Sprintf("\t%s", path) +
-		matchItem(match)
+		":" + "\t" + path + matchItem(match)
 	return s
 }
 
 // MatchItem prints 'Found duplicate match' along with file stat info.
 func matchItem(match string) string {
 	matches := color.Success.Sprint(printer.MatchPrefix) +
-		fmt.Sprint(match)
+		match
 	if match == "" {
 		return ""
 	}

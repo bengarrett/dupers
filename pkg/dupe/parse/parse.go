@@ -273,7 +273,7 @@ func matchBuckets(m *database.Matches) (string, []string) {
 // Executable returns true if the root directory contains an MS-DOS or Windows program file.
 func Executable(root string) (bool, error) {
 	isProgram := false
-	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	if err := filepath.WalkDir(root, func(_ string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

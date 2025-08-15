@@ -1,3 +1,6 @@
+// Package main in testflag iterates through the terminal
+// flags of dupers to allow a manual visual confirmation
+// of the flags and help screens.
 package main
 
 import (

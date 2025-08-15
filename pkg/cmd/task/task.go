@@ -153,7 +153,7 @@ func Dupe(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
 	if f == nil || f.Version == nil {
 		return ErrNilFlags
 	}
-	c.Debugger(fmt.Sprintf("dupe command: %s", strings.Join(args, " ")))
+	c.Debugger("dupe command: " + strings.Join(args, " "))
 
 	// fetch bucket info
 	b, err := database.All(db)
@@ -206,7 +206,7 @@ func SetStat(db *bolt.DB, c *dupe.Config, args ...string) error {
 		if err := c.SetAllBuckets(db); err != nil {
 			return err
 		}
-		c.Debugger(fmt.Sprintf("use all buckets: %s", c.BucketS()))
+		c.Debugger("use all buckets: " + c.BucketS())
 		return nil
 	}
 	if err := c.SetBuckets(buckets...); err != nil {
@@ -227,7 +227,7 @@ func SetStat(db *bolt.DB, c *dupe.Config, args ...string) error {
 		}
 		return err
 	}
-	c.Debugger(fmt.Sprintf("use buckets: %s", c.BucketS()))
+	c.Debugger("use buckets: " + c.BucketS())
 	return nil
 }
 

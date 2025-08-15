@@ -80,7 +80,7 @@ func Error(err error) error {
 		fmt.Fprintln(os.Stdout, "To add this directory as a bucket to the database, run:")
 		dir := err.Error()
 		if errors.Unwrap(err) != nil {
-			s := fmt.Sprintf("%s: ", bberr.ErrBucketNotFound.Error())
+			s := bberr.ErrBucketNotFound.Error() + ": "
 			dir = strings.ReplaceAll(dir, s, "")
 		}
 		s := fmt.Sprintf("dupers up %s\n", dir)

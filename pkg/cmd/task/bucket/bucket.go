@@ -82,7 +82,7 @@ func Export(db *bolt.DB, quiet bool, args [2]string) error {
 		return err
 	}
 	s := fmt.Sprintf("%s %s\n", color.Secondary.Sprint("Bucket name:"), color.Debug.Sprint(name))
-	s += fmt.Sprintf("The exported bucket file is at: %s", exp)
+	s += "The exported bucket file is at: " + exp
 	printer.Quiet(quiet, s)
 	if quiet {
 		fmt.Fprintln(os.Stdout, exp)

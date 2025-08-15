@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	ErrChecksumLen  = errors.New("hexadecimal value is invalid")
+	ErrHexDec       = errors.New("hexadecimal value is invalid")
 	ErrFileNoDesc   = errors.New("no file descriptor")
 	ErrImportFile   = errors.New("not a valid dupers export file")
 	ErrImportPath   = errors.New("import item has an invalid file path")
@@ -78,7 +78,7 @@ func Checksum(s string) ([32]byte, error) {
 	const fixLength = 64
 	empty, bs := [32]byte{}, [32]byte{}
 	if len(s) != fixLength {
-		return empty, fmt.Errorf("%w: value must contain exactly %d characters", ErrChecksumLen, fixLength)
+		return empty, fmt.Errorf("%w: value must contain exactly %d characters", ErrHexDec, fixLength)
 	}
 	b, err := hex.DecodeString(s)
 	if err != nil {
