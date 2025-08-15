@@ -233,7 +233,9 @@ func AskYN(question string, alwaysYes bool, recommend YN) bool {
 }
 
 // Define returns the prompt and suffix strings to print for a Yes or No prompt.
-func (y YN) Define() (prompt string, suffix string) {
+func (y YN) Define() (string, string) {
+	var prompt string
+	var suffix string
 	switch y {
 	case Nil:
 		prompt = "Y/N"

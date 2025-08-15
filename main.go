@@ -213,7 +213,7 @@ func copyright() string {
 	t := versioninfo.LastCommit
 	s := fmt.Sprintf("© %d-", initYear)
 	if t.Year() > initYear {
-		s += t.Local().Format("06")
+		s += t.Local().Format("06") //nolint:gosmopolitan
 	} else {
 		s += time.Now().Format("06")
 	}
@@ -246,5 +246,5 @@ func lastCommit() string {
 	if d.IsZero() {
 		return ""
 	}
-	return d.Local().Format("2006 Jan 2 15:04")
+	return d.Local().Format("2006 Jan 2 15:04") //nolint:gosmopolitan
 }

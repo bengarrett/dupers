@@ -42,26 +42,32 @@ var (
 	ErrNoRoot    = errors.New("could not determine the root directory")
 )
 
-var sources = map[int]string{
-	0: "/0vlLaUEvzAWP",
-	1: "/3a9dnxgSVEnJ",
-	2: "/12wZkDDR9CQ0",
+func sources() map[int]string {
+	return map[int]string{
+		0: "/0vlLaUEvzAWP",
+		1: "/3a9dnxgSVEnJ",
+		2: "/12wZkDDR9CQ0",
+	}
 }
 
-var checksums = map[int]string{
-	0: "1a1d76a3187ccee147e6c807277273afbad5d2680f5eadf1012310743e148f22",
-	1: "1bdd103eace1a58d2429d447ac551030a9da424056d2d89a77b1366a04f1f1cc",
-	2: "c5f338d4057fb107793032de91b264707c3c27bf9970687a78a080a4bf095c26",
+func checksums() map[int]string {
+	return map[int]string{
+		0: "1a1d76a3187ccee147e6c807277273afbad5d2680f5eadf1012310743e148f22",
+		1: "1bdd103eace1a58d2429d447ac551030a9da424056d2d89a77b1366a04f1f1cc",
+		2: "c5f338d4057fb107793032de91b264707c3c27bf9970687a78a080a4bf095c26",
+	}
 }
 
-var extensions = map[string]string{
-	"7z":  "/randomfiles.7z",
-	"xz":  "/randomfiles.tar.xz",
-	"txt": "/randomfiles.txt",
-	"zip": "/randomfiles.zip",
+func extensions() map[string]string {
+	return map[string]string{
+		"7z":  "/randomfiles.7z",
+		"xz":  "/randomfiles.tar.xz",
+		"txt": "/randomfiles.txt",
+		"zip": "/randomfiles.zip",
+	}
 }
 
-var test = "testdata"
+const test = "testdata"
 
 var ErrRuntime = errors.New("runtime caller failed")
 
@@ -136,7 +142,7 @@ func Bucket(t *testing.T, i int) (string, error) {
 func Export(t *testing.T, i int) string {
 	t.Helper()
 	const msg = "mock export csv"
-	if i >= len(sources) || i < 0 {
+	if i >= len(sources()) || i < 0 {
 		t.Errorf("%s: %s", msg, ErrItem)
 	}
 	name := fmt.Sprintf("export-bucket%d.csv", i)
@@ -152,10 +158,10 @@ func Export(t *testing.T, i int) string {
 func Item(t *testing.T, i int) string {
 	t.Helper()
 	const msg = "mock item absolute path"
-	if i >= len(sources) || i < 0 {
+	if i >= len(sources()) || i < 0 {
 		t.Errorf("%s: %s", msg, ErrItem)
 	}
-	elem := sources[i]
+	elem := sources()[i]
 	bucket1, err := Bucket(t, 1)
 	if err != nil {
 		t.Errorf("%s: %s", msg, err)
@@ -173,7 +179,7 @@ func Item(t *testing.T, i int) string {
 func Extension(t *testing.T, ext string) string {
 	t.Helper()
 	const msg = "mock extension"
-	elem, ok := extensions[ext]
+	elem, ok := extensions()[ext]
 	if !ok || elem == "" {
 		return ""
 	}
@@ -240,7 +246,7 @@ func Create(t *testing.T) string {
 		if err != nil {
 			return fmt.Errorf("%w: create bucket: %s", err, bucket1)
 		}
-		for i := range sources {
+		for i := range sources() {
 			item := Item(t, i)
 			sum256, err := read(item)
 			if err != nil {
@@ -259,7 +265,7 @@ func Create(t *testing.T) string {
 }
 
 // Read the named file and return its SHA256 checksum.
-func read(name string) (sum [32]byte, err error) {
+func read(name string) ([32]byte, error) {
 	f, err := os.Open(name)
 	if err != nil {
 		return [32]byte{}, err
@@ -374,10 +380,10 @@ func SensenTmp(t *testing.T, path string) int64 {
 func Sum(t *testing.T, item int, b [32]byte) bool {
 	t.Helper()
 	const msg = "mock sum sha-256 checksum"
-	if item >= len(checksums) || item < 0 {
+	if item >= len(checksums()) || item < 0 {
 		t.Errorf("%s %d: %s", msg, item, ErrItem)
 	}
-	if checksums[item] == hex.EncodeToString(b[:]) {
+	if checksums()[item] == hex.EncodeToString(b[:]) {
 		return true
 	}
 	return false
@@ -387,8 +393,8 @@ func Sum(t *testing.T, item int, b [32]byte) bool {
 func ItemSum(t *testing.T, item int) string {
 	t.Helper()
 	const msg = "mock item sha-256 checksum"
-	if item >= len(checksums) || item < 0 {
+	if item >= len(checksums()) || item < 0 {
 		t.Errorf("%s %d: %s", msg, item, ErrItem)
 	}
-	return checksums[item]
+	return checksums()[item]
 }

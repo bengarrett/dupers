@@ -59,12 +59,12 @@ func TestCSVExport(t *testing.T) {
 }
 
 func TestCSVImport(t *testing.T) {
-	imported, err := database.CSVImport(nil, "", false)
+	_, err := database.CSVImport(nil, "", false)
 	be.Err(t, err)
 	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
-	imported, err = database.CSVImport(db, "", false)
+	imported, err := database.CSVImport(db, "", false)
 	be.Err(t, err)
 	be.Equal(t, 0, imported)
 	imported, err = database.CSVImport(db, mock.NoSuchFile, false)

@@ -37,7 +37,9 @@ var (
 )
 
 // Backup makes a copy of the database to the named location.
-func Backup() (name string, written int64, err error) {
+//
+// Returned is the path to the database and the number of bytes copied.
+func Backup() (string, int64, error) {
 	src, err := DB()
 	if err != nil {
 		return "", 0, err
@@ -46,8 +48,8 @@ func Backup() (name string, written int64, err error) {
 	if err != nil {
 		return "", 0, err
 	}
-	name = filepath.Join(dir, backup())
-	written, err = CopyFile(src, name)
+	name := filepath.Join(dir, backup())
+	written, err := CopyFile(src, name)
 	if err != nil {
 		return "", 0, err
 	}
@@ -176,7 +178,9 @@ func Home() (string, error) {
 
 // Import the list of data and save it to the database.
 // If the named bucket does not exist, it is created.
-func Import(db *bolt.DB, name Bucket, ls *Lists) (imported int, err error) {
+//
+// The returned int is the number of records imported.
+func Import(db *bolt.DB, name Bucket, ls *Lists) (int, error) {
 	if db == nil {
 		return 0, bberr.ErrDatabaseNotOpen
 	}
@@ -184,8 +188,10 @@ func Import(db *bolt.DB, name Bucket, ls *Lists) (imported int, err error) {
 		return 0, ErrImportList
 	}
 	const batchItems = 50000
+	imported := 0
 	items, total := 0, len(*ls)
 	batch := make(Lists, batchItems)
+	var err error
 	for path, sum := range *ls {
 		batch[path] = sum
 		items++
@@ -231,12 +237,12 @@ func (batch Lists) iterate(db *bolt.DB, name Bucket, imported, total int) (int, 
 }
 
 // OpenRead opens the Bolt database for reading.
-func OpenRead() (db *bolt.DB, err error) {
+func OpenRead() (*bolt.DB, error) {
 	path, err := DB()
 	if err != nil {
 		return nil, err
 	}
-	db, err = bolt.Open(path, PrivateFile, read())
+	db, err := bolt.Open(path, PrivateFile, read())
 	if err != nil {
 		return nil, err
 	}
@@ -249,12 +255,12 @@ func read() *bolt.Options {
 }
 
 // OpenRead opens the Bolt database for writing and reading.
-func OpenWrite() (db *bolt.DB, err error) {
+func OpenWrite() (*bolt.DB, error) {
 	path, err := DB()
 	if err != nil {
 		return nil, err
 	}
-	db, err = bolt.Open(path, PrivateFile, write())
+	db, err := bolt.Open(path, PrivateFile, write())
 	if err != nil {
 		return nil, err
 	}

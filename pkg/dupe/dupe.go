@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -50,6 +51,10 @@ var (
 	ErrPathNoFound   = errors.New("path does not exist")
 )
 
+func ignore(err error) {
+	_, _ = fmt.Fprint(io.Discard, err)
+}
+
 // Config options.
 type Config struct {
 	Debug bool // Debug spams technobabble to stdout.
@@ -74,14 +79,17 @@ func (c *Config) Writer(w io.Writer, s string) {
 
 // StatSource returns the number of files in the source directory to check.
 // If the source is a file, files will always equal 1.
-// The returned versus the number of items in the buckets for the dupe check.
-func (c *Config) StatSource() (isDir bool, files, versus int, err error) {
+//
+// It returns the following values in order,
+//   - boolean is directory value
+//   - int is the number of files
+//   - int verse is the nunber of items in the buckets for the dupe check
+func (c *Config) StatSource() (bool, int, int, error) {
 	c.Debugger("count the files within the paths")
-
 	src := c.GetSource()
 	c.Debugger("path to check: " + src)
-	versus = 0
-	isDir, files, err = c.statSource()
+	versus := 0
+	isDir, files, err := c.statSource()
 	if err != nil {
 		return isDir, 0, 0, err
 	}
@@ -105,7 +113,7 @@ func (c *Config) StatSource() (isDir bool, files, versus int, err error) {
 // Check stats and returns the named file or directory.
 // If it does not exist, it looks up an absolute path and returns the result.
 // If the item is a file it returns both the named file and an ErrPathIsFile error.
-func (c *Config) Check(name string) (isdir bool, path string, err error) {
+func (c *Config) Check(name string) (bool, string, error) {
 	if name == "" {
 		return false, "", ErrPathEmpty
 	}
@@ -247,6 +255,7 @@ func (c *Config) Print() (string, error) { //nolint:gocognit
 				return nil
 			}
 			if err := SkipFS(true, false, true, d); err != nil {
+				ignore(err)
 				return nil
 			}
 			if err := c.printer(w, root); err != nil {
@@ -480,8 +489,15 @@ func matchItem(match string) string {
 	}
 	matches += "\n    " +
 		fmt.Sprintf("\t%s, ", stat.ModTime().Format(modFmt)) +
-		humanize.Bytes(uint64(stat.Size()))
+		humanize.Bytes(safesize(stat.Size()))
 	return matches
+}
+
+func safesize(i int64) uint64 {
+	if i < 0 || i > math.MaxInt64 {
+		return 0
+	}
+	return uint64(i)
 }
 
 // PrintRM prints "could not remove:".
@@ -614,6 +630,7 @@ func (c *Config) WalkArchiver(db *bolt.DB, name parse.Bucket) error {
 			return nil
 		}
 		if err := SkipFS(false, true, true, d); err != nil {
+			ignore(err)
 			return nil
 		}
 		err = c.readArchive(db, parse.Bucket(root), path)
@@ -766,6 +783,7 @@ func (c *Config) statSources(root string) error {
 			return nil
 		}
 		if err := SkipFS(true, false, true, d); err != nil {
+			ignore(err)
 			return nil
 		}
 		c.Sources = append(c.Sources, path)
@@ -845,7 +863,8 @@ func (c *Config) lookupOne(sum parse.Checksum) string {
 }
 
 // skipFiles returns the value of c.sources as strings.
-func (c *Config) skipFiles() (files []string) {
+func (c *Config) skipFiles() []string {
+	var files []string
 	files = append(files, c.Sources...)
 	return files
 }
@@ -981,7 +1000,7 @@ func (c *Config) printer(w io.Writer, path string) error {
 	return nil
 }
 
-func (c *Config) statSource() (isDir bool, files int, err error) {
+func (c *Config) statSource() (bool, int, error) {
 	name := c.GetSource()
 	stat, err := os.Stat(name)
 	if err != nil {
@@ -1007,18 +1026,20 @@ func (c *Config) statSource() (isDir bool, files int, err error) {
 	if err := SkipDirs(name); err != nil {
 		return false, 0, err
 	}
-	files = 0
+	files := 0
 	root := name
 	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		c.Debugger("counting: " + path)
 		if err != nil {
 			c.Debugger(errRead + err.Error())
+			ignore(err)
 			return nil
 		}
 		if root == path {
 			return nil
 		}
 		if err := SkipFS(true, false, true, d); err != nil {
+			ignore(err)
 			return nil
 		}
 		files++
@@ -1053,6 +1074,7 @@ func (c *Config) walkBucket(b parse.Bucket, buckets int) (int, error) {
 		}
 		c.Debugger("walking bucket item: " + path)
 		if err := SkipFS(true, false, true, d); err != nil {
+			ignore(err)
 			return nil
 		}
 		buckets++

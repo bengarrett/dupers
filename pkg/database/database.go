@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -106,7 +107,7 @@ func Check() (int64, error) {
 		fmt.Fprintf(w, "\n%s\nThe database will be located at: %s\n", NotFound, path)
 		return 0, ErrNotFound // 0
 	} else if err1 != nil {
-		return 0, err
+		return 0, err1
 	}
 	if i.Size() == 0 {
 		printer.StderrCR(ErrZeroByte)
@@ -463,7 +464,7 @@ func Info(db *bolt.DB) (string, error) {
 	fmt.Fprintf(w, "\tModified:\t%s", stat.ModTime().Local().Format("Jan 2 15:04:05"))
 	fmt.Fprintln(w)
 	fmt.Fprintf(w, "\tFile:\t%s",
-		color.Primary.Sprint(humanize.Bytes(uint64(stat.Size()))))
+		color.Primary.Sprint(humanize.Bytes(safesize(stat.Size()))))
 	if runtime.GOOS != winOS {
 		fmt.Fprintf(w, " (%v)", stat.Mode())
 	}
@@ -484,6 +485,13 @@ func Info(db *bolt.DB) (string, error) {
 	}
 	w.Flush()
 	return b.String(), nil
+}
+
+func safesize(i int64) uint64 {
+	if i < 0 || i > math.MaxInt64 {
+		return 0
+	}
+	return uint64(i)
 }
 
 func info(db *bolt.DB, w *tabwriter.Writer) (*tabwriter.Writer, int, error) {

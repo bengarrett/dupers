@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"math"
 	"os"
 	"runtime"
 	"strings"
@@ -365,9 +366,16 @@ func backupDB(quiet bool) error {
 		fmt.Fprintln(os.Stdout, name)
 	}
 	s := fmt.Sprintf("A new copy of the database (%s) is at: %s",
-		humanize.Bytes(uint64(writ)), name)
+		humanize.Bytes(safesize(writ)), name)
 	printer.Quiet(quiet, s)
 	return nil
+}
+
+func safesize(i int64) uint64 {
+	if i < 0 || i > math.MaxInt64 {
+		return 0
+	}
+	return uint64(i)
 }
 
 // cleanupDB cleans and compacts the database.

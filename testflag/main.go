@@ -1,6 +1,13 @@
+//go:build exclude
+// +build exclude
+
 // Package main in testflag iterates through the terminal
 // flags of dupers to allow a manual visual confirmation
 // of the flags and help screens.
+// This is excluded from the main build,
+// to run this use the following cmd:
+//
+// `go run -tags exclude .`
 package main
 
 import (

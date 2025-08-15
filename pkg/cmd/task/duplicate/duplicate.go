@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"runtime"
 
@@ -136,11 +137,16 @@ func WalkScanSave(db *bolt.DB, c *dupe.Config, f *cmd.Flags) error {
 	}
 	if *f.Lookup {
 		if err := Lookup(db, c); err != nil {
+			ignore(err)
 			return nil
 		}
 	}
 	c.Debugger("walk the buckets.")
 	return c.WalkDirs(db)
+}
+
+func ignore(err error) {
+	_, _ = fmt.Fprint(io.Discard, err)
 }
 
 // normalise the names of the buckets.

@@ -37,7 +37,9 @@ type Cleaner struct {
 }
 
 // Clean the stale items from database buckets.
-func (c *Cleaner) Clean(db *bolt.DB) (items, finds, errors int, err error) {
+//
+// Returned are the counted items, the finds and the number of errors.
+func (c *Cleaner) Clean(db *bolt.DB) (int, int, int, error) {
 	if db == nil {
 		return 0, 0, 0, bberr.ErrDatabaseNotOpen
 	}
@@ -88,7 +90,9 @@ type Parser struct {
 	Errs  int    // Errs is the sum of the items that could not be parse.
 }
 
-func (p *Parser) Parse(db *bolt.DB) (items, errs int, name string, debug bool) {
+// Parse the parse returns the items and errors count and the absolute path.
+// The return boolean is a debug notifier.
+func (p *Parser) Parse(db *bolt.DB) (int, int, string, bool) {
 	if db == nil {
 		printer.StderrCR(bberr.ErrDatabaseNotOpen)
 		return -1, -1, "", true

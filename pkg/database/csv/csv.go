@@ -89,7 +89,9 @@ func Checksum(s string) ([32]byte, error) {
 }
 
 // Import reads, validates and returns a line of data from an export csv file.
-func Import(line, bucket string) (sum [32]byte, path string, err error) {
+//
+// Returned is the checksum and the path.
+func Import(line, bucket string) ([32]byte, string, error) {
 	const expected = 2
 	empty := [32]byte{}
 	ss := strings.Split(line, ",")
@@ -100,7 +102,7 @@ func Import(line, bucket string) (sum [32]byte, path string, err error) {
 	if !filepath.IsAbs(name) {
 		return empty, "", ErrImportPath
 	}
-	sum, err = Checksum(ss[0])
+	sum, err := Checksum(ss[0])
 	if err != nil {
 		return empty, "", err
 	}
