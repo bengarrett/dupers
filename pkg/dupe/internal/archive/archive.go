@@ -96,6 +96,7 @@ func MIME(name string) string {
 // ReadMIME opens and reads the named file and returns its compressed application MIME type.
 // If the compression format is unsupported or unknown an error is returned.
 func ReadMIME(name string) (string, error) {
+	name = filepath.Clean(name)
 	f, err := os.Open(name)
 	if err != nil {
 		return "", err

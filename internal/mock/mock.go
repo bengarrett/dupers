@@ -266,6 +266,7 @@ func Create(t *testing.T) string {
 
 // Read the named file and return its SHA256 checksum.
 func read(name string) ([32]byte, error) {
+	name = filepath.Clean(name)
 	f, err := os.Open(name)
 	if err != nil {
 		return [32]byte{}, err

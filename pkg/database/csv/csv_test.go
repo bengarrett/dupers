@@ -32,6 +32,7 @@ func TestChecker(t *testing.T) {
 	err := csv.Checker(nil)
 	be.Err(t, err)
 	item1 := mock.Item(t, 1)
+	item1 = filepath.Clean(item1)
 	binary, err := os.Open(item1)
 	be.Err(t, err, nil)
 	defer binary.Close()

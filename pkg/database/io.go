@@ -70,6 +70,7 @@ func CopyFile(name, dest string) (int64, error) {
 	if dest == "" {
 		return 0, ErrNoDest
 	}
+	name = filepath.Clean(name)
 	// read source
 	f, err := os.Open(name)
 	if err != nil {
@@ -97,6 +98,7 @@ func CSVExport(db *bolt.DB, bucket string) (string, error) {
 		return "", err
 	}
 	name := filepath.Join(dir, export())
+	name = filepath.Clean(name)
 	dest, err := os.Create(name)
 	if err != nil {
 		return "", err
@@ -133,7 +135,7 @@ func CSVImport(db *bolt.DB, name string, assumeYes bool) (int, error) {
 	if db == nil {
 		return 0, bberr.ErrDatabaseNotOpen
 	}
-
+	name = filepath.Clean(name)
 	file, err := os.Open(name)
 	if err != nil {
 		return 0, err

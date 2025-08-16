@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"math"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -488,7 +487,7 @@ func Info(db *bolt.DB) (string, error) {
 }
 
 func safesize(i int64) uint64 {
-	if i < 0 || i > math.MaxInt64 {
+	if i < 0 {
 		return 0
 	}
 	return uint64(i)
@@ -521,7 +520,8 @@ func info(db *bolt.DB, w *tabwriter.Writer) (*tabwriter.Writer, int, error) {
 			}
 			cnt++
 			sizes += v.Stats().LeafAlloc
-			items[string(name)] = vals{v.Stats().KeyN, humanize.Bytes(uint64(v.Stats().LeafAlloc))}
+			s := int64(v.Stats().LeafAlloc)
+			items[string(name)] = vals{v.Stats().KeyN, humanize.Bytes(safesize(s))}
 			return nil
 		})
 	}); err != nil {

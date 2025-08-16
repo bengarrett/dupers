@@ -97,6 +97,7 @@ func TestImport(t *testing.T) {
 	imported, err = database.Import(db, database.Bucket(bucket2), nil)
 	be.Err(t, err)
 	be.Equal(t, 0, imported)
+	export1 = filepath.Clean(export1)
 	csv, err := os.Open(export1)
 	be.Err(t, err, nil)
 	defer csv.Close()

@@ -222,6 +222,7 @@ func Print(quiet, exact bool, term string, m *database.Matches) string {
 
 // Read the named file to return a SHA256 checksum of it's data.
 func Read(name string) (Checksum, error) {
+	name = filepath.Clean(name)
 	f, err := os.Open(name)
 	if err != nil {
 		return Checksum{}, err

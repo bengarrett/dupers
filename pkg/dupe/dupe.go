@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"math"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -494,7 +493,7 @@ func matchItem(match string) string {
 }
 
 func safesize(i int64) uint64 {
-	if i < 0 || i > math.MaxInt64 {
+	if i < 0 {
 		return 0
 	}
 	return uint64(i)
