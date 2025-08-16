@@ -338,11 +338,11 @@ func Search(db *bolt.DB, f *cmd.Flags, test bool, args ...string) error {
 	if err := search.CmdErr(l, test); err != nil {
 		return err
 	}
-	if len(args) < 2 {
+	const minArgs = 2
+	if len(args) < minArgs {
 		return ErrArgs
 	}
 	term, buckets := args[1], []string{}
-	const minArgs = 2
 	if l > minArgs {
 		buckets = args[minArgs:]
 	}

@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -585,12 +586,7 @@ func SkipFile(name string) bool {
 
 // skipSelf returns true if the path exists in skip.
 func skipSelf(path string, skip ...string) bool {
-	for _, n := range skip {
-		if path == n {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(skip, path)
 }
 
 // Print the results of the database comparisons.
@@ -957,12 +953,7 @@ func (c *Config) readArchive(db *bolt.DB, b parse.Bucket, path string) error {
 
 // findItem returns true if the absolute file path is in c.sources.
 func (c *Config) findItem(abs string) bool {
-	for _, item := range c.Sources {
-		if item == abs {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(c.Sources, abs)
 }
 
 // listItems sets c.sources to list all the filenames used in the bucket.

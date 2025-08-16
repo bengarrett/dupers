@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -167,12 +168,7 @@ func (p *Scanner) Timer() time.Duration {
 
 // Contains returns true if find exists in s.
 func Contains(find string, s ...string) bool {
-	for _, item := range s {
-		if find == item {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(s, find)
 }
 
 // Print the results of the database comparisons.
