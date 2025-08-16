@@ -68,6 +68,11 @@ tasks:
       - go {{.RUNRACE}} invalid-command and-more-args
       - read -p wait && clear
     ignore_error: true
+  testr:
+    desc: Runs test files using the race flag.
+    silent: false
+    cmds:
+      - go test -count=10 -race ./...
   tests:
     desc: Runs all of the tests below.
     silent: false

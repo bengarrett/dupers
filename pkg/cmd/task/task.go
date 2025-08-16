@@ -84,7 +84,7 @@ func Directories() error {
 }
 
 // Database parses the commands that interact with the database.
-func Database(db *bolt.DB, c *dupe.Config, args ...string) error {
+func Database(db *bolt.DB, c *dupe.Config, args ...string) error { //nolint:cyclop
 	if db == nil {
 		return bberr.ErrDatabaseNotOpen
 	}
@@ -112,7 +112,7 @@ func Database(db *bolt.DB, c *dupe.Config, args ...string) error {
 		if err != nil {
 			printer.StderrCR(err)
 		}
-		fmt.Fprintln(os.Stdout, s)
+		printl(os.Stdout, s)
 	case Export_:
 		return bucket.Export(db, quiet, buckets)
 	case Import_:
@@ -178,7 +178,7 @@ func Dupe(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
 	if err := c.SetSource(args[source]); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			printer.StderrCR(os.ErrNotExist)
-			fmt.Fprintf(os.Stdout, "File or directory path: %s\n", args[source])
+			printf(os.Stdout, "File or directory path: %s\n", args[source])
 			printer.Example("\ndupers dupe <file or directory> [buckets to lookup]")
 		}
 		return err
@@ -213,7 +213,7 @@ func SetStat(db *bolt.DB, c *dupe.Config, args ...string) error {
 		var pathError *fs.PathError
 		if errors.As(err, &pathError) {
 			printer.StderrCR(bberr.ErrBucketNotFound)
-			fmt.Fprintf(os.Stdout, "Bucket: %s\n", pathError.Path)
+			printf(os.Stdout, "Bucket: %s\n", pathError.Path)
 			printer.Example("\ndupers dupe " + args[1] + " [buckets to lookup]")
 		}
 		return err
@@ -222,7 +222,7 @@ func SetStat(db *bolt.DB, c *dupe.Config, args ...string) error {
 		var pathError *fs.PathError
 		if errors.As(err, &pathError) {
 			printer.StderrCR(os.ErrNotExist)
-			fmt.Fprintf(os.Stdout, "Bucket: %s\n", pathError.Path)
+			printf(os.Stdout, "Bucket: %s\n", pathError.Path)
 			printer.Example("\ndupers dupe <file or directory> [buckets to lookup]")
 		}
 		return err
@@ -248,21 +248,21 @@ func WalkScan(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
 		return err
 	}
 	if !c.Quiet {
-		fmt.Fprint(os.Stdout, printer.EraseLine())
+		printr(os.Stdout, printer.EraseLine())
 	}
 	// print the found dupes
 	s, err := c.Print()
 	if err != nil {
 		return err
 	}
-	fmt.Fprint(os.Stdout, s)
+	printr(os.Stdout, s)
 	// remove files
 	if err := duplicate.Cleanup(c, f); err != nil {
 		return err
 	}
 	// summaries
 	if !c.Quiet {
-		fmt.Fprintln(os.Stdout, c.Status())
+		printl(os.Stdout, c.Status())
 	}
 	return nil
 }
@@ -283,7 +283,7 @@ func Help() string {
 func helper() (*bytes.Buffer, *tabwriter.Writer) {
 	b := bytes.Buffer{}
 	w := tabwriter.NewWriter(&b, 0, 0, tabPadding, ' ', 0)
-	fmt.Fprintln(w, description)
+	printl(w, description)
 	return &b, w
 }
 
@@ -344,13 +344,13 @@ func Search(db *bolt.DB, f *cmd.Flags, test bool, args ...string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprint(os.Stdout, dupe.Print(*f.Quiet, *f.Exact, term, m))
+	printr(os.Stdout, dupe.Print(*f.Quiet, *f.Exact, term, m))
 	if !*f.Quiet {
 		l := 0
 		if m != nil {
 			l = len(*m)
 		}
-		fmt.Fprintln(os.Stdout, cmd.SearchSummary(l, term, *f.Exact, *f.Filename))
+		printl(os.Stdout, cmd.SearchSummary(l, term, *f.Exact, *f.Filename))
 	}
 	return nil
 }
@@ -362,7 +362,7 @@ func backupDB(quiet bool) error {
 		return err
 	}
 	if quiet {
-		fmt.Fprintln(os.Stdout, name)
+		printl(os.Stdout, name)
 	}
 	s := fmt.Sprintf("A new copy of the database (%s) is at: %s",
 		humanize.Bytes(safesize(writ)), name)
@@ -417,40 +417,40 @@ func StatSource(c *dupe.Config) error {
 	src := c.GetSource()
 	w := os.Stdout
 	if isDir {
-		fmt.Fprint(w, "Directory to check:")
+		printr(w, "Directory to check:")
 	} else {
-		fmt.Fprint(w, "File to check:")
+		printr(w, "File to check:")
 	}
-	fmt.Fprintln(w)
+	printl(w)
 	if verses == 0 {
-		fmt.Fprintf(w, " %s ", src)
+		printf(w, " %s ", src)
 	} else {
-		fmt.Fprintf(w, " %s ", color.Warn.Sprint(src))
+		printf(w, " %s ", color.Warn.Sprint(src))
 	}
 	if !isDir {
 		stat, err := os.Stat(src)
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(w, "(%s)", color.Info.Sprintf("%s bytes", p.Sprint(stat.Size())))
+		printf(w, "(%s)", color.Info.Sprintf("%s bytes", p.Sprint(stat.Size())))
 	} else {
-		fmt.Fprintf(w, "(%s)", color.Info.Sprintf("%s files", p.Sprint(files)))
+		printf(w, "(%s)", color.Info.Sprintf("%s files", p.Sprint(files)))
 	}
-	fmt.Fprintln(w)
-	fmt.Fprintln(w)
-	fmt.Fprintf(w, "%s to lookup, for finding duplicates:", verb)
-	fmt.Fprintln(w)
-	fmt.Fprintf(w, " %s ", c.BucketS())
+	printl(w)
+	printl(w)
+	printf(w, "%s to lookup, for finding duplicates:", verb)
+	printl(w)
+	printf(w, " %s ", c.BucketS())
 	if verses == 0 {
-		fmt.Fprintf(w, "(%s)", color.Danger.Sprintf("%s files", p.Sprint(verses)))
-		fmt.Fprintln(w)
-		fmt.Fprintln(w)
-		fmt.Fprintln(os.Stderr, color.Danger.Sprintf("The %s to lookup contains no files", strings.ToLower(verb)))
+		printf(w, "(%s)", color.Danger.Sprintf("%s files", p.Sprint(verses)))
+		printl(w)
+		printl(w)
+		printl(os.Stderr, color.Danger.Sprintf("The %s to lookup contains no files", strings.ToLower(verb)))
 		return bucket.ErrBucketEmpty
 	}
-	fmt.Fprintf(w, "(%s)", color.Info.Sprintf("%s files", p.Sprint(verses)))
-	fmt.Fprintln(w)
-	fmt.Fprintln(w)
+	printf(w, "(%s)", color.Info.Sprintf("%s files", p.Sprint(verses)))
+	printl(w)
+	printl(w)
 	if isDir {
 		return dirPrompt(w, c)
 	}
@@ -458,10 +458,10 @@ func StatSource(c *dupe.Config) error {
 }
 
 func dirPrompt(w io.Writer, c *dupe.Config) error {
-	fmt.Fprintln(w, "About to scan and save this directory to the database:")
-	fmt.Fprintf(w, " %s", c.BucketS())
-	fmt.Fprintln(w)
-	fmt.Fprintln(w)
+	printl(w, "About to scan and save this directory to the database:")
+	printf(w, " %s", c.BucketS())
+	printl(w)
+	printl(w)
 	if !printer.AskYN("Is this what you want (no will exit)", c.Yes, printer.Yes) {
 		return ErrUserExit
 	}

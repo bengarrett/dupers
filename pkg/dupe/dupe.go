@@ -54,13 +54,22 @@ func ignore(err error) {
 	_, _ = fmt.Fprint(io.Discard, err)
 }
 
+func printl(w io.Writer, a ...any) {
+	_, _ = fmt.Fprintln(w, a...)
+}
+
+func printf(w io.Writer, format string, a ...any) {
+	_, _ = fmt.Fprintf(w, format, a...)
+}
+
 // Config options.
 type Config struct {
+	parse.Scanner
+
 	Debug bool // Debug spams technobabble to stdout.
 	Quiet bool // Quiet the feedback sent to stdout.
 	Yes   bool // Yes is assumed for all user questions and prompts.
 	Test  bool // Test toggles the internal unit test mode.
-	parse.Scanner
 }
 
 // Debugger prints the string to stdout whenever Config.Debug is true.
@@ -73,7 +82,7 @@ func (c *Config) Writer(w io.Writer, s string) {
 	if !c.Debug {
 		return
 	}
-	fmt.Fprintf(w, "∙%s\n", s)
+	printf(w, "∙%s\n", s)
 }
 
 // StatSource returns the number of files in the source directory to check.
@@ -214,10 +223,10 @@ func (c *Config) Clean(w io.Writer) error {
 		return err
 	}
 	if count == 0 {
-		fmt.Fprintln(w, "No empty directories required removal.")
+		printl(w, "No empty directories required removal.")
 		return nil
 	}
-	fmt.Fprintf(w, "Removed %d empty directories in: '%s'\n", count, path)
+	printf(w, "Removed %d empty directories in: '%s'\n", count, path)
 	return nil
 }
 
@@ -270,7 +279,7 @@ func (c *Config) Print() (string, error) { //nolint:gocognit
 		}
 	}
 	if finds == 0 {
-		fmt.Fprintln(w, color.Info.Sprint("\rNo duplicate files found.          "))
+		printl(w, color.Info.Sprint("\rNo duplicate files found.          "))
 	}
 	return w.String(), nil
 }
@@ -280,10 +289,10 @@ func (c *Config) Remove() (string, error) {
 	c.Debugger("remove all duplicate files.")
 	w := new(bytes.Buffer)
 	if len(c.Sources) == 0 || len(c.Compare) == 0 {
-		fmt.Fprintln(w, "No duplicate files to remove.          ")
+		printl(w, "No duplicate files to remove.          ")
 		return w.String(), nil
 	}
-	fmt.Fprintln(w)
+	printl(w)
 	for i, path := range c.Sources {
 		c.Debugger(fmt.Sprintf(" %d. remove read: %s", i, path))
 		stat, err := os.Stat(path)
@@ -302,7 +311,7 @@ func (c *Config) Remove() (string, error) {
 			continue
 		}
 		err = os.Remove(path)
-		fmt.Fprintln(w, PrintRM(path, err))
+		printl(w, PrintRM(path, err))
 	}
 	return w.String(), nil
 }
@@ -326,13 +335,13 @@ func (c *Config) Removes() ([]string, error) {
 	}
 	w := os.Stdout
 	if !c.Test {
-		fmt.Fprintf(w, "%s %s\n", color.Secondary.Sprint("Target directory:"), color.Debug.Sprint(root))
-		fmt.Fprintln(w, "Delete everything in the target directory, except for directories"+
+		printf(w, "%s %s\n", color.Secondary.Sprint("Target directory:"), color.Debug.Sprint(root))
+		printl(w, "Delete everything in the target directory, except for directories"+
 			"\ncontaining unique Windows or MS-DOS programs and assets?")
 		if input := printer.AskYN("Please confirm", c.Yes, printer.Nil); !input {
 			os.Exit(0)
 		}
-		fmt.Fprintln(w)
+		printl(w)
 	}
 	return Removes(w, root, files)
 }
@@ -345,7 +354,7 @@ func Removes(w io.Writer, root string, files []fs.DirEntry) ([]string, error) {
 		path := filepath.Join(root, item.Name())
 		if !item.IsDir() {
 			err := os.Remove(path)
-			fmt.Fprintln(w, PrintRM(path, err))
+			printl(w, PrintRM(path, err))
 			continue
 		}
 		exe, err := parse.Executable(path)
@@ -357,7 +366,7 @@ func Removes(w io.Writer, root string, files []fs.DirEntry) ([]string, error) {
 			continue
 		}
 		err = os.RemoveAll(path)
-		fmt.Fprintln(w, PrintRM(fmt.Sprintf("%s%s",
+		printl(w, PrintRM(fmt.Sprintf("%s%s",
 			path, string(filepath.Separator)), err))
 		if err != nil {
 			s = append(s, path)
@@ -650,7 +659,9 @@ func (c *Config) Read7Zip(db *bolt.DB, b parse.Bucket, name string) error {
 	if err != nil {
 		return err
 	}
-	defer r.Close()
+	defer func() {
+		_ = r.Close()
+	}()
 	cnt := 0
 	for _, f := range r.File {
 		if f.FileInfo().IsDir() {
@@ -665,7 +676,9 @@ func (c *Config) Read7Zip(db *bolt.DB, b parse.Bucket, name string) error {
 			printer.Stderr(err)
 			continue
 		}
-		defer rc.Close()
+		defer func() {
+			_ = rc.Close()
+		}()
 		cnt++
 		buf, h := make([]byte, oneMb), sha256.New()
 		if _, err := io.CopyBuffer(h, rc, buf); err != nil {
@@ -763,7 +776,7 @@ func (c *Config) walkDir(db *bolt.DB, root string, skip []string) error {
 			}
 			return err
 		}
-		fmt.Fprint(os.Stdout, PrintWalk(false, c))
+		_, _ = fmt.Fprint(os.Stdout, PrintWalk(false, c))
 		if err := c.Checksum(db, path, root); err != nil {
 			return err
 		}
@@ -878,7 +891,7 @@ func (c *Config) walkCompare(db *bolt.DB, root, path string) error {
 	}
 	return db.View(func(tx *bolt.Tx) error {
 		if !c.Test && !c.Quiet && !c.Debug {
-			fmt.Fprint(os.Stdout, printer.Status(c.Files, -1, printer.Scan))
+			_, _ = fmt.Fprint(os.Stdout, printer.Status(c.Files, -1, printer.Scan))
 		}
 		b := tx.Bucket([]byte(root))
 		if b == nil {
@@ -995,7 +1008,7 @@ func (c *Config) printer(w io.Writer, path string) error {
 	if l == path {
 		return ErrNoMatch
 	}
-	fmt.Fprintln(w, Match(path, l))
+	printl(w, Match(path, l))
 	return nil
 }
 
@@ -1085,7 +1098,7 @@ func (c *Config) readRecover(archive string) {
 	if err := recover(); err != nil {
 		if !c.Quiet {
 			if !c.Debug {
-				fmt.Fprintln(os.Stdout)
+				printl(os.Stdout)
 			}
 			color.Warn.Printf("Unsupported archive: '%s'\n", archive)
 		}

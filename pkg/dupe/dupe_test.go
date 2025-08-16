@@ -80,7 +80,8 @@ func TestConfig_Clean(t *testing.T) {
 	// make empty dir
 	tmp := t.TempDir()
 	be.Err(t, err, nil)
-	c.SetSource(tmp)
+	err = c.SetSource(tmp)
+	be.Err(t, err, nil)
 	err = os.MkdirAll(filepath.Join(tmp, "config-clean-empty-dir"), mock.PrivateDir)
 	be.Err(t, err, nil)
 	err = c.Clean(&b)
@@ -103,7 +104,7 @@ func TestConfig_WalkDirs(t *testing.T) {
 	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
-	c.SetBuckets(bucket1)
+	err = c.SetBuckets(bucket1)
 	be.Err(t, err, nil)
 	err = c.WalkDirs(db)
 	be.Err(t, err, nil)

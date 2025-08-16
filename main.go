@@ -9,6 +9,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"runtime"
 	"strings"
@@ -39,6 +40,14 @@ const (
 	homepage = "https://github.com/bengarrett/dupers"
 )
 
+func printl(w io.Writer, a ...any) {
+	_, _ = fmt.Fprintln(w, a...)
+}
+
+func printf(w io.Writer, format string, a ...any) {
+	_, _ = fmt.Fprintf(w, format, a...)
+}
+
 func tasks(selection string, c *dupe.Config, f cmd.Flags) error {
 	switch selection {
 	case task.Dupe_:
@@ -46,14 +55,18 @@ func tasks(selection string, c *dupe.Config, f cmd.Flags) error {
 		if err != nil {
 			return err
 		}
-		defer db.Close()
+		defer func() {
+			_ = db.Close()
+		}()
 		return task.Dupe(db, c, &f, flag.Args()...)
 	case task.Search_:
 		db, err := database.OpenRead()
 		if err != nil {
 			return err
 		}
-		defer db.Close()
+		defer func() {
+			_ = db.Close()
+		}()
 		return task.Search(db, &f, false, flag.Args()...)
 	case
 		task.Backup_,
@@ -65,7 +78,9 @@ func tasks(selection string, c *dupe.Config, f cmd.Flags) error {
 		if err != nil {
 			return err
 		}
-		defer db.Close()
+		defer func() {
+			_ = db.Close()
+		}()
 		return task.Database(db, c, flag.Args()...)
 	case
 		task.Import_,
@@ -77,7 +92,9 @@ func tasks(selection string, c *dupe.Config, f cmd.Flags) error {
 		if err != nil {
 			return err
 		}
-		defer db.Close()
+		defer func() {
+			_ = db.Close()
+		}()
 		return task.Database(db, c, flag.Args()...)
 	default:
 		unknownExit(selection)
@@ -105,7 +122,7 @@ func main() {
 		printer.ErrFatal(err)
 	}
 	if help != "" {
-		fmt.Fprint(os.Stdout, help)
+		_, _ = fmt.Fprint(os.Stdout, help)
 		os.Exit(0)
 	}
 
@@ -131,11 +148,11 @@ func main() {
 func unknownExit(s string) {
 	w := os.Stderr
 	printer.StderrCR(ErrCmd)
-	fmt.Fprintf(w, "Command: '%s'", s)
-	fmt.Fprintln(w)
-	fmt.Fprintln(w)
-	fmt.Fprint(w, "See the help for the available commands and options:")
-	fmt.Fprintln(w)
+	printf(w, "Command: '%s'", s)
+	printl(w)
+	printl(w)
+	_, _ = fmt.Fprint(w, "See the help for the available commands and options:")
+	printl(w)
 	printer.Example("dupers -help")
 
 	os.Exit(1)
@@ -182,18 +199,18 @@ func about(quiet bool) string {
 	}
 	w := new(bytes.Buffer)
 	if !quiet {
-		fmt.Fprintln(w, brand+"\n")
-		fmt.Fprintln(w, ralign(width, "dupers v"+version))
-		fmt.Fprintln(w, ralign(width, fmt.Sprintf("%s %s", copyright(), author)))
-		fmt.Fprintln(w, color.Primary.Sprint(ralign(width, homepage)))
-		fmt.Fprintln(w)
+		printl(w, brand+"\n")
+		printl(w, ralign(width, "dupers v"+version))
+		printl(w, ralign(width, fmt.Sprintf("%s %s", copyright(), author)))
+		printl(w, color.Primary.Sprint(ralign(width, homepage)))
+		printl(w)
 	}
-	fmt.Fprintf(w, "  %s    %s\n", color.Secondary.Sprint("build:"), commit())
-	fmt.Fprintf(w, "  %s %s/%s\n", color.Secondary.Sprint("platform:"),
+	printf(w, "  %s    %s\n", color.Secondary.Sprint("build:"), commit())
+	printf(w, "  %s %s/%s\n", color.Secondary.Sprint("platform:"),
 		runtime.GOOS, runtime.GOARCH)
-	fmt.Fprintf(w, "  %s       %s\n", color.Secondary.Sprint("go:"),
+	printf(w, "  %s       %s\n", color.Secondary.Sprint("go:"),
 		strings.Replace(runtime.Version(), "go", "v", 1))
-	fmt.Fprintf(w, "  %s     %s\n", color.Secondary.Sprint("path:"), exe)
+	printf(w, "  %s     %s\n", color.Secondary.Sprint("path:"), exe)
 	return w.String()
 }
 

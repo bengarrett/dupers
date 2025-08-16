@@ -104,7 +104,7 @@ func TempDir(t *testing.T) string {
 	t.Helper()
 	const msg = "mock temporary directory"
 	root := RootDir(t)
-	tmp, err := os.MkdirTemp(root, ".mock-*")
+	tmp, err := os.MkdirTemp(root, ".mock-*") //nolint:usetesting
 	if err != nil {
 		t.Errorf("%s: %s", msg, err)
 	}
@@ -204,7 +204,9 @@ func NamedDB(t *testing.T) string {
 	if err != nil {
 		t.Errorf("%s create temp using %q: %s", msg, filename, err)
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 	return f.Name()
 }
 
@@ -219,7 +221,7 @@ func Create(t *testing.T) string {
 	if err != nil {
 		t.Errorf("%s: %s", err, msg)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	err = db.Update(func(tx *bolt.Tx) error {
 		// delete any existing buckets from the mock database
 		if err := tx.ForEach(func(name []byte, b *bolt.Bucket) error {
@@ -271,7 +273,9 @@ func read(name string) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 	buf := make([]byte, oneMb)
 	h := sha256.New()
 	if _, err := io.CopyBuffer(h, f, buf); err != nil {

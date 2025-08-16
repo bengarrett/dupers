@@ -4,6 +4,7 @@ package bucket
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -34,6 +35,14 @@ type Cleaner struct {
 	Items int    // Items is the sum of the bucket items.
 	Finds int    // Finds is the sum of the cleaned items.
 	Errs  int    // Errs is the sum of the items that could not be cleaned.
+}
+
+func printl(w io.Writer, a ...any) {
+	_, _ = fmt.Fprintln(w, a...)
+}
+
+func printf(w io.Writer, format string, a ...any) {
+	_, _ = fmt.Fprintf(w, format, a...)
 }
 
 // Clean the stale items from database buckets.
@@ -152,7 +161,7 @@ func Abs(name string) (string, error) {
 
 func printStat(debug, quiet bool, cnt, total int, k []byte) {
 	if !debug && !quiet {
-		fmt.Fprintf(os.Stdout, "%s", printer.Status(cnt, total, printer.Check))
+		printf(os.Stdout, "%s", printer.Status(cnt, total, printer.Check))
 	}
 	printer.Debug(debug, "clean: "+string(k))
 }
@@ -201,23 +210,23 @@ func count(db *bolt.DB, b *bolt.Bucket) (int, error) {
 func Rename(name string, assumeYes bool) string {
 	printer.StderrCR(ErrBucketExists)
 	w := os.Stdout
-	fmt.Fprintln(w)
-	fmt.Fprintf(w, "Import bucket name: %s", color.Debug.Sprint(name))
-	fmt.Fprintln(w)
-	fmt.Fprintln(w)
-	fmt.Fprintln(w, "The existing data in this bucket will overridden and any new data will be appended.")
+	printl(w)
+	printf(w, "Import bucket name: %s", color.Debug.Sprint(name))
+	printl(w)
+	printl(w)
+	printl(w, "The existing data in this bucket will overridden and any new data will be appended.")
 	if printer.AskYN("Do you want to continue using this bucket", assumeYes, printer.Yes) {
 		return name
 	}
-	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Please choose a new bucket, which must be an absolute directory path.")
+	printl(w)
+	printl(w, "Please choose a new bucket, which must be an absolute directory path.")
 	return printer.Prompt(query)
 }
 
 // Stats checks the validity of the named bucket and prompts for user confirmation on errors.
 func Stats(name string, assumeYes bool) bool {
 	for {
-		fmt.Fprintln(os.Stdout)
+		printl(os.Stdout)
 		if name = Stat(name, assumeYes, false); name != "" {
 			return true
 		}
@@ -227,10 +236,10 @@ func Stats(name string, assumeYes bool) bool {
 func Stat(name string, assumeYes, test bool) string {
 	w := os.Stdout
 	printName := func() {
-		fmt.Fprintln(w)
-		fmt.Fprintf(w, "Import bucket directory: %s", color.Debug.Sprint(name))
-		fmt.Fprintln(w)
-		fmt.Fprintln(w)
+		printl(w)
+		printf(w, "Import bucket directory: %s", color.Debug.Sprint(name))
+		printl(w)
+		printl(w)
 	}
 	if name == "" {
 		return ""
@@ -245,8 +254,8 @@ func Stat(name string, assumeYes, test bool) string {
 	if errors.Is(err, os.ErrNotExist) {
 		printer.StderrCR(ErrBucketPath)
 		printName()
-		fmt.Fprintln(w, "You may still run dupe checks and searches without the actual files on your system.")
-		fmt.Fprintln(w, "Choosing no will prompt for a new bucket.")
+		printl(w, "You may still run dupe checks and searches without the actual files on your system.")
+		printl(w, "Choosing no will prompt for a new bucket.")
 		if !test {
 			if printer.AskYN("Do you want to continue using this bucket", assumeYes, printer.Yes) {
 				return abs
@@ -260,7 +269,7 @@ func Stat(name string, assumeYes, test bool) string {
 	if err != nil {
 		printer.StderrCR(ErrBucketNotDir)
 		printName()
-		fmt.Fprintln(w, "You cannot use this path as a bucket, please choose an absolute directory path.")
+		printl(w, "You cannot use this path as a bucket, please choose an absolute directory path.")
 		if !test {
 			return printer.Prompt(query)
 		}

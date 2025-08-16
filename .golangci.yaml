@@ -15,6 +15,7 @@ linters:
   exclusions:
     rules:
       - linters:
+          - errcheck
           - dupl
           - lll
           - varnamelen

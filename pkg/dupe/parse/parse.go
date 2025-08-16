@@ -227,8 +227,7 @@ func Read(name string) (Checksum, error) {
 	if err != nil {
 		return Checksum{}, err
 	}
-	defer f.Close()
-
+	defer func() { _ = f.Close() }()
 	buf, h := make([]byte, oneMb), sha256.New()
 	if _, err := io.CopyBuffer(h, f, buf); err != nil {
 		return Checksum{}, err

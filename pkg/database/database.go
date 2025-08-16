@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -61,6 +62,14 @@ var (
 	ErrZeroByte  = errors.New("database is a zero byte file and is unusable")
 )
 
+func printl(w io.Writer, a ...any) {
+	_, _ = fmt.Fprintln(w, a...)
+}
+
+func printf(w io.Writer, format string, a ...any) {
+	_, _ = fmt.Fprintf(w, format, a...)
+}
+
 // Abs returns an absolute representation of the named bucket.
 func Abs(name string) (string, error) {
 	return bucket.Abs(name)
@@ -103,7 +112,7 @@ func Check() (int64, error) {
 	i, err1 := os.Stat(path)
 	if os.IsNotExist(err1) {
 		printer.StderrCR(ErrNotFound)
-		fmt.Fprintf(w, "\n%s\nThe database will be located at: %s\n", NotFound, path)
+		printf(w, "\n%s\nThe database will be located at: %s\n", NotFound, path)
 		return 0, ErrNotFound // 0
 	} else if err1 != nil {
 		return 0, err1
@@ -111,7 +120,7 @@ func Check() (int64, error) {
 	if i.Size() == 0 {
 		printer.StderrCR(ErrZeroByte)
 		s := "This error occures when dupers cannot save any data to the file system."
-		fmt.Fprintf(w, "\n%s\nThe database is located at: %s\n", s, path)
+		printf(w, "\n%s\nThe database is located at: %s\n", s, path)
 		return 0, ErrZeroByte // 1
 	}
 	return i.Size(), nil
@@ -185,14 +194,14 @@ func Clean(db *bolt.DB, quiet, debug bool, buckets ...string) error {
 	}
 	w := os.Stdout
 	if debug && finds == 0 {
-		fmt.Fprintln(w, "")
+		printl(w, "")
 		return ErrNoClean
 	}
 	if finds > 0 {
-		fmt.Fprintf(w, "\rThe database removed %d stale items\n", finds)
+		printf(w, "\rThe database removed %d stale items\n", finds)
 		return nil
 	}
-	fmt.Fprintln(w, "")
+	printl(w, "")
 	return nil
 }
 
@@ -235,16 +244,18 @@ func Compact(db *bolt.DB, debug bool) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-
+	defer func() {
+		_ = f.Close()
+	}()
 	// open target database
 	target, err := bolt.Open(f.Name(), PrivateFile, write())
 	if err != nil {
 		return fmt.Errorf("%w: open %s", err, f.Name())
 	}
 	printer.Debug(debug, "opened replacement database: "+f.Name())
-	defer target.Close()
-
+	defer func() {
+		_ = target.Close()
+	}()
 	// compress and copy the results to the temporary database
 	printer.Debug(debug, "compress and copy databases")
 	if err := bolt.Compact(target, db, 0); err != nil {
@@ -433,7 +444,9 @@ func Create(path string) error {
 	if err != nil {
 		return fmt.Errorf("could not create a new database: %w: %s", err, path)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 	return nil
 }
 
@@ -449,40 +462,44 @@ func Info(db *bolt.DB) (string, error) {
 	var b bytes.Buffer
 	w := new(tabwriter.Writer)
 	w.Init(&b, 0, tabWidth, 0, '\t', 0)
-	fmt.Fprintf(w, "\tLocation:\t%s", path)
-	fmt.Fprintln(w)
+	printf(w, "\tLocation:\t%s", path)
+	printl(w)
 	stat, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			fmt.Fprintf(w, "\n%s\n", NotFound)
+			printf(w, "\n%s\n", NotFound)
 			err = ErrNotFound
 		}
-		w.Flush()
+		if err := w.Flush(); err != nil {
+			return b.String(), err
+		}
 		return b.String(), err
 	}
-	fmt.Fprintf(w, "\tModified:\t%s", stat.ModTime().Local().Format("Jan 2 15:04:05"))
-	fmt.Fprintln(w)
-	fmt.Fprintf(w, "\tFile:\t%s",
+	printf(w, "\tModified:\t%s", stat.ModTime().Local().Format("Jan 2 15:04:05")) //nolint:gosmopolitan
+	printl(w)
+	printf(w, "\tFile:\t%s",
 		color.Primary.Sprint(humanize.Bytes(safesize(stat.Size()))))
 	if runtime.GOOS != winOS {
-		fmt.Fprintf(w, " (%v)", stat.Mode())
+		printf(w, " (%v)", stat.Mode())
 	}
-	fmt.Fprintln(w)
+	printl(w)
 	var bucketsB int
 	w, bucketsB, err = info(db, w)
 	if err != nil {
-		fmt.Fprintln(w)
-		fmt.Fprintf(w, "\tDatabase error:\t%s", err.Error())
-		fmt.Fprintln(w)
+		printl(w)
+		printf(w, "\tDatabase error:\t%s", err.Error())
+		printl(w)
 	}
 	const oneAndAHalf, oneMB = 1.5, 1_000_000
 	tooBig := int64(float64(bucketsB) * oneAndAHalf)
 	if stat.Size() > oneMB && stat.Size() > tooBig {
-		fmt.Fprintln(w)
-		fmt.Fprintln(w, color.Notice.Sprint("To reduce the size of the database:"))
-		fmt.Fprintln(w, color.Debug.Sprint("dupers backup && dupers clean"))
+		printl(w)
+		printl(w, color.Notice.Sprint("To reduce the size of the database:"))
+		printl(w, color.Debug.Sprint("dupers backup && dupers clean"))
 	}
-	w.Flush()
+	if err := w.Flush(); err != nil {
+		return b.String(), err
+	}
 	return b.String(), nil
 }
 
@@ -509,8 +526,8 @@ func info(db *bolt.DB, w *tabwriter.Writer) (*tabwriter.Writer, int, error) {
 	if !db.IsReadOnly() {
 		ro = color.Danger.Sprint("NO")
 	}
-	fmt.Fprintf(w, "\tRead only mode:\t%s", ro)
-	fmt.Fprintln(w)
+	printf(w, "\tRead only mode:\t%s", ro)
+	printl(w)
 	items, cnt, sizes := make(item), 0, 0
 	if err := db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
@@ -527,21 +544,21 @@ func info(db *bolt.DB, w *tabwriter.Writer) (*tabwriter.Writer, int, error) {
 	}); err != nil {
 		return nil, 0, err
 	}
-	fmt.Fprintf(w, "Buckets:        %s", color.Primary.Sprint(cnt))
-	fmt.Fprintln(w)
-	fmt.Fprintln(w)
+	printf(w, "Buckets:        %s", color.Primary.Sprint(cnt))
+	printl(w)
+	printl(w)
 	if cnt == 0 {
 		// exit when no buckets exist
 		return w, sizes, nil
 	}
 	tab := tabwriter.NewWriter(w, 0, 0, tabPadding, ' ', tabwriter.AlignRight)
-	fmt.Fprintf(tab, "Items\tSize\t\tBucket %s",
+	printf(tab, "Items\tSize\t\tBucket %s",
 		color.Secondary.Sprint("(absolute path)"))
-	fmt.Fprintln(tab)
+	printl(tab)
 	p := message.NewPrinter(language.English)
 	for i, b := range items {
-		p.Fprintf(tab, "%d\t%s\t\t%v", number.Decimal(b.items), b.size, i)
-		fmt.Fprintln(tab)
+		_, _ = p.Fprintf(tab, "%d\t%s\t\t%v", number.Decimal(b.items), b.size, i)
+		printl(tab)
 	}
 	if err := tab.Flush(); err != nil {
 		return w, 0, err

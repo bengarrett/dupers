@@ -4,6 +4,7 @@ package search
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -20,6 +21,10 @@ var (
 	ErrSearch  = errors.New("search request needs an expression")
 )
 
+func printl(w io.Writer, a ...any) {
+	_, _ = fmt.Fprintln(w, a...)
+}
+
 // CmdErr parses the arguments of the search command.
 func CmdErr(lenArgs int, test bool) error {
 	if lenArgs > 1 {
@@ -27,8 +32,8 @@ func CmdErr(lenArgs int, test bool) error {
 	}
 	w := os.Stderr
 	printer.StderrCR(ErrSearch)
-	fmt.Fprintln(w, "A search expression can be a partial or complete filename,")
-	fmt.Fprintln(w, "or a partial or complete directory.")
+	printl(w, "A search expression can be a partial or complete filename,")
+	printl(w, "or a partial or complete directory.")
 	printer.Example("\ndupers search <search expression> [optional, directories to search]")
 	if !test {
 		printer.ErrFatal(nil)
@@ -36,7 +41,7 @@ func CmdErr(lenArgs int, test bool) error {
 	return ErrSearch
 }
 
-func Compare(db *bolt.DB, f *cmd.Flags, term string, buckets []string) (*database.Matches, error) {
+func Compare(db *bolt.DB, f *cmd.Flags, term string, buckets []string) (*database.Matches, error) { //nolint:cyclop
 	if db == nil {
 		return nil, bberr.ErrDatabaseNotOpen
 	}
@@ -77,7 +82,7 @@ func Error(err error) error {
 	}
 	if errors.Is(err, bberr.ErrBucketNotFound) {
 		printer.StderrCR(err)
-		fmt.Fprintln(os.Stdout, "To add this directory as a bucket to the database, run:")
+		printl(os.Stdout, "To add this directory as a bucket to the database, run:")
 		dir := err.Error()
 		if errors.Unwrap(err) != nil {
 			s := bberr.ErrBucketNotFound.Error() + ": "

@@ -4,6 +4,7 @@ package printer
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"runtime"
 	"strings"
@@ -42,12 +43,20 @@ const (
 	winOS = "windows"
 )
 
+func printl(w io.Writer, a ...any) {
+	_, _ = fmt.Fprintln(w, a...)
+}
+
+func printf(w io.Writer, format string, a ...any) {
+	_, _ = fmt.Fprintf(w, format, a...)
+}
+
 // Debug prints the string to a newline whenever the value of flag is true.
 func Debug(flag bool, s string) {
 	if !flag {
 		return
 	}
-	fmt.Fprintf(os.Stdout, "∙%s\n", s)
+	printf(os.Stdout, "∙%s\n", s)
 }
 
 // Quiet prints the string when the flag value is false.
@@ -56,7 +65,7 @@ func Quiet(flag bool, s string) {
 		return
 	}
 
-	fmt.Fprintf(os.Stdout, "%s\n", s)
+	printf(os.Stdout, "%s\n", s)
 }
 
 // EnterKey returns the Enter keyboard code.
@@ -77,7 +86,7 @@ func Stderr(err error) {
 
 	s := strings.ToLower(err.Error())
 	fmt.Fprint(os.Stderr, color.Warn.Sprintf("%s.", strings.TrimSpace(s)))
-	fmt.Fprintln(os.Stderr)
+	printl(os.Stderr)
 }
 
 // StderrCR prints the formatted err to the current line of stderr.
@@ -92,14 +101,14 @@ func StderrCR(err error) {
 
 	switch {
 	case strings.HasPrefix(s, nf):
-		fmt.Fprintln(os.Stdout, color.Info.Sprintf("%s\n",
+		printl(os.Stdout, color.Info.Sprintf("%s\n",
 			strings.Replace(s, nf, "New database bucket:", 1)))
 		return
 	case strings.HasPrefix(s, "bucket not found"):
 		s = "bucket does not exist"
 	}
 
-	fmt.Fprintln(os.Stderr, color.Warn.Sprintf("\rThe %s", s))
+	printl(os.Stderr, color.Warn.Sprintf("\rThe %s", s))
 }
 
 // ErrFatal prints the error and exits the program.
@@ -118,8 +127,8 @@ func Example(cmd string) {
 		return
 	}
 
-	fmt.Fprintln(os.Stdout, color.Debug.Sprint(cmd))
-	fmt.Fprintln(os.Stdout)
+	printl(os.Stdout, color.Debug.Sprint(cmd))
+	printl(os.Stdout)
 }
 
 // EraseLine uses ANSI to erase the current line in stdout.
@@ -198,9 +207,9 @@ func AskYN(question string, alwaysYes bool, recommend YN) bool {
 	w := os.Stdout
 	prompt, suffix := recommend.Define()
 	ask := fmt.Sprintf("\r%s? [%s]%s: ", question, prompt, suffix)
-	fmt.Fprintf(w, "%s", ask)
+	printf(w, "%s", ask)
 	if alwaysYes {
-		fmt.Fprintln(w, yes)
+		printl(w, yes)
 		return true
 	}
 	for {
@@ -220,10 +229,10 @@ func AskYN(question string, alwaysYes bool, recommend YN) bool {
 		if b == EnterKey() {
 			switch recommend {
 			case Yes:
-				fmt.Fprintf(w, "%s%s%s\n", CursorUp, ask, "y")
+				printf(w, "%s%s%s\n", CursorUp, ask, "y")
 				return true
 			case No:
-				fmt.Fprintf(w, "%s%s%s\n", CursorUp, ask, "n")
+				printf(w, "%s%s%s\n", CursorUp, ask, "n")
 				return false
 			case Nil:
 				continue
@@ -253,9 +262,7 @@ func (y YN) Define() (string, string) {
 // The prompt will loop until Enter key or Ctrl-C are pressed.
 func Prompt(question string) string {
 	r := bufio.NewReader(os.Stdin)
-
-	fmt.Fprintf(os.Stdout, "\r%s?: ", question)
-
+	printf(os.Stdout, "\r%s?: ", question)
 	for {
 		s, err := r.ReadString(EnterKey())
 		if err != nil {

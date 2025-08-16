@@ -76,13 +76,13 @@ func CopyFile(name, dest string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	// create backup file
 	bf, err := os.Create(dest)
 	if err != nil {
 		return 0, err
 	}
-	defer bf.Close()
+	defer func() { _ = bf.Close() }()
 	// duplicate data
 	return io.Copy(bf, f)
 }
@@ -103,7 +103,7 @@ func CSVExport(db *bolt.DB, bucket string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer dest.Close()
+	defer func() { _ = dest.Close() }()
 
 	meta := strings.Join([]string{"path", bucket}, "#")
 	records := [][]string{
@@ -140,8 +140,9 @@ func CSVImport(db *bolt.DB, name string, assumeYes bool) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer file.Close()
-
+	defer func() {
+		_ = file.Close()
+	}()
 	if err := csv.Checker(file); err != nil {
 		return 0, err
 	}
@@ -159,10 +160,10 @@ func CSVImport(db *bolt.DB, name string, assumeYes bool) (int, error) {
 	s += color.Secondary.Sprint("Found ") +
 		color.Primary.Sprintf("%s valid items", p.Sprint(number.Decimal(items))) +
 		color.Secondary.Sprint(" in the CSV file.")
-	fmt.Fprintln(w, s)
+	_, _ = fmt.Fprintln(w, s)
 	s = color.Secondary.Sprint("These will be added to the bucket: ")
 	s += color.Debug.Sprint(name)
-	fmt.Fprintln(w, s)
+	_, _ = fmt.Fprintln(w, s)
 	return Import(db, Bucket(name), lists)
 }
 
@@ -225,7 +226,7 @@ func (batch Lists) iterate(db *bolt.DB, name Bucket, imported, total int) (int, 
 			if err != nil {
 				return err
 			}
-			fmt.Fprint(os.Stdout, printer.Status(imported, total, printer.Read))
+			_, _ = fmt.Fprint(os.Stdout, printer.Status(imported, total, printer.Read))
 			if err := b.Put([]byte(string(path)), sum[:]); err != nil {
 				return err
 			}

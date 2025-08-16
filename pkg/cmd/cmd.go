@@ -134,24 +134,7 @@ func (f *Flags) Define() {
 // Aliases parses the command aliases and flags, configuring both Flags and dupe.Config.
 func (f *Flags) Aliases(a *Aliases, c *dupe.Config) dupe.Config {
 	// handle misuse when a global flag is passed as an argument
-	for _, arg := range flag.Args() {
-		switch strings.ToLower(arg) {
-		case "-d", "-debug", "--debug":
-			*f.Debug = true
-		case "-m", "-mono", "--mono":
-			*f.Mono = true
-		case "-q", "-quiet", "--quiet":
-			*f.Quiet = true
-		case "-h", "-help", "--help":
-			*f.Help = true
-		case "-y", "-yes", "--yes":
-			*f.Yes = true
-		case "-v", "-version", "--version":
-			*f.Version = true
-		default:
-			// help and version are handled by main.suffixOpts()
-		}
-	}
+	f.aliases()
 	// configurations
 	if *a.Debug || *f.Debug {
 		*f.Debug = true
@@ -185,6 +168,28 @@ func (f *Flags) Aliases(a *Aliases, c *dupe.Config) dupe.Config {
 		*f.Version = true
 	}
 	return *c
+}
+
+func (f *Flags) aliases() {
+	// handle misuse when a global flag is passed as an argument
+	for _, arg := range flag.Args() {
+		switch strings.ToLower(arg) {
+		case "-d", "-debug", "--debug":
+			*f.Debug = true
+		case "-m", "-mono", "--mono":
+			*f.Mono = true
+		case "-q", "-quiet", "--quiet":
+			*f.Quiet = true
+		case "-h", "-help", "--help":
+			*f.Help = true
+		case "-y", "-yes", "--yes":
+			*f.Yes = true
+		case "-v", "-version", "--version":
+			*f.Version = true
+		default:
+			// help and version are handled by main.suffixOpts()
+		}
+	}
 }
 
 // WindowsChk checks the named directory for invalid, escaped quoted paths when using Windows cmd.exe.

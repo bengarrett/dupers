@@ -101,7 +101,9 @@ func ReadMIME(name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 	kind, err := filetype.MatchReader(f)
 	if err != nil {
 		return "", err

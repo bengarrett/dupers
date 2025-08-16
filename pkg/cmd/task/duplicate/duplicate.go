@@ -27,6 +27,10 @@ var (
 
 const winOS = "windows"
 
+func printl(w io.Writer, a ...any) {
+	_, _ = fmt.Fprintln(w, a...)
+}
+
 // Cleanup runs the cleanup commands when the appropriate flags are set.
 func Cleanup(c *dupe.Config, f *cmd.Flags) error {
 	if c == nil {
@@ -41,7 +45,7 @@ func Cleanup(c *dupe.Config, f *cmd.Flags) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprint(w, s)
+		_, _ = fmt.Fprint(w, s)
 	}
 	if *f.Sensen {
 		removes, err := c.Removes()
@@ -84,22 +88,22 @@ func Check(args, buckets, minArgs int) {
 	w := os.Stdout
 	if args < minArgs {
 		printer.StderrCR(ErrNoArgs)
-		fmt.Fprintln(w, "\nThe dupe command requires a directory or file to check.")
+		printl(w, "\nThe dupe command requires a directory or file to check.")
 		if runtime.GOOS == winOS {
-			fmt.Fprintln(w, "The optional bucket can be one or more directories or drive letters.")
+			printl(w, "The optional bucket can be one or more directories or drive letters.")
 		} else {
-			fmt.Fprintln(w, "The optional bucket can be one or more directory paths.")
+			printl(w, "The optional bucket can be one or more directory paths.")
 		}
 		printer.Example("\ndupers dupe <directory or file to check> [buckets to lookup]")
 	}
 	if buckets == 0 && args == minArgs {
-		fmt.Fprintln(w, color.Warn.Sprint("The database is empty.\n"))
+		printl(w, color.Warn.Sprint("The database is empty.\n"))
 		if runtime.GOOS == winOS {
-			fmt.Fprintln(w, "This dupe request requires at least one directory or drive letter to lookup.")
+			printl(w, "This dupe request requires at least one directory or drive letter to lookup.")
 		} else {
-			fmt.Fprintln(w, "This dupe request requires at least one directory to lookup.")
+			printl(w, "This dupe request requires at least one directory to lookup.")
 		}
-		fmt.Fprintln(w, "These lookup directories will be stored to the database as buckets.")
+		printl(w, "These lookup directories will be stored to the database as buckets.")
 		if len(flag.Args()) > 0 {
 			s := fmt.Sprintf("\ndupers dupe %s <one or more directories>\n", flag.Args()[1])
 			printer.Example(s)
@@ -196,7 +200,7 @@ func Lookup(db *bolt.DB, c *dupe.Config) error {
 			continue
 		}
 		fastFlagErr = true
-		fmt.Fprintln(os.Stderr, "The -fast flag cannot be used for this dupe query")
+		printl(os.Stderr, "The -fast flag cannot be used for this dupe query")
 	}
 	if fastFlagErr {
 		return ErrFast
