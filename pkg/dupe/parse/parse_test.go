@@ -179,7 +179,7 @@ func TestPrint(t *testing.T) {
 	m[database.Filepath(item1)] = database.Bucket(sum1) // 1 match
 	s = parse.Print(false, false, "", &m)
 	ok := strings.Contains(s, item1)
-	be.True(t, ok) // TODO: incorrect result?
+	be.True(t, ok)
 	ok = strings.Contains(s, sum1)
 	be.True(t, ok)
 	s = parse.Print(true, false, "", &m)

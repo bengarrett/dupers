@@ -8,6 +8,7 @@ import (
 	"io"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"text/tabwriter"
 
 	"github.com/bengarrett/dupers/pkg/cmd"
@@ -90,7 +91,6 @@ func DatabaseHelp(w io.Writer) {
 
 // DupeHelp creates the dupe command help.
 func DupeHelp(w io.Writer) {
-	var f flag.Flag
 	const danger = "(!)"
 	printl(w)
 	printl(w, color.Primary.Sprint("Dupe command:"))
@@ -108,18 +108,26 @@ func DupeHelp(w io.Writer) {
 	printl(w)
 	printl(w, "  Options:")
 	if flag.Lookup(cmd.Fast_) != nil {
-		// fmt.Fprintln(w, "-----------------------------------------------------------------------------80|")
-		f = *flag.Lookup(cmd.Fast_)
-		printf(w, "    -%s, -%s\t%s\n", f.Name[:1], f.Name, f.Usage)
-		f = *flag.Lookup(cmd.Delete_)
-		printf(w, "        -%s\t%s ", f.Name, color.Danger.Sprint(danger))
-		printl(w, f.Usage)
-		f = *flag.Lookup(cmd.DelPlus_)
-		printf(w, "        -%s\t%s ", f.Name, color.Danger.Sprint(danger))
-		printl(w, f.Usage)
-		f = *flag.Lookup(cmd.Sensen_)
-		printf(w, "        -%s\t%s ", f.Name, color.Danger.Sprint(danger))
-		printl(w, f.Usage)
+		var f *flag.Flag
+		f = flag.Lookup(cmd.Fast_)
+		if len(f.Name) > 1 {
+			printf(w, "    -%s, -%s\t%s\n", f.Name[:1], f.Name, f.Usage)
+		}
+		f = flag.Lookup(cmd.Delete_)
+		if f != nil {
+			printf(w, "        -%s\t%s ", f.Name, color.Danger.Sprint(danger))
+			printl(w, f.Usage)
+		}
+		f = flag.Lookup(cmd.DelPlus_)
+		if f != nil {
+			printf(w, "        -%s\t%s ", f.Name, color.Danger.Sprint(danger))
+			printl(w, f.Usage)
+		}
+		f = flag.Lookup(cmd.Sensen_)
+		if f != nil {
+			printf(w, "        -%s\t%s ", f.Name, color.Danger.Sprint(danger))
+			printl(w, f.Usage)
+		}
 		printl(w)
 		printl(w, color.Danger.Sprint(pad4, danger), "this option is potentionally dangerous")
 	}
@@ -161,24 +169,21 @@ func ProgramOpts(w io.Writer) {
 	printl(w)
 	printl(w, "  Usage:")
 	if flag.Lookup(cmd.Mono_) != nil {
-		var f flag.Flag
-		f = *flag.Lookup(cmd.Mono_)
-		printf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
-		f = *flag.Lookup(cmd.Quiet_)
-		printf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
-		f = *flag.Lookup(cmd.Yes_)
-		printf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
-		f = *flag.Lookup(cmd.Debug_)
-		printf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
-		f = *flag.Lookup(cmd.Version_)
-		printf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
+		lcmd := []string{cmd.Mono_, cmd.Quiet_, cmd.Yes_, cmd.Debug_, cmd.Version_}
+		var f *flag.Flag
+		for name := range slices.Values(lcmd) {
+			f = flag.Lookup(name)
+			if f == nil {
+				continue
+			}
+			printf(w, "    -%v, -%v\t%v\n", f.Name[:1], f.Name, f.Usage)
+		}
 	}
 	printf(w, "    -h, %s\tshow this list of options\n", "-help")
 }
 
 // Search creates the search command help.
 func SearchHelp(w io.Writer) {
-	var f flag.Flag
 	printl(w)
 	printl(w, color.Primary.Sprint("Search command:"))
 	printl(w, "  Lookup a file or a directory name in the database.")
@@ -189,10 +194,15 @@ func SearchHelp(w io.Writer) {
 	printl(w)
 	printl(w, "  Options:")
 	if flag.Lookup(cmd.Exact_) != nil {
-		f = *flag.Lookup(cmd.Exact_)
-		printf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
-		f = *flag.Lookup(cmd.Name_)
-		printf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
+		var f *flag.Flag
+		f = flag.Lookup(cmd.Exact_)
+		if f != nil {
+			printf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
+		}
+		f = flag.Lookup(cmd.Name_)
+		if f != nil {
+			printf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
+		}
 	}
 	SearchExample(w)
 }

@@ -175,6 +175,9 @@ func Dupe(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
 		}
 		return ErrArgs
 	}
+	if len(args) < source {
+		return ErrArgs
+	}
 	if err := c.SetSource(args[source]); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			printer.StderrCR(os.ErrNotExist)
@@ -334,6 +337,9 @@ func Search(db *bolt.DB, f *cmd.Flags, test bool, args ...string) error {
 	}
 	if err := search.CmdErr(l, test); err != nil {
 		return err
+	}
+	if len(args) < 2 {
+		return ErrArgs
 	}
 	term, buckets := args[1], []string{}
 	const minArgs = 2

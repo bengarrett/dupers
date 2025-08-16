@@ -300,7 +300,7 @@ func (c *Config) Remove() (string, error) {
 			c.Debugger("path is not exist: " + path)
 			return "", err
 		}
-		if stat.IsDir() {
+		if stat == nil || stat.IsDir() {
 			continue
 		}
 		checksum, err := parse.Read(path)
