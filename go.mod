@@ -10,13 +10,13 @@ require (
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/dustin/go-humanize v1.0.1
 	github.com/golang/snappy v1.0.0 // indirect
-	github.com/gookit/color v1.5.4
+	github.com/gookit/color v1.6.0
 	github.com/h2non/filetype v1.1.3
 	github.com/karrick/godirwalk v1.17.0
 	github.com/nwaples/rardecode v1.1.3 // indirect
 	github.com/ulikunitz/xz v0.5.14 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
-	go.etcd.io/bbolt v1.4.2
+	go.etcd.io/bbolt v1.4.3
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
 	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/text v0.28.0
@@ -25,7 +25,7 @@ require (
 require (
 	github.com/carlmjohnson/versioninfo v0.22.5
 	github.com/mholt/archiver/v3 v3.5.1
-	github.com/nalgeon/be v0.2.0
+	github.com/nalgeon/be v0.3.0
 )
 
 require (
