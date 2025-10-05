@@ -17,7 +17,7 @@ jobs:
       - name: Git fetch
         run: git fetch --force --tags
       - name: Setup Go with cache
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
       - name: GoReleaser run
         uses: goreleaser/goreleaser-action@v6
         with:
