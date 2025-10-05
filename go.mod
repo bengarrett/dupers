@@ -19,7 +19,7 @@ require (
 	go.etcd.io/bbolt v1.4.3
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
 	golang.org/x/sys v0.35.0 // indirect
-	golang.org/x/text v0.28.0
+	golang.org/x/text v0.29.0
 )
 
 require (
@@ -39,9 +39,9 @@ require (
 	github.com/spf13/afero v1.14.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.uber.org/nilaway v0.0.0-20250805202745-8ad05f089790 // indirect
-	golang.org/x/mod v0.26.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/tools v0.35.0 // indirect
+	golang.org/x/mod v0.27.0 // indirect
+	golang.org/x/sync v0.17.0 // indirect
+	golang.org/x/tools v0.36.0 // indirect
 )
 
 tool go.uber.org/nilaway/cmd/nilaway
