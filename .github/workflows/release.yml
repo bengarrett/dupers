@@ -11,13 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Git fetch
         run: git fetch --force --tags
       - name: Setup Go with cache
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
       - name: GoReleaser run
         uses: goreleaser/goreleaser-action@v6
         with:
