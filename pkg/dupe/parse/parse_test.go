@@ -212,19 +212,19 @@ func BenchmarkChecksum(b *testing.B) {
 				if err != nil {
 					b.Fatalf("Failed to create temp file: %v", err)
 				}
-				
+
 				// Write test data
 				if _, err := file.Write(tc.data); err != nil {
 					b.Fatalf("Failed to write to temp file: %v", err)
 				}
 				file.Close()
-				
+
 				// Benchmark checksum calculation
 				_, err = parse.Read(file.Name())
 				if err != nil {
 					b.Fatalf("Read failed: %v", err)
 				}
-				
+
 				// Clean up
 				os.Remove(file.Name())
 			}
@@ -267,10 +267,10 @@ func BenchmarkPrint(b *testing.B) {
 	}
 
 	testCases := []struct {
-		name     string
-		exact    bool
-		term     string
-		matches  database.Matches
+		name    string
+		exact   bool
+		term    string
+		matches database.Matches
 	}{
 		{"small", false, "", database.Matches{database.Filepath("file.txt"): database.Bucket("bucket1")}},
 		{"medium", false, "", matches},

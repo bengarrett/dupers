@@ -30,7 +30,7 @@ func FuzzWindowsChk(f *testing.F) {
 	f.Fuzz(func(t *testing.T, path string) {
 		// This should not panic
 		err := WindowsChk(path)
-		
+
 		// We expect either nil or an error, but not a panic
 		// The function should handle all input gracefully
 		_ = err
@@ -41,9 +41,9 @@ func FuzzWindowsChk(f *testing.F) {
 func FuzzSearchSummary(f *testing.F) {
 	// Add some initial test cases
 	testCases := []struct {
-		total   int
-		term    string
-		exact   bool
+		total    int
+		term     string
+		exact    bool
 		filename bool
 	}{
 		{0, "search", false, false},
@@ -61,7 +61,7 @@ func FuzzSearchSummary(f *testing.F) {
 	f.Fuzz(func(t *testing.T, total int, term string, exact bool, filename bool) {
 		// This should not panic
 		result := SearchSummary(total, term, exact, filename)
-		
+
 		// Result should be a non-empty string for valid inputs
 		if total >= 0 {
 			if result == "" {

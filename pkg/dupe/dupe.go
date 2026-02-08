@@ -1110,7 +1110,7 @@ func (c *Config) readWalk(db *bolt.DB, b parse.Bucket, archive string, cnt int, 
 		fullPath := filepath.Join(archive, f.Name())
 		cleanPath := filepath.Clean(fullPath)
 		archiveDir := filepath.Clean(archive) + string(filepath.Separator)
-		
+
 		// Validate that the path doesn't escape the archive directory
 		// Also check for absolute paths that bypass the archive directory
 		if !strings.HasPrefix(cleanPath, archiveDir) || filepath.IsAbs(f.Name()) {

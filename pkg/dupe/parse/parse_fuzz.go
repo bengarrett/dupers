@@ -14,19 +14,19 @@ import (
 // createTempFile creates a temporary file with the given data for testing.
 func createTempFile(t *testing.T, data []byte) string {
 	t.Helper()
-	
+
 	// Create a temporary file
 	file, err := os.CreateTemp("", "fuzz-test-*.tmp")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
 	defer file.Close()
-	
+
 	// Write the data to the file
 	if _, err := file.Write(data); err != nil {
 		t.Fatalf("Failed to write to temp file: %v", err)
 	}
-	
+
 	return file.Name()
 }
 
@@ -77,4 +77,3 @@ func FuzzChecksum(f *testing.F) {
 		}
 	})
 }
-

@@ -70,7 +70,6 @@ func tasks(selection string, c *dupe.Config, f cmd.Flags) error {
 		return task.Search(db, &f, false, flag.Args()...)
 	case
 		task.Backup_,
-		task.Clean_,
 		task.Database_, task.DB_,
 		task.Export_,
 		task.LS_:
@@ -83,6 +82,7 @@ func tasks(selection string, c *dupe.Config, f cmd.Flags) error {
 		}()
 		return task.Database(db, c, flag.Args()...)
 	case
+		task.Clean_,
 		task.Import_,
 		task.MV_,
 		task.RM_,

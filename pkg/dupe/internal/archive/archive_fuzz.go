@@ -35,7 +35,7 @@ func FuzzExtension(f *testing.F) {
 	f.Fuzz(func(t *testing.T, filename string) {
 		// This should not panic
 		ext := Extension(filename)
-		
+
 		// Basic validation - extension should not contain path separators
 		if ext != "" {
 			// Extension should be a valid file extension format
@@ -57,7 +57,7 @@ func FuzzMIME(f *testing.F) {
 		"unknown.ext",
 		"",
 		"path/to/file.txt",
-		"file.ZIP",  // Test case sensitivity
+		"file.ZIP", // Test case sensitivity
 		"file.TXT",
 		"archive.tar.gz",
 		"archive.TAR.GZ",
@@ -70,7 +70,7 @@ func FuzzMIME(f *testing.F) {
 	f.Fuzz(func(t *testing.T, filename string) {
 		// This should not panic
 		mime := MIME(filename)
-		
+
 		// MIME type should be a valid string (could be empty for unknown types)
 		// We just ensure it doesn't panic
 		_ = mime
@@ -96,13 +96,12 @@ func FuzzReadMIME(f *testing.F) {
 	f.Fuzz(func(t *testing.T, filename string) {
 		// This should not panic
 		mime, err := ReadMIME(filename)
-		
 		// We expect either a valid MIME type or an error, but not a panic
 		if err != nil {
 			// Some errors are expected (e.g., file not found)
 			return
 		}
-		
+
 		// If no error, MIME should not be empty
 		if mime == "" {
 			t.Fatal("MIME type should not be empty when no error is returned")

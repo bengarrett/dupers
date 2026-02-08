@@ -304,9 +304,9 @@ func BenchmarkRemove(b *testing.B) {
 			if err != nil {
 				b.Fatalf("Failed to create bucket: %v", err)
 			}
-			
+
 			_ = database.Remove(db, bucket1)
-			
+
 			db.Close()
 			os.Remove(path)
 		}
@@ -317,9 +317,9 @@ func BenchmarkRemove(b *testing.B) {
 			// Create a new database for each iteration to have consistent state
 			t := &testing.T{}
 			db, path := mock.Database(t)
-			
+
 			_ = database.Remove(db, "non-existing-bucket")
-			
+
 			db.Close()
 			os.Remove(path)
 		}

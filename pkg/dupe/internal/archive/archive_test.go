@@ -29,7 +29,7 @@ func TestExtension(t *testing.T) {
 		{"zst extension", ".zst", "application/zstd"},
 		{"lz4 extension", ".lz4", "application/x-lz4"},
 		{"sz extension", ".sz", "application/x-snappy-framed"},
-		
+
 		// Compound extensions
 		{"tar.gz extension", ".tar.gz", "application/x-tar"},
 		{"tar.bz2 extension", ".tar.bz2", "application/x-tar"},
@@ -37,24 +37,24 @@ func TestExtension(t *testing.T) {
 		{"tgz extension", ".tgz", "application/x-tar"},
 		{"tbz2 extension", ".tbz2", "application/x-tar"},
 		{"txz extension", ".txz", "application/x-tar"},
-		
+
 		// Filename without dot prefix
 		{"zip filename", "zip", ".zip"},
 		{"tar filename", "tar", ".tar"},
 		{"gz filename", "gz", ".gz"},
-		
+
 		// MIME type lookups (returns some matching extension for MIME types)
 		{"zip mime", "application/zip", ".zip"},
 		{"gz mime", "application/gzip", ".gz"},
 		// Note: tar mime returns various extensions (.tar, .tar.br, etc.) due to map randomization
 		// We test the specific behavior in separate tests
-		
+
 		// No match cases
 		{"no extension", "txt", ""},
 		{"empty string", "", ""},
 		{"unknown extension", ".unknown", ""},
 		{"unknown mime", "unknown/mime", ""},
-		
+
 		// Case insensitivity
 		{"ZIP uppercase", ".ZIP", "application/zip"},
 		{"Zip mixed case", ".Zip", "application/zip"},
@@ -85,23 +85,23 @@ func TestMIME(t *testing.T) {
 		{"bz2 file", "archive.bz2", "application/x-bzip2"},
 		{"xz file", "archive.xz", "application/x-xz"},
 		{"zst file", "archive.zst", "application/zstd"},
-		
+
 		// Compound extensions (MIME detects last extension via filepath.Ext)
-		{"tar.gz file", "archive.tar.gz", "application/gzip"}, // filepath.Ext returns .gz
+		{"tar.gz file", "archive.tar.gz", "application/gzip"},      // filepath.Ext returns .gz
 		{"tar.bz2 file", "archive.tar.bz2", "application/x-bzip2"}, // filepath.Ext returns .bz2
-		{"tgz file", "archive.tgz", "application/x-tar"}, // filepath.Ext returns .tgz (which is in map)
-		{"tbz2 file", "archive.tbz2", "application/x-tar"}, // .tbz2 is in the map
-		
+		{"tgz file", "archive.tgz", "application/x-tar"},           // filepath.Ext returns .tgz (which is in map)
+		{"tbz2 file", "archive.tbz2", "application/x-tar"},         // .tbz2 is in the map
+
 		// No extension
 		{"no extension", "file", ""},
 		{"text file", "file.txt", ""},
 		{"empty filename", "", ""},
-		
+
 		// Case insensitivity
 		{"ZIP uppercase", "archive.ZIP", "application/zip"},
 		{"Tar mixed case", "archive.Tar", "application/x-tar"},
 		{"TAR.GZ mixed case", "archive.TAR.GZ", "application/gzip"},
-		
+
 		// Path with extension
 		{"path with zip", "path/to/archive.zip", "application/zip"},
 		{"path with tar.gz", "path/to/archive.tar.gz", "application/gzip"},
@@ -155,51 +155,51 @@ func TestSupported(t *testing.T) {
 		{"struct with methods", struct{ name string }{name: "test"}, false},
 		{"interface with methods", func() interface{} { return nil }, false},
 		{"multiple interfaces", func() interface{} { return nil }, false},
-		{"complex nested structure", struct{ 
-			inner struct{ 
-				value int 
-				data []string 
-			} 
-		}{inner: struct{ 
-			value int 
-			data []string 
+		{"complex nested structure", struct {
+			inner struct {
+				value int
+				data  []string
+			}
+		}{inner: struct {
+			value int
+			data  []string
 		}{value: 42, data: []string{"test"}}}, false},
-		{"pointer to complex structure", &struct{ 
-			inner struct{ 
-				value int 
-				data []string 
-			} 
-		}{inner: struct{ 
-			value int 
-			data []string 
+		{"pointer to complex structure", &struct {
+			inner struct {
+				value int
+				data  []string
+			}
+		}{inner: struct {
+			value int
+			data  []string
 		}{value: 42, data: []string{"test"}}}, false},
 		{"empty struct", struct{}{}, false},
 		{"pointer to empty struct", &struct{}{}, false},
 		{"struct with unexported fields", struct{ unexported string }{unexported: "test"}, false},
 		{"pointer to struct with unexported fields", &struct{ unexported string }{unexported: "test"}, false},
-		{"struct with mixed fields", struct{ 
-			Exported   string 
-			unexported string 
+		{"struct with mixed fields", struct {
+			Exported   string
+			unexported string
 		}{Exported: "test", unexported: "test"}, false},
-		{"pointer to struct with mixed fields", &struct{ 
-			Exported   string 
-			unexported string 
+		{"pointer to struct with mixed fields", &struct {
+			Exported   string
+			unexported string
 		}{Exported: "test", unexported: "test"}, false},
-		{"large struct", struct{ 
-			Field1 string 
-			Field2 int 
-			Field3 bool 
-			Field4 float64 
-			Field5 []string 
-			Field6 map[string]int 
+		{"large struct", struct {
+			Field1 string
+			Field2 int
+			Field3 bool
+			Field4 float64
+			Field5 []string
+			Field6 map[string]int
 		}{Field1: "test", Field2: 42, Field3: true, Field4: 3.14, Field5: []string{"test"}, Field6: map[string]int{"key": 42}}, false},
-		{"pointer to large struct", &struct{ 
-			Field1 string 
-			Field2 int 
-			Field3 bool 
-			Field4 float64 
-			Field5 []string 
-			Field6 map[string]int 
+		{"pointer to large struct", &struct {
+			Field1 string
+			Field2 int
+			Field3 bool
+			Field4 float64
+			Field5 []string
+			Field6 map[string]int
 		}{Field1: "test", Field2: 42, Field3: true, Field4: 3.14, Field5: []string{"test"}, Field6: map[string]int{"key": 42}}, false},
 	}
 
@@ -215,10 +215,10 @@ func TestSupported(t *testing.T) {
 func TestReadMIME(t *testing.T) {
 	// Create temporary test files
 	tests := []struct {
-		name       string
-		content    []byte
+		name         string
+		content      []byte
 		expectedMime string
-		expectError bool
+		expectError  bool
 	}{
 		// Note: Actual MIME detection requires real file content
 		// These tests verify error handling and basic functionality
@@ -240,7 +240,7 @@ func TestReadMIME(t *testing.T) {
 
 			// Test ReadMIME
 			mime, err := ReadMIME(file.Name())
-			
+
 			if tt.expectError {
 				// We expect an error for non-archive files
 				if err == nil {
@@ -314,7 +314,7 @@ func TestRealArchiveFiles(t *testing.T) {
 				t.Logf("Could not read MIME for %s: %v", filePath, err)
 				return
 			}
-			
+
 			if mime == "" {
 				t.Errorf("Expected valid MIME type for %s, got empty", filePath)
 			} else {
@@ -335,11 +335,11 @@ func TestEdgeCases(t *testing.T) {
 		{"unicode filename", "文件.zip", "application/zip"},
 		{"special chars", "file-with-dashes.tar.gz", "application/gzip"}, // .gz is last extension
 		{"spaces", "file with spaces.zip", "application/zip"},
-		
+
 		// Multiple dots
 		{"multiple dots", "archive.tar.gz.backup", ""},
 		{"no archive extension", "file.txt.backup", ""},
-		
+
 		// Path traversal attempts (should be handled safely)
 		{"path traversal", "../../archive.zip", "application/zip"},
 		{"absolute path", "/path/to/archive.zip", "application/zip"},
@@ -357,7 +357,7 @@ func TestEdgeCases(t *testing.T) {
 func BenchmarkExtension(b *testing.B) {
 	testCases := []string{
 		".zip",
-		".tar.gz", 
+		".tar.gz",
 		".7z",
 		"application/zip",
 		".unknown",

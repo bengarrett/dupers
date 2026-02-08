@@ -245,16 +245,15 @@ func Compact(db *bolt.DB, debug bool) error {
 	if err != nil {
 		return err
 	}
-	// Ensure file is always closed
+	// Ensure file is always closed and cleaned up
 	defer func() {
 		_ = f.Close()
+		_ = os.Remove(f.Name())
 	}()
 
 	// open target database
 	target, err := bolt.Open(f.Name(), PrivateFile, write())
 	if err != nil {
-		_ = f.Close()
-		_ = os.Remove(f.Name())
 		return fmt.Errorf("%w: open %s", err, f.Name())
 	}
 	// Ensure target DB is always closed
@@ -267,8 +266,6 @@ func Compact(db *bolt.DB, debug bool) error {
 	// compress and copy the results to the temporary database
 	printer.Debug(debug, "compress and copy databases")
 	if err := bolt.Compact(target, db, 0); err != nil {
-		_ = target.Close()
-		_ = os.Remove(f.Name())
 		return fmt.Errorf("%w: compact %s", err, f.Name())
 	}
 
@@ -289,21 +286,12 @@ func Compact(db *bolt.DB, debug bool) error {
 
 	path := db.Path()
 	if err = db.Close(); err != nil {
-		_ = target.Close()
-		_ = os.Remove(f.Name())
 		return err
 	}
 
 	i, err := CopyFile(f.Name(), path)
 	if err != nil {
-		_ = target.Close()
-		_ = os.Remove(f.Name())
 		return err
-	}
-
-	// Clean up temp file on success
-	if err := os.Remove(f.Name()); err != nil {
-		printer.Debug(debug, "warning: failed to clean up temp file: "+err.Error())
 	}
 
 	s := fmt.Sprintf("copied %d bytes to: %s", i, path)
