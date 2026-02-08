@@ -62,7 +62,7 @@ func Debug(a *cmd.Aliases, f *cmd.Flags) (string, error) {
 // DatabaseHelp creates the database command help.
 func DatabaseHelp(w io.Writer) {
 	printl(w)
-	printl(w, color.Primary.Sprint("Database commands:"))
+	printl(w, color.Primary.Sprint("DATABASE commands:"))
 	printl(w, "  View information and run optional maintenance on the internal database.")
 	printl(w)
 	printl(w, "  Usage:")
@@ -91,16 +91,9 @@ func DatabaseHelp(w io.Writer) {
 // DupeHelp creates the dupe command help.
 func DupeHelp(w io.Writer) {
 	const danger = "(!)"
-	printl(w)
-	printl(w, color.Primary.Sprint("Dupe command:"))
-	printl(w, "  Scan for duplicate files, matching files that share the identical content.")
-	printl(w, "  The \"directory or file to check\" is never added to the database.")
-	printr(w, "  The \"buckets to lookup\" are directories ")
-	if runtime.GOOS == winOS {
-		printr(w, "or drive letters ")
-	}
-	printl(w, "that get added to the database for")
-	printl(w, "   quicker scans.")
+	printl(w, color.Primary.Sprint("DUPE command:"))
+	printl(w, "  Scan for duplicate files with identical content. The file or \n"+
+		"  directory being checked is never added to the database, while\n  lookup buckets are directories.")
 	printl(w)
 	printl(w, "  Usage:")
 	printl(w, "    dupers [options] dupe <directory or file to check> [buckets to lookup]")
@@ -127,28 +120,47 @@ func DupeHelp(w io.Writer) {
 			printf(w, "        -%s\t%s ", f.Name, color.Danger.Sprint(danger))
 			printl(w, f.Usage)
 		}
-		printl(w)
-		printl(w, color.Danger.Sprint(pad4, danger), "this option is potentionally dangerous")
 	}
 	DupeExample(w)
 }
 
+// QuickStartHelp creates a quick start guide for new users.
+func QuickStartHelp(w io.Writer) {
+	printl(w)
+	printl(w, color.Primary.Sprint("Quick Start:"))
+	printl(w, "  Get started with Dupers in just a few commands.")
+	printl(w)
+	printl(w, "  1. Add your main directories to the database (buckets):")
+	printl(w, color.Info.Sprintf("     dupers up ~/Documents"))
+	printl(w, color.Info.Sprintf("     dupers up ~/Downloads"))
+	printl(w, color.Info.Sprintf("     dupers up /path/to/your/files"))
+	printl(w)
+	printl(w, "  2. Find duplicate files:")
+	printl(w, color.Info.Sprintf("     dupers dupe ~/Pictures ~/Documents"))
+	printl(w)
+	printl(w, "  3. Search for files by name:")
+	printl(w, color.Info.Sprintf("     dupers search 'project'"))
+	printl(w)
+	printl(w, "  4. View database information:")
+	printl(w, color.Info.Sprintf("     dupers database"))
+	printl(w)
+}
+
 // DupeExample creates the examples of the dupe command.
 func DupeExample(w io.Writer) {
-	printl(w)
 	printl(w, "  Examples:")
-	const a = "    # find identical copies of file.txt in the Downloads directory"
+	const a = "  1. Find identical copies of file.txt in the Downloads directory"
 	printl(w, color.Secondary.Sprint(a))
 	if runtime.GOOS == winOS {
 		dupeWindows(w)
 		return
 	}
-	printl(w, color.Info.Sprintf("    dupers dupe '%s' '%s'",
+	printl(w, color.Info.Sprintf("     dupers dupe '%s' '%s'",
 		filepath.Join(cmd.Home(), "file.txt"),
 		filepath.Join(cmd.Home(), "Downloads")))
-	const b = "    # search for files in Documents that also exist in /var/www"
+	const b = "  2. Search for files in Documents that also exist in /var/www"
 	printl(w, color.Secondary.Sprint(b))
-	printl(w, color.Info.Sprintf("    dupers dupe '%s' '%s'",
+	printl(w, color.Info.Sprintf("     dupers dupe '%s' '%s'",
 		filepath.Join(cmd.Home(), "Documents"), "/var/www"))
 }
 
@@ -162,8 +174,7 @@ func dupeWindows(w io.Writer) {
 }
 
 func ProgramOpts(w io.Writer) {
-	printl(w)
-	printl(w, color.Primary.Sprint("Options:"))
+	printl(w, color.Primary.Sprint("OPTION flags:"))
 	printl(w, "  Program options that can be used with any command.")
 	printl(w)
 	printl(w, "  Usage:")
@@ -184,7 +195,7 @@ func ProgramOpts(w io.Writer) {
 // SearchHelp creates the search command help.
 func SearchHelp(w io.Writer) {
 	printl(w)
-	printl(w, color.Primary.Sprint("Search command:"))
+	printl(w, color.Primary.Sprint("SEARCH command:"))
 	printl(w, "  Lookup a file or a directory name in the database.")
 	printl(w, "  The <search expression> can be a partial or complete, file or directory name.")
 	printl(w)
@@ -209,17 +220,17 @@ func SearchHelp(w io.Writer) {
 // SearchExample creates the examples of the search command.
 func SearchExample(w io.Writer) {
 	printl(w, "\n  Examples:")
-	const a = "    # search for the expression foo in your home directory"
+	const a = "  1. Search for the expression foo in your home directory"
 	printl(w, color.Secondary.Sprint(a))
 	if runtime.GOOS == winOS {
-		printr(w, pad4+color.Info.Sprintf("dupers search \"foo\" \"%s\"", cmd.Home()))
-		printr(w, color.Secondary.Sprint("\n    # search for filenames containing .zip\n"))
-		printr(w, pad4+color.Info.Sprint("dupers -name search \".zip\""))
+		printr(w, pad4+color.Info.Sprintf(" dupers search \"foo\" \"%s\"", cmd.Home()))
+		printr(w, color.Secondary.Sprint("\n  2. Search for filenames containing .zip\n"))
+		printr(w, pad4+color.Info.Sprint(" dupers -name search \".zip\""))
 		printl(w)
 		return
 	}
-	printr(w, pad4+color.Info.Sprintf("dupers search 'foo' '%s'", cmd.Home()))
-	printr(w, color.Secondary.Sprint("\n    # search for filenames containing .zip\n"))
-	printr(w, pad4+color.Info.Sprint("dupers -name search '.zip'"))
+	printr(w, pad4+color.Info.Sprintf(" dupers search 'foo' '%s'", cmd.Home()))
+	printr(w, color.Secondary.Sprint("\n  2. Search for filenames containing .zip\n"))
+	printr(w, pad4+color.Info.Sprint(" dupers -name search '.zip'"))
 	printl(w)
 }

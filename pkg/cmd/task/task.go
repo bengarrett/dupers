@@ -273,6 +273,7 @@ func WalkScan(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
 // Help, usage and examples.
 func Help() string {
 	b, w := helper()
+	QuickStartHelp(w)
 	DupeHelp(w)
 	SearchHelp(w)
 	DatabaseHelp(w)
