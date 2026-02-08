@@ -550,19 +550,23 @@ func SkipFS(dir, file, regular bool, d fs.DirEntry) error {
 		// skip all non-files such as symlinks
 		return filepath.SkipDir
 	}
-	// note: this skips both directories and filenames sharing specific system dirs.
-	return SkipDirs(d.Name())
+	// SkipDirs should only apply to directories, not files
+	if d.IsDir() {
+		return SkipDirs(d.Name())
+	}
+	return nil
 }
 
 // SkipDirs tells WalkDir to ignore specific system and hidden directories.
+// This function should only be called for directories, not files.
 func SkipDirs(name string) error {
-	// skip directories
+	// skip specific directories by name
 	switch strings.ToLower(name) {
 	// the SkipDir return tells WalkDir to skip all files in these directories
 	case ".git", ".cache", ".config", ".local", "node_modules", "__macosx", "appdata":
 		return filepath.SkipDir
 	default:
-		// Unix style hidden directories
+		// Unix style hidden directories (only applies to directories)
 		if strings.HasPrefix(name, ".") {
 			return filepath.SkipDir
 		}

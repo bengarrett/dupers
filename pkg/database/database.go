@@ -168,6 +168,16 @@ func Clean(db *bolt.DB, quiet, debug bool, buckets ...string) error {
 			Debug: debug,
 		}
 		if cnt, errs, abs, cont = parser.Parse(db); cont {
+			// Bucket directory doesn't exist, remove the entire bucket
+			if err := db.Update(func(tx *bolt.Tx) error {
+				return tx.DeleteBucket([]byte(name))
+			}); err != nil {
+				printer.Debug(debug, fmt.Sprintf("failed to remove bucket %s: %v", name, err))
+				errs++
+			} else {
+				printer.Debug(debug, fmt.Sprintf("removed empty bucket: %s", name))
+				finds++
+			}
 			continue
 		}
 		cleaner := bucket.Cleaner{
@@ -182,6 +192,36 @@ func Clean(db *bolt.DB, quiet, debug bool, buckets ...string) error {
 		cnt, finds, errs, err = cleaner.Clean(db)
 		if err != nil {
 			return err
+		}
+		
+		// Check if bucket is empty after cleaning and remove it
+		err := db.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte(abs))
+			if b != nil {
+				// Count remaining items in bucket
+				itemCount := 0
+				b.ForEach(func(k, v []byte) error {
+					itemCount++
+					return nil
+				})
+				
+				// If bucket is empty, remove it
+				if itemCount == 0 {
+					if err := db.Update(func(tx *bolt.Tx) error {
+						return tx.DeleteBucket([]byte(abs))
+					}); err != nil {
+						printer.Debug(debug, fmt.Sprintf("failed to remove empty bucket %s: %v", abs, err))
+						errs++
+					} else {
+						printer.Debug(debug, fmt.Sprintf("removed empty bucket: %s", abs))
+						finds++
+					}
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			errs++
 		}
 	}
 	if quiet {
@@ -532,10 +572,10 @@ func info(db *bolt.DB, w *tabwriter.Writer) (*tabwriter.Writer, int, error) {
 	)
 
 	ro := color.Green.Sprint("OK")
-	if !db.IsReadOnly() {
+	if writable := db.IsReadOnly(); !writable {
 		ro = color.Danger.Sprint("NO")
 	}
-	printf(w, "\tRead only mode:\t%s", ro)
+	printf(w, "\tWritable:\t%s", ro)
 	printl(w)
 	items, cnt, sizes := make(item), 0, 0
 	if err := db.View(func(tx *bolt.Tx) error {
@@ -545,9 +585,21 @@ func info(db *bolt.DB, w *tabwriter.Writer) (*tabwriter.Writer, int, error) {
 				return fmt.Errorf("%w: %s", bberr.ErrBucketNotFound, string(name))
 			}
 			cnt++
-			sizes += v.Stats().LeafAlloc
-			s := int64(v.Stats().LeafAlloc)
-			items[string(name)] = vals{v.Stats().KeyN, humanize.Bytes(safesize(s))}
+
+			// Calculate bucket size by summing up key+value sizes
+			bucketSize := 0
+			itemCount := 0
+			err := v.ForEach(func(k, val []byte) error {
+				bucketSize += len(k) + len(val)
+				itemCount++
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+
+			sizes += bucketSize
+			items[string(name)] = vals{itemCount, humanize.Bytes(uint64(bucketSize))}
 			return nil
 		})
 	}); err != nil {
