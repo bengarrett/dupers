@@ -2,6 +2,8 @@
 package parse_test
 
 import (
+	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -188,4 +190,110 @@ func TestPrint(t *testing.T) {
 	ok = strings.Contains(s, sum1)
 	be.True(t, !ok)
 	// exact and term are untested as they only effect ANSI color output.
+}
+
+// BenchmarkChecksum benchmarks the Checksum function performance
+func BenchmarkChecksum(b *testing.B) {
+	// Create test data of different sizes
+	testData := []struct {
+		name string
+		data []byte
+	}{
+		{"small", []byte("test content")},
+		{"medium", bytes.Repeat([]byte("test"), 1000)},
+		{"large", bytes.Repeat([]byte("test"), 10000)},
+	}
+
+	for _, tc := range testData {
+		b.Run(tc.name, func(b *testing.B) {
+			// Create temporary file for each benchmark iteration
+			for i := 0; i < b.N; i++ {
+				file, err := os.CreateTemp("", "benchmark-*.tmp")
+				if err != nil {
+					b.Fatalf("Failed to create temp file: %v", err)
+				}
+				
+				// Write test data
+				if _, err := file.Write(tc.data); err != nil {
+					b.Fatalf("Failed to write to temp file: %v", err)
+				}
+				file.Close()
+				
+				// Benchmark checksum calculation
+				_, err = parse.Read(file.Name())
+				if err != nil {
+					b.Fatalf("Read failed: %v", err)
+				}
+				
+				// Clean up
+				os.Remove(file.Name())
+			}
+		})
+	}
+}
+
+// BenchmarkMarker benchmarks the Marker function performance
+func BenchmarkMarker(b *testing.B) {
+	testCases := []struct {
+		name     string
+		filepath string
+		term     string
+		exact    bool
+	}{
+		{"simple", "file.txt", "", false},
+		{"with term", "path/to/file.txt", "file.txt", false},
+		{"with exact", "path/to/file.txt", "file.txt", true},
+		{"long path", "very/long/path/to/file.txt", "file.txt", false},
+		{"unicode", "文件.txt", "", false},
+	}
+
+	for _, tc := range testCases {
+		b.Run(tc.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_ = parse.Marker(database.Filepath(tc.filepath), tc.term, tc.exact)
+			}
+		})
+	}
+}
+
+// BenchmarkPrint benchmarks the Print function performance
+func BenchmarkPrint(b *testing.B) {
+	// Create test matches
+	matches := make(database.Matches)
+	for i := 0; i < 10; i++ {
+		filepath := database.Filepath(fmt.Sprintf("file%d.txt", i))
+		bucket := database.Bucket(fmt.Sprintf("bucket%d", i%3))
+		matches[filepath] = bucket
+	}
+
+	testCases := []struct {
+		name     string
+		exact    bool
+		term     string
+		matches  database.Matches
+	}{
+		{"small", false, "", database.Matches{database.Filepath("file.txt"): database.Bucket("bucket1")}},
+		{"medium", false, "", matches},
+		{"large", false, "", createLargeMatches()},
+		{"with term", true, "file", matches},
+	}
+
+	for _, tc := range testCases {
+		b.Run(tc.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_ = parse.Print(tc.exact, false, tc.term, &tc.matches)
+			}
+		})
+	}
+}
+
+// createLargeMatches creates a large set of matches for benchmarking
+func createLargeMatches() database.Matches {
+	matches := make(database.Matches)
+	for i := 0; i < 1000; i++ {
+		filepath := database.Filepath(fmt.Sprintf("very/long/path/to/file%d.txt", i))
+		bucket := database.Bucket(fmt.Sprintf("bucket%d", i%10))
+		matches[filepath] = bucket
+	}
+	return matches
 }

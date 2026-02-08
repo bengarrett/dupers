@@ -18,6 +18,11 @@ tasks:
 
   # ===== Development Tasks =====
 
+  benchmark:
+    desc: Benchmark the code
+    cmds:
+      - go test -bench=. ./...
+
   lint:
     desc: Format and lint code
     cmds:

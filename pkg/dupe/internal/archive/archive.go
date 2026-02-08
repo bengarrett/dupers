@@ -36,50 +36,76 @@ var (
 )
 
 // Extension finds either a compressed file extension or mime type and returns its match.
+// The function uses deterministic lookup with priority given to longer, more specific extensions.
 func Extension(find string) string {
-	// mime types refer to data types and do not contain encoding information
-	// * mime not detected by h2non/filetype
-	exts := map[string]string{
-		Ext7z:      Mime7z,
-		".bz2":     MimeBZ2,
-		".gz":      MimeGZ,   // gzip
-		".lz4":     MimeLZ4,  // LZ4*
-		".rar":     MimeRAR,  // rar
-		".sz":      MimeSnap, // Snappy*
-		".tar":     MimeTar,  // tar
-		".tar.br":  MimeTar,  // tar + Brotli compression
-		".tbr":     MimeTar,  //
-		".tar.gz":  MimeTar,  // tar + gzip compression
-		".tgz":     MimeTar,  //
-		".tar.bz2": MimeTar,  // tar + bzip2 compression
-		".tbz2":    MimeTar,  //
-		".tar.xz":  MimeTar,  // tar + XZ compression
-		".txz":     MimeTar,  //
-		".tar.lz4": MimeTar,  // tar + LZ4 compression
-		".tlz4":    MimeTar,  //
-		".tar.sz":  MimeTar,  // tar + snappy compression
-		".tsz":     MimeTar,  //
-		".tar.zst": MimeTar,  // tar + Zstandard compression
-		".xz":      MimeXZ,   // XZ Utils
-		".zip":     MimeZip,
-		".zst":     MimeZ, // Zstandard (zstd)*
+	if find == "" {
+		return ""
 	}
+
 	lfind := strings.ToLower(find)
-	for ext, mime := range exts {
-		if ext == lfind {
-			return mime
-		}
-		if mime == lfind {
-			return ext
-		}
-		if !strings.HasPrefix(find, ".") {
-			if ext == "."+lfind {
-				return ext
-			}
+
+	// Direct map lookup for extensions (deterministic)
+	if ext, ok := extensionToMIME[lfind]; ok {
+		return ext
+	}
+
+	// Check for extension without dot prefix (e.g., "zip" -> ".zip")
+	if !strings.HasPrefix(find, ".") {
+		if _, ok := extensionToMIME["."+lfind]; ok {
+			// For filename without dot prefix, return the extension itself, not the MIME type
+			return "." + lfind
 		}
 	}
+
+	// Direct map lookup for MIME types (deterministic) - lowest priority
+	if ext, ok := mimeToExtension[lfind]; ok {
+		return ext
+	}
+
 	return ""
 }
+
+// Predefined maps for deterministic lookup
+var (
+	extensionToMIME = map[string]string{
+		Ext7z:      Mime7z,
+		".bz2":     MimeBZ2,
+		".gz":      MimeGZ,
+		".lz4":     MimeLZ4,
+		".rar":     MimeRAR,
+		".sz":      MimeSnap,
+		".tar":     MimeTar,
+		".tar.br":  MimeTar,
+		".tbr":     MimeTar,
+		".tar.gz":  MimeTar,
+		".tgz":     MimeTar,
+		".tar.bz2": MimeTar,
+		".tbz2":    MimeTar,
+		".tar.xz":  MimeTar,
+		".txz":     MimeTar,
+		".tar.lz4": MimeTar,
+		".tlz4":    MimeTar,
+		".tar.sz":  MimeTar,
+		".tsz":     MimeTar,
+		".tar.zst": MimeTar,
+		".xz":      MimeXZ,
+		".zip":     MimeZip,
+		".zst":     MimeZ,
+	}
+
+	mimeToExtension = map[string]string{
+		Mime7z:   Ext7z,
+		MimeBZ2:  ".bz2",
+		MimeGZ:   ".gz",
+		MimeLZ4:  ".lz4",
+		MimeRAR:  ".rar",
+		MimeSnap: ".sz",
+		MimeTar:  ".tar",
+		MimeXZ:   ".xz",
+		MimeZip:  ".zip",
+		MimeZ:    ".zst",
+	}
+)
 
 // MIME returns the application MIME type of a filename based on its extension.
 func MIME(name string) string {

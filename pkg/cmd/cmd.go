@@ -132,7 +132,7 @@ func (f *Flags) Define() {
 }
 
 // Aliases parses the command aliases and flags, configuring both Flags and dupe.Config.
-func (f *Flags) Aliases(a *Aliases, c *dupe.Config) dupe.Config {
+func (f *Flags) Aliases(a *Aliases, c *dupe.Config) *dupe.Config {
 	// handle misuse when a global flag is passed as an argument
 	f.aliases()
 	// configurations
@@ -167,7 +167,7 @@ func (f *Flags) Aliases(a *Aliases, c *dupe.Config) dupe.Config {
 	if *a.Version {
 		*f.Version = true
 	}
-	return *c
+	return c
 }
 
 func (f *Flags) aliases() {
@@ -197,19 +197,46 @@ func WindowsChk(name string) error {
 	if name == "" {
 		return nil
 	}
-	const dblQuote rune = 34
+
+	// Only validate if this looks like a Windows path (starts with drive letter)
+	if len(name) < 2 || name[1] != ':' || (name[0] < 'A' || name[0] > 'Z') && (name[0] < 'a' || name[0] > 'z') {
+		return nil
+	}
+
 	r := []rune(name)
 	l := len(r)
-	first, last := r[0:1][0], r[l-1 : l][0]
-	if first == dblQuote && last == dblQuote {
-		return nil // okay as the string is fully quoted
+	if l == 0 {
+		return nil
 	}
-	if first != dblQuote && last != dblQuote {
-		return nil // okay as the string is not quoted
+
+	first, last := r[0], r[l-1]
+
+	// Case 1: Properly quoted path - check for problematic trailing backslash
+	if first == '"' && last == '"' {
+		// Check if this is the problematic case: quoted path ending with backslash
+		// The pattern we're looking for is something like "C:\path\"
+		// which flag.Parse() would turn into C:\path"
+		if l >= 2 && r[l-2] == '\\' {
+			return createWindowsDirError()
+		}
+		return nil
 	}
-	// otherwise there is a problem, as only the start or end of the string is quoted.
-	// this is caused by flag.Parse() treating the \" prefix on a quoted directory path as an escaped quote.
-	// so "C:\Example\" will be incorrectly parsed as C:\Example"
+
+	// Case 2: Unquoted path - check for drive letter with trailing backslash (e.g., "C:")
+	if first != '"' && last != '"' {
+		// Special case: drive letter with trailing backslash (e.g., "C:") should fail
+		if l == 3 && r[2] == '\\' {
+			return createWindowsDirError()
+		}
+		return nil
+	}
+
+	// Case 3: Malformed quoting (only start or end quoted) - should fail
+	return createWindowsDirError()
+}
+
+// createWindowsDirError creates the error message for Windows directory path issues.
+func createWindowsDirError() error {
 	w := new(bytes.Buffer)
 	fmt.Fprint(w, "please remove the trailing backslash \\ character from any quoted directory paths")
 	if usr, err := os.UserHomeDir(); err == nil {

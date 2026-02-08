@@ -239,28 +239,39 @@ func Compact(db *bolt.DB, debug bool) error {
 		return bberr.ErrDatabaseNotOpen
 	}
 	printer.Debug(debug, "running database compact")
+
 	// make a temporary database
 	f, err := os.CreateTemp(os.TempDir(), "dupers-*.db")
 	if err != nil {
 		return err
 	}
+	// Ensure file is always closed
 	defer func() {
 		_ = f.Close()
 	}()
+
 	// open target database
 	target, err := bolt.Open(f.Name(), PrivateFile, write())
 	if err != nil {
+		_ = f.Close()
+		_ = os.Remove(f.Name())
 		return fmt.Errorf("%w: open %s", err, f.Name())
 	}
-	printer.Debug(debug, "opened replacement database: "+f.Name())
+	// Ensure target DB is always closed
 	defer func() {
 		_ = target.Close()
 	}()
+
+	printer.Debug(debug, "opened replacement database: "+f.Name())
+
 	// compress and copy the results to the temporary database
 	printer.Debug(debug, "compress and copy databases")
 	if err := bolt.Compact(target, db, 0); err != nil {
+		_ = target.Close()
+		_ = os.Remove(f.Name())
 		return fmt.Errorf("%w: compact %s", err, f.Name())
 	}
+
 	if debug {
 		statSrc, err := os.Stat(db.Path())
 		if err != nil {
@@ -275,14 +286,26 @@ func Compact(db *bolt.DB, debug bool) error {
 		s2 := fmt.Sprintf("new database:      %d bytes, %s", statDst.Size(), statDst.Name())
 		printer.Debug(debug, s2)
 	}
+
 	path := db.Path()
 	if err = db.Close(); err != nil {
+		_ = target.Close()
+		_ = os.Remove(f.Name())
 		return err
 	}
+
 	i, err := CopyFile(f.Name(), path)
 	if err != nil {
+		_ = target.Close()
+		_ = os.Remove(f.Name())
 		return err
 	}
+
+	// Clean up temp file on success
+	if err := os.Remove(f.Name()); err != nil {
+		printer.Debug(debug, "warning: failed to clean up temp file: "+err.Error())
+	}
+
 	s := fmt.Sprintf("copied %d bytes to: %s", i, path)
 	printer.Debug(debug, s)
 	return nil

@@ -247,3 +247,81 @@ func TestCheck_DB(t *testing.T) {
 	be.Err(t, err, nil)
 	be.True(t, i > 0)
 }
+
+// BenchmarkList benchmarks the List function performance
+func BenchmarkList(b *testing.B) {
+	t := &testing.T{}
+	db, path := mock.Database(t)
+	defer db.Close()
+	defer os.Remove(path)
+
+	// Add some test data
+	bucket1, err := mock.Bucket(t, 1)
+	if err != nil {
+		b.Fatalf("Failed to create bucket: %v", err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = database.List(db, bucket1)
+	}
+}
+
+// BenchmarkInfo benchmarks the Info function performance
+func BenchmarkInfo(b *testing.B) {
+	t := &testing.T{}
+	db, path := mock.Database(t)
+	defer db.Close()
+	defer os.Remove(path)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = database.Info(db)
+	}
+}
+
+// BenchmarkIsEmpty benchmarks the IsEmpty function performance
+func BenchmarkIsEmpty(b *testing.B) {
+	t := &testing.T{}
+	db, path := mock.Database(t)
+	defer db.Close()
+	defer os.Remove(path)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = database.IsEmpty(db)
+	}
+}
+
+// BenchmarkRemove benchmarks the Remove function performance
+func BenchmarkRemove(b *testing.B) {
+	b.Run("existing bucket", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			// Create a new database for each iteration to have consistent state
+			t := &testing.T{}
+			db, path := mock.Database(t)
+			bucket1, err := mock.Bucket(t, 1)
+			if err != nil {
+				b.Fatalf("Failed to create bucket: %v", err)
+			}
+			
+			_ = database.Remove(db, bucket1)
+			
+			db.Close()
+			os.Remove(path)
+		}
+	})
+
+	b.Run("non-existing bucket", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			// Create a new database for each iteration to have consistent state
+			t := &testing.T{}
+			db, path := mock.Database(t)
+			
+			_ = database.Remove(db, "non-existing-bucket")
+			
+			db.Close()
+			os.Remove(path)
+		}
+	})
+}

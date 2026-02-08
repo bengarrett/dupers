@@ -353,23 +353,83 @@ func TestEdgeCases(t *testing.T) {
 	}
 }
 
-// TestPerformance tests performance of archive functions (optional)
-func TestPerformance(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping performance test in short mode")
+// BenchmarkExtension benchmarks the Extension function performance
+func BenchmarkExtension(b *testing.B) {
+	testCases := []string{
+		".zip",
+		".tar.gz", 
+		".7z",
+		"application/zip",
+		".unknown",
+		"zip",
 	}
 
-	t.Run("Extension performance", func(t *testing.T) {
-		// Test with a large number of calls
-		for i := 0; i < 10000; i++ {
-			_ = Extension(".zip")
-		}
-	})
+	for _, tc := range testCases {
+		b.Run(tc, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_ = Extension(tc)
+			}
+		})
+	}
+}
 
-	t.Run("MIME performance", func(t *testing.T) {
-		// Test with a large number of calls
-		for i := 0; i < 10000; i++ {
-			_ = MIME("archive.zip")
-		}
-	})
+// BenchmarkMIME benchmarks the MIME function performance
+func BenchmarkMIME(b *testing.B) {
+	testCases := []string{
+		"archive.zip",
+		"archive.tar.gz",
+		"file.txt",
+		"path/to/archive.7z",
+		"",
+	}
+
+	for _, tc := range testCases {
+		b.Run(tc, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_ = MIME(tc)
+			}
+		})
+	}
+}
+
+// BenchmarkSupported benchmarks the Supported function performance
+func BenchmarkSupported(b *testing.B) {
+	testCases := []any{
+		nil,
+		"string",
+		42,
+		struct{ field string }{field: "test"},
+		&struct{ field string }{field: "test"},
+	}
+
+	for i, tc := range testCases {
+		b.Run(string(rune(i)), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_ = Supported(tc)
+			}
+		})
+	}
+}
+
+// BenchmarkReadMIME benchmarks the ReadMIME function performance
+// Note: This benchmark uses a temporary file for realistic testing
+func BenchmarkReadMIME(b *testing.B) {
+	// Create a temporary test file
+	file, err := os.CreateTemp("", "benchmark-*.tmp")
+	if err != nil {
+		b.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(file.Name())
+	defer file.Close()
+
+	// Write some content
+	_, err = file.WriteString("test content for benchmarking")
+	if err != nil {
+		b.Fatalf("Failed to write to temp file: %v", err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = ReadMIME(file.Name())
+	}
 }

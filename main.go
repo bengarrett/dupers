@@ -112,7 +112,7 @@ func main() {
 	}
 	flag.Parse()
 
-	cfg = flg.Aliases(&alias, &cfg)
+	cfg = *flg.Aliases(&alias, &cfg)
 	if *alias.Mono || *flg.Mono {
 		color.Enable = false
 	}

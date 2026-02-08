@@ -1106,7 +1106,17 @@ func (c *Config) readWalk(db *bolt.DB, b parse.Bucket, archive string, cnt int, 
 		if notFile || SkipFile(f.Name()) {
 			return nil
 		}
-		path := filepath.Join(archive, f.Name())
+		// Security: Prevent path traversal attacks from malicious archives
+		fullPath := filepath.Join(archive, f.Name())
+		cleanPath := filepath.Clean(fullPath)
+		archiveDir := filepath.Clean(archive) + string(filepath.Separator)
+		
+		// Validate that the path doesn't escape the archive directory
+		// Also check for absolute paths that bypass the archive directory
+		if !strings.HasPrefix(cleanPath, archiveDir) || filepath.IsAbs(f.Name()) {
+			return fmt.Errorf("path traversal attempt detected: %s", f.Name())
+		}
+		path := cleanPath
 		if c.findItem(path) {
 			return nil
 		}
