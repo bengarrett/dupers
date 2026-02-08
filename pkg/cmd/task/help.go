@@ -66,26 +66,16 @@ func DatabaseHelp(w io.Writer) {
 	printl(w, "  View information and run optional maintenance on the internal database.")
 	printl(w)
 	printl(w, "  Usage:")
-	printf(w, "    dupers %s\tdisplay statistics and bucket information\n", Database_)
-	printf(w, "    dupers %s\t%s\n", Backup_, "make a copy of the database to")
-	printf(w, "\t %s", color.Info.Sprint(cmd.Home()))
-	printl(w)
-	printf(w, "    dupers %s\t%s\n", Clean_, "compact and remove all items in the database that")
-	printl(w, "\t point to missing files")
+	printf(w, "    dupers %s\t%s\n", Database_, "display statistics and bucket information")
+	printf(w, "    dupers %s\t%s\n", Backup_, "make a copy of the database")
+	printf(w, "    dupers %s\t%s\n", Clean_, "compact and remove items pointing to missing files")
 	printf(w, "    dupers %s <bucket>\t%s\n", LS_, "list the hashes and files in the bucket")
 	printf(w, "    dupers %s <bucket>\t%s\n", Up_, "add or update the bucket to the database")
-	printf(w, "    dupers %s <bucket>\t%s", UpPlus_, color.Danger.Sprint("(SLOW)"))
-	printl(w, " add or update the bucket using an archive")
-	printl(w, "\t scan the scan reads every file archived with known")
-	printl(w, "\t package formats")
-	printl(w)
+	printf(w, "    dupers %s <bucket>\t%s\n", UpPlus_, color.Danger.Sprint("(SLOW) add bucket using archives scan"))
 	printf(w, "    dupers %s <bucket>\t%s\n", RM_, "remove the bucket from the database")
-	printf(w, "    dupers %s <bucket> <destination>\t%s\n", MV_, "move the bucket to a new directory path")
-	printf(w, "    dupers %s <bucket>\t%s\n", Export_, "export the bucket to a text file in")
-	printf(w, "\t %s", color.Info.Sprint(cmd.Home()))
-	printl(w)
-	printf(w, "    dupers %s <export file>\t%s\n", Import_, "import a bucket text file into the")
-	printl(w, "\t database")
+	printf(w, "    dupers %s <bucket> <dest>\t%s\n", MV_, "move the bucket to a new directory path")
+	printf(w, "    dupers %s <bucket>\t%s\n", Export_, "export the bucket to a text file")
+	printf(w, "    dupers %s <export file>\t%s\n", Import_, "import a bucket text file into the database")
 }
 
 // DupeHelp creates the dupe command help.
@@ -174,6 +164,7 @@ func dupeWindows(w io.Writer) {
 }
 
 func ProgramOpts(w io.Writer) {
+	printl(w)
 	printl(w, color.Primary.Sprint("OPTION flags:"))
 	printl(w, "  Program options that can be used with any command.")
 	printl(w)
