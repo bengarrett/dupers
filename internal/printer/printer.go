@@ -1,4 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
+
+// Package printer provides printing utilities for the application.
 package printer
 
 import (

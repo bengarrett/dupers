@@ -1,6 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
 
-package archive
+package archive_test
 
 import (
 	"errors"
@@ -8,10 +8,13 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/bengarrett/dupers/pkg/dupe/internal/archive"
 	"github.com/nalgeon/be"
 )
 
-// TestExtension tests the Extension function with various inputs
+var ErrTest = errors.New("test error")
+
+// TestExtension tests the Extension function with various inputs.
 func TestExtension(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -63,13 +66,13 @@ func TestExtension(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := Extension(tt.input)
+			result := archive.Extension(tt.input)
 			be.Equal(t, result, tt.expected)
 		})
 	}
 }
 
-// TestMIME tests the MIME function with various filenames
+// TestMIME tests the MIME function with various filenames.
 func TestMIME(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -109,13 +112,111 @@ func TestMIME(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := MIME(tt.filename)
+			result := archive.MIME(tt.filename)
 			be.Equal(t, result, tt.expected)
 		})
 	}
 }
 
-// TestSupported tests the Supported function with various archiver formats
+// getComplexNestedStructure returns a complex nested structure for testing.
+func getComplexNestedStructure() struct {
+	inner struct {
+		value int
+		data  []string
+	}
+} {
+	return struct {
+		inner struct {
+			value int
+			data  []string
+		}
+	}{
+		inner: struct {
+			value int
+			data  []string
+		}{
+			value: 42,
+			data:  []string{"test"},
+		},
+	}
+}
+
+// getPointerToComplexStructure returns a pointer to a complex nested structure for testing.
+func getPointerToComplexStructure() *struct {
+	inner struct {
+		value int
+		data  []string
+	}
+} {
+	return &struct {
+		inner struct {
+			value int
+			data  []string
+		}
+	}{
+		inner: struct {
+			value int
+			data  []string
+		}{
+			value: 42,
+			data:  []string{"test"},
+		},
+	}
+}
+
+// getLargeStruct returns a large struct for testing.
+func getLargeStruct() struct {
+	Field1 string
+	Field2 int
+	Field3 bool
+	Field4 float64
+	Field5 []string
+	Field6 map[string]int
+} {
+	return struct {
+		Field1 string
+		Field2 int
+		Field3 bool
+		Field4 float64
+		Field5 []string
+		Field6 map[string]int
+	}{
+		Field1: "test",
+		Field2: 42,
+		Field3: true,
+		Field4: 3.14,
+		Field5: []string{"test"},
+		Field6: map[string]int{"key": 42},
+	}
+}
+
+// getPointerToLargeStruct returns a pointer to a large struct for testing.
+func getPointerToLargeStruct() *struct {
+	Field1 string
+	Field2 int
+	Field3 bool
+	Field4 float64
+	Field5 []string
+	Field6 map[string]int
+} {
+	return &struct {
+		Field1 string
+		Field2 int
+		Field3 bool
+		Field4 float64
+		Field5 []string
+		Field6 map[string]int
+	}{
+		Field1: "test",
+		Field2: 42,
+		Field3: true,
+		Field4: 3.14,
+		Field5: []string{"test"},
+		Field6: map[string]int{"key": 42},
+	}
+}
+
+// TestSupported tests the Supported function with various archiver formats.
 func TestSupported(t *testing.T) {
 	// Test with various unsupported types to ensure the type switch works correctly
 	tests := []struct {
@@ -133,17 +234,17 @@ func TestSupported(t *testing.T) {
 		{"map format", map[string]string{"key": "value"}, false},
 		{"struct format", struct{ name string }{name: "test"}, false},
 		{"pointer to string", func() *string { s := "test"; return &s }(), false},
-		{"interface format", func() interface{} { return "test" }(), false},
+		{"interface format", func() any { return "test" }(), false},
 		{"channel format", make(chan int), false},
 		{"function format", func() {}, false},
-		{"error format", errors.New("test error"), false},
-		{"empty interface", interface{}(nil), false},
+		{"error format", ErrTest, false},
+		{"empty interface", any(nil), false},
 		{"array format", [3]int{1, 2, 3}, false},
 		{"rune format", 'a', false},
 		{"byte format", byte(65), false},
 		{"uint format", uint(42), false},
 		{"complex format", complex(1, 2), false},
-		{"pointer to interface", func() interface{} { var i interface{}; return &i }(), false},
+		{"pointer to interface", func() any { var i any; return &i }(), false},
 		{"custom struct", struct{ field string }{field: "test"}, false},
 		{"nested struct", struct{ inner struct{ value int } }{inner: struct{ value int }{value: 42}}, false},
 		{"anonymous struct", struct{ string }{}, false},
@@ -153,26 +254,10 @@ func TestSupported(t *testing.T) {
 		{"slice of structs", []struct{ field string }{{"test"}}, false},
 		{"map of structs", map[string]struct{ field string }{"key": {"test"}}, false},
 		{"struct with methods", struct{ name string }{name: "test"}, false},
-		{"interface with methods", func() interface{} { return nil }, false},
-		{"multiple interfaces", func() interface{} { return nil }, false},
-		{"complex nested structure", struct {
-			inner struct {
-				value int
-				data  []string
-			}
-		}{inner: struct {
-			value int
-			data  []string
-		}{value: 42, data: []string{"test"}}}, false},
-		{"pointer to complex structure", &struct {
-			inner struct {
-				value int
-				data  []string
-			}
-		}{inner: struct {
-			value int
-			data  []string
-		}{value: 42, data: []string{"test"}}}, false},
+		{"interface with methods", func() any { return nil }, false},
+		{"multiple interfaces", func() any { return nil }, false},
+		{"complex nested structure", getComplexNestedStructure(), false},
+		{"pointer to complex structure", getPointerToComplexStructure(), false},
 		{"empty struct", struct{}{}, false},
 		{"pointer to empty struct", &struct{}{}, false},
 		{"struct with unexported fields", struct{ unexported string }{unexported: "test"}, false},
@@ -185,33 +270,19 @@ func TestSupported(t *testing.T) {
 			Exported   string
 			unexported string
 		}{Exported: "test", unexported: "test"}, false},
-		{"large struct", struct {
-			Field1 string
-			Field2 int
-			Field3 bool
-			Field4 float64
-			Field5 []string
-			Field6 map[string]int
-		}{Field1: "test", Field2: 42, Field3: true, Field4: 3.14, Field5: []string{"test"}, Field6: map[string]int{"key": 42}}, false},
-		{"pointer to large struct", &struct {
-			Field1 string
-			Field2 int
-			Field3 bool
-			Field4 float64
-			Field5 []string
-			Field6 map[string]int
-		}{Field1: "test", Field2: 42, Field3: true, Field4: 3.14, Field5: []string{"test"}, Field6: map[string]int{"key": 42}}, false},
+		{"large struct", getLargeStruct(), false},
+		{"pointer to large struct", getPointerToLargeStruct(), false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := Supported(tt.format)
+			result := archive.Supported(tt.format)
 			be.Equal(t, result, tt.expected)
 		})
 	}
 }
 
-// TestReadMIME tests the ReadMIME function with real files
+// TestReadMIME tests the ReadMIME function with real files.
 func TestReadMIME(t *testing.T) {
 	// Create temporary test files
 	tests := []struct {
@@ -229,7 +300,7 @@ func TestReadMIME(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create temporary file
-			file, err := os.CreateTemp("", "test-*.tmp")
+			file, err := os.CreateTemp(t.TempDir(), "test-*.tmp")
 			be.Err(t, err, nil)
 			defer os.Remove(file.Name())
 			defer file.Close()
@@ -239,9 +310,10 @@ func TestReadMIME(t *testing.T) {
 			be.Err(t, err, nil)
 
 			// Test ReadMIME
-			mime, err := ReadMIME(file.Name())
+			mime, err := archive.ReadMIME(file.Name())
 
-			if tt.expectError {
+			switch {
+			case tt.expectError:
 				// We expect an error for non-archive files
 				if err == nil {
 					t.Errorf("Expected error for %s, got none", tt.name)
@@ -249,7 +321,7 @@ func TestReadMIME(t *testing.T) {
 				if mime != "" {
 					t.Errorf("Expected empty MIME for %s, got %s", tt.name, mime)
 				}
-			} else {
+			case !tt.expectError:
 				// For archive files, we'd expect a valid MIME type
 				if err != nil {
 					t.Errorf("Unexpected error for %s: %v", tt.name, err)
@@ -257,37 +329,39 @@ func TestReadMIME(t *testing.T) {
 				if mime != tt.expectedMime {
 					t.Errorf("Expected MIME %s for %s, got %s", tt.expectedMime, tt.name, mime)
 				}
+			default:
+				t.Errorf("Unexpected test case configuration for %s", tt.name)
 			}
 		})
 	}
 }
 
-// TestErrors tests error handling in archive functions
+// TestErrors tests error handling in archive functions.
 func TestErrors(t *testing.T) {
 	t.Run("ReadMIME non-existent file", func(t *testing.T) {
-		mime, err := ReadMIME("non-existent-file.xyz")
+		mime, err := archive.ReadMIME("non-existent-file.xyz")
 		be.True(t, err != nil)
 		be.Equal(t, mime, "")
 	})
 
 	t.Run("ReadMIME empty filename", func(t *testing.T) {
-		mime, err := ReadMIME("")
+		mime, err := archive.ReadMIME("")
 		be.True(t, err != nil)
 		be.Equal(t, mime, "")
 	})
 
 	t.Run("Extension empty input", func(t *testing.T) {
-		result := Extension("")
+		result := archive.Extension("")
 		be.Equal(t, result, "")
 	})
 
 	t.Run("MIME empty filename", func(t *testing.T) {
-		result := MIME("")
+		result := archive.MIME("")
 		be.Equal(t, result, "")
 	})
 }
 
-// TestRealArchiveFiles tests with actual archive files if available
+// TestRealArchiveFiles tests with actual archive files if available.
 func TestRealArchiveFiles(t *testing.T) {
 	// Look for test archive files in the testdata directory
 	testFiles := []string{
@@ -309,7 +383,7 @@ func TestRealArchiveFiles(t *testing.T) {
 		}
 
 		t.Run(filepath.Base(filePath), func(t *testing.T) {
-			mime, err := ReadMIME(absPath)
+			mime, err := archive.ReadMIME(absPath)
 			if err != nil {
 				t.Logf("Could not read MIME for %s: %v", filePath, err)
 				return
@@ -324,15 +398,16 @@ func TestRealArchiveFiles(t *testing.T) {
 	}
 }
 
-// TestEdgeCases tests edge cases and special scenarios
+// TestEdgeCases tests edge cases and special scenarios.
 func TestEdgeCases(t *testing.T) {
+	const han = "\u6587\u4ef6" // 文件
 	tests := []struct {
 		name     string
 		input    string
 		expected string
 	}{
 		// Unicode and special characters
-		{"unicode filename", "文件.zip", "application/zip"},
+		{"unicode filename", han + ".zip", "application/zip"},
 		{"special chars", "file-with-dashes.tar.gz", "application/gzip"}, // .gz is last extension
 		{"spaces", "file with spaces.zip", "application/zip"},
 
@@ -347,13 +422,13 @@ func TestEdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := MIME(tt.input)
+			result := archive.MIME(tt.input)
 			be.Equal(t, result, tt.expected)
 		})
 	}
 }
 
-// BenchmarkExtension benchmarks the Extension function performance
+// BenchmarkExtension benchmarks the Extension function performance.
 func BenchmarkExtension(b *testing.B) {
 	testCases := []string{
 		".zip",
@@ -366,14 +441,14 @@ func BenchmarkExtension(b *testing.B) {
 
 	for _, tc := range testCases {
 		b.Run(tc, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				_ = Extension(tc)
+			for range b.N {
+				_ = archive.Extension(tc)
 			}
 		})
 	}
 }
 
-// BenchmarkMIME benchmarks the MIME function performance
+// BenchmarkMIME benchmarks the MIME function performance.
 func BenchmarkMIME(b *testing.B) {
 	testCases := []string{
 		"archive.zip",
@@ -385,14 +460,14 @@ func BenchmarkMIME(b *testing.B) {
 
 	for _, tc := range testCases {
 		b.Run(tc, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				_ = MIME(tc)
+			for range b.N {
+				_ = archive.MIME(tc)
 			}
 		})
 	}
 }
 
-// BenchmarkSupported benchmarks the Supported function performance
+// BenchmarkSupported benchmarks the Supported function performance.
 func BenchmarkSupported(b *testing.B) {
 	testCases := []any{
 		nil,
@@ -404,18 +479,18 @@ func BenchmarkSupported(b *testing.B) {
 
 	for i, tc := range testCases {
 		b.Run(string(rune(i)), func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				_ = Supported(tc)
+			for range b.N {
+				_ = archive.Supported(tc)
 			}
 		})
 	}
 }
 
-// BenchmarkReadMIME benchmarks the ReadMIME function performance
-// Note: This benchmark uses a temporary file for realistic testing
+// BenchmarkReadMIME benchmarks the ReadMIME function performance.
+// Note: This benchmark uses a temporary file for realistic testing.
 func BenchmarkReadMIME(b *testing.B) {
 	// Create a temporary test file
-	file, err := os.CreateTemp("", "benchmark-*.tmp")
+	file, err := os.CreateTemp(b.TempDir(), "benchmark-*.tmp")
 	if err != nil {
 		b.Fatalf("Failed to create temp file: %v", err)
 	}
@@ -429,7 +504,7 @@ func BenchmarkReadMIME(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = ReadMIME(file.Name())
+	for b.Loop() {
+		_, _ = archive.ReadMIME(file.Name())
 	}
 }

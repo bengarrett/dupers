@@ -1,4 +1,5 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
+// Package database_test provides tests for database functionality.
 package database_test
 
 import (
@@ -248,7 +249,7 @@ func TestCheck_DB(t *testing.T) {
 	be.True(t, i > 0)
 }
 
-// BenchmarkList benchmarks the List function performance
+// BenchmarkList benchmarks the List function performance.
 func BenchmarkList(b *testing.B) {
 	t := &testing.T{}
 	db, path := mock.Database(t)
@@ -261,42 +262,39 @@ func BenchmarkList(b *testing.B) {
 		b.Fatalf("Failed to create bucket: %v", err)
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = database.List(db, bucket1)
 	}
 }
 
-// BenchmarkInfo benchmarks the Info function performance
+// BenchmarkInfo benchmarks the Info function performance.
 func BenchmarkInfo(b *testing.B) {
 	t := &testing.T{}
 	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = database.Info(db)
 	}
 }
 
-// BenchmarkIsEmpty benchmarks the IsEmpty function performance
+// BenchmarkIsEmpty benchmarks the IsEmpty function performance.
 func BenchmarkIsEmpty(b *testing.B) {
 	t := &testing.T{}
 	db, path := mock.Database(t)
 	defer db.Close()
 	defer os.Remove(path)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = database.IsEmpty(db)
 	}
 }
 
-// BenchmarkRemove benchmarks the Remove function performance
-func BenchmarkRemove(b *testing.B) {
+// BenchmarkRemove benchmarks the Remove function performance.
+func BenchmarkRemove(b *testing.B) { //nolint:gocognit
 	b.Run("existing bucket", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			// Create a new database for each iteration to have consistent state
 			t := &testing.T{}
 			db, path := mock.Database(t)
@@ -307,21 +305,41 @@ func BenchmarkRemove(b *testing.B) {
 
 			_ = database.Remove(db, bucket1)
 
-			db.Close()
-			os.Remove(path)
+			if err := db.Close(); err != nil {
+				b.Errorf("Failed to close database: %v", err)
+			}
+			if err := os.Remove(path); err != nil {
+				b.Errorf("Failed to remove database file: %v", err)
+			}
+			if err := db.Close(); err != nil {
+				b.Errorf("Failed to close database: %v", err)
+			}
+			if err := os.Remove(path); err != nil {
+				b.Errorf("Failed to remove database file: %v", err)
+			}
 		}
 	})
 
 	b.Run("non-existing bucket", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			// Create a new database for each iteration to have consistent state
 			t := &testing.T{}
 			db, path := mock.Database(t)
 
 			_ = database.Remove(db, "non-existing-bucket")
 
-			db.Close()
-			os.Remove(path)
+			if err := db.Close(); err != nil {
+				b.Errorf("Failed to close database: %v", err)
+			}
+			if err := os.Remove(path); err != nil {
+				b.Errorf("Failed to remove database file: %v", err)
+			}
+			if err := db.Close(); err != nil {
+				b.Errorf("Failed to close database: %v", err)
+			}
+			if err := os.Remove(path); err != nil {
+				b.Errorf("Failed to remove database file: %v", err)
+			}
 		}
 	})
 }

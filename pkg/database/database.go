@@ -1,5 +1,3 @@
-// © Ben Garrett https://github.com/bengarrett/dupers
-
 // Package database interacts with Dupers bbolt database and buckets.
 package database
 

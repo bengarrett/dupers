@@ -1,4 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
+
+// Package bucket provides database bucket management functionality.
 package bucket
 
 import (

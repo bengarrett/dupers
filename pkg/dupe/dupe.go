@@ -1,4 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
+
+// Package dupe provides core duplicate file detection functionality.
 package dupe
 
 import (
@@ -49,6 +51,7 @@ var (
 	ErrPathIsFile    = errors.New("path is a file")
 	ErrPathExist     = errors.New("path exists in the database bucket")
 	ErrPathNoFound   = errors.New("path does not exist")
+	ErrPathTraversal = errors.New("path traversal attempt detected")
 )
 
 func ignore(err error) {
@@ -872,7 +875,7 @@ func (c *Config) lookupOne(sum parse.Checksum) string {
 
 // skipFiles returns the value of c.sources as strings.
 func (c *Config) skipFiles() []string {
-	var files []string
+	files := make([]string, 0, len(c.Sources))
 	files = append(files, c.Sources...)
 	return files
 }
@@ -1114,7 +1117,7 @@ func (c *Config) readWalk(db *bolt.DB, b parse.Bucket, archive string, cnt int, 
 		// Validate that the path doesn't escape the archive directory
 		// Also check for absolute paths that bypass the archive directory
 		if !strings.HasPrefix(cleanPath, archiveDir) || filepath.IsAbs(f.Name()) {
-			return fmt.Errorf("path traversal attempt detected: %s", f.Name())
+			return fmt.Errorf("%w: %s", ErrPathTraversal, f.Name())
 		}
 		path := cleanPath
 		if c.findItem(path) {

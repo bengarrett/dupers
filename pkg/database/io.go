@@ -1,4 +1,3 @@
-// © Ben Garrett https://github.com/bengarrett/dupers
 package database
 
 import (
@@ -257,7 +256,7 @@ func read() *bolt.Options {
 	return &bolt.Options{ReadOnly: true, Timeout: Timeout}
 }
 
-// OpenRead opens the Bolt database for writing and reading.
+// OpenWrite opens the Bolt database for writing and reading.
 func OpenWrite() (*bolt.DB, error) {
 	path, err := DB()
 	if err != nil {

@@ -1,7 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
 
 //go:build go1.18
-// +build go1.18
 
 package parse
 
@@ -16,11 +15,15 @@ func createTempFile(t *testing.T, data []byte) string {
 	t.Helper()
 
 	// Create a temporary file
-	file, err := os.CreateTemp("", "fuzz-test-*.tmp")
+	file, err := os.CreateTemp(t.TempDir(), "fuzz-test-*.tmp")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			t.Fatalf("Failed to close temp file: %v", err)
+		}
+	}()
 
 	// Write the data to the file
 	if _, err := file.Write(data); err != nil {
@@ -33,6 +36,12 @@ func createTempFile(t *testing.T, data []byte) string {
 // FuzzChecksum fuzz tests the checksum calculation to ensure it handles
 // various file contents without panicking and produces consistent results.
 func FuzzChecksum(f *testing.F) {
+	// Define constants for test case sizes to avoid magic numbers
+	const (
+		kb = 1024
+		mb = 65536
+	)
+
 	// Add some initial test cases
 	testCases := [][]byte{
 		[]byte("hello world"),
@@ -40,8 +49,8 @@ func FuzzChecksum(f *testing.F) {
 		[]byte("a"),
 		[]byte("\x00\x01\x02\x03\x04\x05"),
 		[]byte("The quick brown fox jumps over the lazy dog"),
-		bytes.Repeat([]byte("A"), 1024),
-		bytes.Repeat([]byte("\x00"), 65536),
+		bytes.Repeat([]byte("A"), kb),
+		bytes.Repeat([]byte("\x00"), mb),
 	}
 
 	for _, tc := range testCases {
@@ -51,7 +60,11 @@ func FuzzChecksum(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte) {
 		// Create a temporary file with the fuzz data
 		filename := createTempFile(t, data)
-		defer os.Remove(filename)
+		defer func() {
+			if err := os.Remove(filename); err != nil {
+				t.Logf("Failed to remove temp file: %v", err)
+			}
+		}()
 
 		// This should not panic
 		sum, err := Read(filename)

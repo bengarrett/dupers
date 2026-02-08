@@ -192,7 +192,7 @@ func TestPrint(t *testing.T) {
 	// exact and term are untested as they only effect ANSI color output.
 }
 
-// BenchmarkChecksum benchmarks the Checksum function performance
+// BenchmarkChecksum benchmarks the Checksum function performance.
 func BenchmarkChecksum(b *testing.B) {
 	// Create test data of different sizes
 	testData := []struct {
@@ -207,8 +207,8 @@ func BenchmarkChecksum(b *testing.B) {
 	for _, tc := range testData {
 		b.Run(tc.name, func(b *testing.B) {
 			// Create temporary file for each benchmark iteration
-			for i := 0; i < b.N; i++ {
-				file, err := os.CreateTemp("", "benchmark-*.tmp")
+			for range b.N {
+				file, err := os.CreateTemp(b.TempDir(), "benchmark-*.tmp")
 				if err != nil {
 					b.Fatalf("Failed to create temp file: %v", err)
 				}
@@ -217,23 +217,30 @@ func BenchmarkChecksum(b *testing.B) {
 				if _, err := file.Write(tc.data); err != nil {
 					b.Fatalf("Failed to write to temp file: %v", err)
 				}
-				file.Close()
+				if err := file.Close(); err != nil {
+					b.Errorf("Failed to close file: %v", err)
+				}
 
 				// Benchmark checksum calculation
 				_, err = parse.Read(file.Name())
 				if err != nil {
 					b.Fatalf("Read failed: %v", err)
 				}
-
+				if err := os.Remove(file.Name()); err != nil {
+					b.Errorf("Failed to remove file: %v", err)
+				}
 				// Clean up
-				os.Remove(file.Name())
+				if err := os.Remove(file.Name()); err != nil {
+					b.Errorf("Failed to remove file: %v", err)
+				}
 			}
 		})
 	}
 }
 
-// BenchmarkMarker benchmarks the Marker function performance
+// BenchmarkMarker benchmarks the Marker function performance.
 func BenchmarkMarker(b *testing.B) {
+	const han = "\u6587\u4ef6" // 文件
 	testCases := []struct {
 		name     string
 		filepath string
@@ -244,23 +251,23 @@ func BenchmarkMarker(b *testing.B) {
 		{"with term", "path/to/file.txt", "file.txt", false},
 		{"with exact", "path/to/file.txt", "file.txt", true},
 		{"long path", "very/long/path/to/file.txt", "file.txt", false},
-		{"unicode", "文件.txt", "", false},
+		{"unicode", han + ".txt", "", false},
 	}
 
 	for _, tc := range testCases {
 		b.Run(tc.name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_ = parse.Marker(database.Filepath(tc.filepath), tc.term, tc.exact)
 			}
 		})
 	}
 }
 
-// BenchmarkPrint benchmarks the Print function performance
+// BenchmarkPrint benchmarks the Print function performance.
 func BenchmarkPrint(b *testing.B) {
 	// Create test matches
 	matches := make(database.Matches)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		filepath := database.Filepath(fmt.Sprintf("file%d.txt", i))
 		bucket := database.Bucket(fmt.Sprintf("bucket%d", i%3))
 		matches[filepath] = bucket
@@ -280,17 +287,17 @@ func BenchmarkPrint(b *testing.B) {
 
 	for _, tc := range testCases {
 		b.Run(tc.name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_ = parse.Print(tc.exact, false, tc.term, &tc.matches)
 			}
 		})
 	}
 }
 
-// createLargeMatches creates a large set of matches for benchmarking
+// createLargeMatches creates a large set of matches for benchmarking.
 func createLargeMatches() database.Matches {
 	matches := make(database.Matches)
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		filepath := database.Filepath(fmt.Sprintf("very/long/path/to/file%d.txt", i))
 		bucket := database.Bucket(fmt.Sprintf("bucket%d", i%10))
 		matches[filepath] = bucket

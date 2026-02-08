@@ -1,4 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
+
+// Package parse provides file parsing and checksum calculation functionality.
 package parse
 
 import (

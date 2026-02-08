@@ -1,4 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
+
+// Package duplicate provides duplicate file detection functionality.
 package duplicate
 
 import (

@@ -1,4 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
+
+// Package cmd provides command-line interface functionality for the application.
 package cmd
 
 import (
@@ -51,7 +53,7 @@ type Aliases struct {
 
 // Usage of the command aliases.
 func (a *Aliases) Usage(name string) string {
-	t := reflect.TypeOf(*a)
+	t := reflect.TypeFor[Aliases]()
 	sf, ok := t.FieldByName(name)
 	if !ok {
 		return ""
@@ -100,7 +102,7 @@ type Flags struct {
 
 // Usage of the command flags.
 func (f *Flags) Usage(name string) string {
-	t := reflect.TypeOf(*f)
+	t := reflect.TypeFor[Flags]()
 	sf, ok := t.FieldByName(name)
 	if !ok {
 		return ""
@@ -192,37 +194,32 @@ func (f *Flags) aliases() {
 	}
 }
 
-// WindowsChk checks the named directory for invalid, escaped quoted paths when using Windows cmd.exe.
+// Only validate if this looks like a Windows path (starts with drive letter).
+func winpath(name string) bool {
+	return len(name) < 2 || name[1] != ':' || (name[0] < 'A' || name[0] > 'Z') && (name[0] < 'a' || name[0] > 'z')
+}
+
+// WindowsChk checks the named directory for invalid, escaped nuoted paths when using Windows cmd.exe.
 func WindowsChk(name string) error {
-	if name == "" {
+	if name == "" || winpath(name) {
 		return nil
 	}
-
-	// Only validate if this looks like a Windows path (starts with drive letter)
-	if len(name) < 2 || name[1] != ':' || (name[0] < 'A' || name[0] > 'Z') && (name[0] < 'a' || name[0] > 'z') {
-		return nil
-	}
-
 	r := []rune(name)
 	l := len(r)
 	if l == 0 {
 		return nil
 	}
-
 	first, last := r[0], r[l-1]
 
-	// Case 1: Properly quoted path - check for problematic trailing backslash
+	// Check for problematic trailing backslash
 	if first == '"' && last == '"' {
-		// Check if this is the problematic case: quoted path ending with backslash
-		// The pattern we're looking for is something like "C:\path\"
-		// which flag.Parse() would turn into C:\path"
 		if l >= 2 && r[l-2] == '\\' {
 			return createWindowsDirError()
 		}
 		return nil
 	}
 
-	// Case 2: Unquoted path - check for drive letter with trailing backslash (e.g., "C:")
+	// Check for drive letter with trailing backslash (e.g., "C:")
 	if first != '"' && last != '"' {
 		// Special case: drive letter with trailing backslash (e.g., "C:") should fail
 		if l == 3 && r[2] == '\\' {
@@ -231,7 +228,6 @@ func WindowsChk(name string) error {
 		return nil
 	}
 
-	// Case 3: Malformed quoting (only start or end quoted) - should fail
 	return createWindowsDirError()
 }
 

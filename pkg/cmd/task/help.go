@@ -1,4 +1,3 @@
-// © Ben Garrett https://github.com/bengarrett/dupers
 package task
 
 import (
@@ -182,7 +181,7 @@ func ProgramOpts(w io.Writer) {
 	printf(w, "    -h, %s\tshow this list of options\n", "-help")
 }
 
-// Search creates the search command help.
+// SearchHelp creates the search command help.
 func SearchHelp(w io.Writer) {
 	printl(w)
 	printl(w, color.Primary.Sprint("Search command:"))

@@ -1,4 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
+
+// Package bucket provides bucket-related command functionality.
 package bucket
 
 import (

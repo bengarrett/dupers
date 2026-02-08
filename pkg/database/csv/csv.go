@@ -1,4 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
+
+// Package csv provides CSV import/export functionality for database operations.
 package csv
 
 import (

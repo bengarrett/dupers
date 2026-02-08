@@ -1,4 +1,4 @@
-// © Ben Garrett https://github.com/bengarrett/dupers
+// Package task provides task execution and coordination functionality.
 package task
 
 import (
@@ -383,7 +383,7 @@ func safesize(i int64) uint64 {
 	return uint64(i)
 }
 
-// cleanupDB cleans and compacts the database.
+// CleanupDB cleans and compacts the database.
 func CleanupDB(db *bolt.DB, c *dupe.Config) error {
 	if db == nil {
 		return bberr.ErrDatabaseNotOpen

@@ -1,4 +1,6 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
+
+// Package archive provides archive file handling and MIME type detection.
 package archive
 
 import (
@@ -65,7 +67,11 @@ func Extension(find string) string {
 	return ""
 }
 
-// Predefined maps for deterministic lookup
+// Predefined maps for deterministic lookup.
+// These are effectively constant lookup tables and are safe as package-level variables
+// since they are only used for read operations and never modified after initialization.
+//
+//nolint:gochecknoglobals // These are internal package constants used for lookup tables
 var (
 	extensionToMIME = map[string]string{
 		Ext7z:      Mime7z,
