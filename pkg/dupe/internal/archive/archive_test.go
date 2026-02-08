@@ -3,6 +3,7 @@
 package archive
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -116,17 +117,90 @@ func TestMIME(t *testing.T) {
 
 // TestSupported tests the Supported function with various archiver formats
 func TestSupported(t *testing.T) {
-	// Create mock archiver format instances
+	// Test with various unsupported types to ensure the type switch works correctly
 	tests := []struct {
 		name     string
 		format   any
 		expected bool
 	}{
-		// This is a simplified test since we can't easily create actual archiver instances
-		// In a real scenario, you would create proper instances or use interfaces
+		// Basic unsupported types
 		{"nil format", nil, false},
 		{"string format", "zip", false},
 		{"int format", 42, false},
+		{"bool format", true, false},
+		{"float format", 3.14, false},
+		{"slice format", []string{"test"}, false},
+		{"map format", map[string]string{"key": "value"}, false},
+		{"struct format", struct{ name string }{name: "test"}, false},
+		{"pointer to string", func() *string { s := "test"; return &s }(), false},
+		{"interface format", func() interface{} { return "test" }(), false},
+		{"channel format", make(chan int), false},
+		{"function format", func() {}, false},
+		{"error format", errors.New("test error"), false},
+		{"empty interface", interface{}(nil), false},
+		{"array format", [3]int{1, 2, 3}, false},
+		{"rune format", 'a', false},
+		{"byte format", byte(65), false},
+		{"uint format", uint(42), false},
+		{"complex format", complex(1, 2), false},
+		{"pointer to interface", func() interface{} { var i interface{}; return &i }(), false},
+		{"custom struct", struct{ field string }{field: "test"}, false},
+		{"nested struct", struct{ inner struct{ value int } }{inner: struct{ value int }{value: 42}}, false},
+		{"anonymous struct", struct{ string }{}, false},
+		{"pointer to custom struct", &struct{ field string }{field: "test"}, false},
+		{"pointer to nested struct", &struct{ inner struct{ value int } }{inner: struct{ value int }{value: 42}}, false},
+		{"pointer to anonymous struct", &struct{ string }{}, false},
+		{"slice of structs", []struct{ field string }{{"test"}}, false},
+		{"map of structs", map[string]struct{ field string }{"key": {"test"}}, false},
+		{"struct with methods", struct{ name string }{name: "test"}, false},
+		{"interface with methods", func() interface{} { return nil }, false},
+		{"multiple interfaces", func() interface{} { return nil }, false},
+		{"complex nested structure", struct{ 
+			inner struct{ 
+				value int 
+				data []string 
+			} 
+		}{inner: struct{ 
+			value int 
+			data []string 
+		}{value: 42, data: []string{"test"}}}, false},
+		{"pointer to complex structure", &struct{ 
+			inner struct{ 
+				value int 
+				data []string 
+			} 
+		}{inner: struct{ 
+			value int 
+			data []string 
+		}{value: 42, data: []string{"test"}}}, false},
+		{"empty struct", struct{}{}, false},
+		{"pointer to empty struct", &struct{}{}, false},
+		{"struct with unexported fields", struct{ unexported string }{unexported: "test"}, false},
+		{"pointer to struct with unexported fields", &struct{ unexported string }{unexported: "test"}, false},
+		{"struct with mixed fields", struct{ 
+			Exported   string 
+			unexported string 
+		}{Exported: "test", unexported: "test"}, false},
+		{"pointer to struct with mixed fields", &struct{ 
+			Exported   string 
+			unexported string 
+		}{Exported: "test", unexported: "test"}, false},
+		{"large struct", struct{ 
+			Field1 string 
+			Field2 int 
+			Field3 bool 
+			Field4 float64 
+			Field5 []string 
+			Field6 map[string]int 
+		}{Field1: "test", Field2: 42, Field3: true, Field4: 3.14, Field5: []string{"test"}, Field6: map[string]int{"key": 42}}, false},
+		{"pointer to large struct", &struct{ 
+			Field1 string 
+			Field2 int 
+			Field3 bool 
+			Field4 float64 
+			Field5 []string 
+			Field6 map[string]int 
+		}{Field1: "test", Field2: 42, Field3: true, Field4: 3.14, Field5: []string{"test"}, Field6: map[string]int{"key": 42}}, false},
 	}
 
 	for _, tt := range tests {
