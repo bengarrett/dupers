@@ -79,10 +79,10 @@ jobs:
             SHA=$(curl -L "${TAR_URL}" | sha256sum | awk '{print $1}')
           fi
 
-          # Update the formula using sed
-          sed -i "s|^  url ".*"$|  url "${TAR_URL}"|" Formula/dupers.rb
-          sed -i "s|^  sha256 ".*"$|  sha256 "${SHA}"|" Formula/dupers.rb
-          sed -i "s|^  version ".*"$|  version "${VERSION}"|" Formula/dupers.rb
+          # Update the formula using sed with proper escaping
+          sed -i 's|^  url "[^"]*"$|  url "'"${TAR_URL}"'"|' Formula/dupers.rb
+          sed -i 's|^  sha256 "[^"]*"$|  sha256 "'"${SHA}"'"|' Formula/dupers.rb
+          sed -i 's|^  version "[^"]*"$|  version "'"${VERSION}"'"|' Formula/dupers.rb
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

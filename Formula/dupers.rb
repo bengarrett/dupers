@@ -1,10 +1,10 @@
 class Dupers < Formula
   desc "The blazing-fast file duplicate checker and filename search tool"
   homepage "https://github.com/bengarrett/dupers"
-  url "https://github.com/bengarrett/dupers/archive/refs/tags/v1.1.3.tar.gz"
-  sha256 "37bade22436faff216250c1c213514477cead6cdd4ed315f0a07c5672f7683be"
+  url "https://github.com/bengarrett/dupers/archive/refs/tags/v1.2.0.tar.gz"
+  sha256 "f961d5206f6c6839618028ee318895ab336cdc0609edf20ec41f7eb6c34b120e"
   license "LGPL-3.0"
-  version "1.1.3"
+  version "1.2.0"
   head "https://github.com/bengarrett/dupers.git", branch: "main"
 
   depends_on "go" => :build
