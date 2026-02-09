@@ -1,15 +1,3 @@
-```
-:::::::::::::::::::::::.
-::
-:: ::::.  ::  :: ::::.   .:::: ::::.   .::::
-:  ::  :: ::  ::     :: ::         :: ::
-   ::  :: ::  :: :::::: :::::: :::::  ::::::  :
-   ::  :: ::  :: ::     ::     ::  ::     :: ::
-   :::::: :::::: ::     :::::: ::  :: :::::: ::
-                                             ::
-                       .:::::::::::::::::::::::
-```
-
 # dupers
 
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/bengarrett/dupers)](https://pkg.go.dev/github.com/bengarrett/dupers)
@@ -19,95 +7,102 @@
 
 Dupers is the blazing-fast file duplicate checker and filename search tool.
 
-- Dupers uses SHA-256 checksums in the fast and straightforward key/value database store.
-- Automate the deletion of duplicates.
-- Multithreaded file reads and scans.
-- Instant filename and directory path search from the database.
-- Automated database maintenance with optional user tools.
-- Import and export database stores as [CSV text](https://en.wikipedia.org/wiki/Comma-separated_values) for sharing.
+- Uses SHA-256 checksums stored in a fast key/value database for accurate duplicate detection
+- Safe, automated duplicate deletion with user confirmation
+- Multithreaded file processing for maximum performance
+- Instant filename and directory path search from the database
+- Automated database maintenance with optional user tools
+- Cross-platform support (Windows, macOS, Linux)
+- Import/export database stores as [CSV](https://en.wikipedia.org/wiki/Comma-separated_values) for sharing
 
 ## Downloads
 
-<small>Dupers is a standalone (portable) terminal program and doesn't require installation.</small>
+Dupers is available as standalone portable binaries and system packages. No installation is required for the portable versions.
 
-- [Windows](https://github.com/bengarrett/dupers/releases/latest/download/dupers_windows_amd64.zip) or [a legacy 32-bit edition](https://github.com/bengarrett/dupers/releases/latest/download/dupers_windows_386.zip).
-- [macOS](https://github.com/bengarrett/dupers/releases/latest/download/dupers_macOS_all.tar.gz
-), [Linux](https://github.com/bengarrett/dupers/releases/latest/download/dupers_linux_amd64.tar.gz
-) or [Linux for ARM CPUs](https://github.com/bengarrett/dupers/releases/latest/download/dupers_linux_arm64.tar.tar.gz
-).
+### Portable Binaries
 
-#### Packages
+**Windows:** [Download](https://github.com/bengarrett/dupers/releases/latest/download/dupers_windows_amd64.zip)
 
-##### [DEB (Debian package)](https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.deb)
+**macOS:** [Download](https://github.com/bengarrett/dupers/releases/latest/download/dupers_macOS_all.tar.gz)
+
+**Linux:** [Download](https://github.com/bengarrett/dupers/releases/latest/download/dupers_linux_amd64.tar.gz)
+
+### Linux Packages
+
+##### [Ubuntu/Debian (.deb)](https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.deb)
 ```sh
-wget https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.deb
-dpkg -i dupers_amd64.deb
+dpk -i dupers_amd64.deb
+```
+```
 ```
 
-##### [RPM (Red Hat package)](https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.rpm)
+##### [Fedora (.rpm)](https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.rpm)
 ```sh
-wget https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.rpm
 rpm -i dupers_amd64.rpm
 ```
 
-##### [APK (Alpine package)](https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.apk)
+##### [Alpine Linux (.apk)](https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.apk)
 ```sh
-wget https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.apk
 apk add dupers_amd64.apk
 ```
 
-##### [Arch Linux](https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.pkg.tar.zst)
+##### [Arch Linux (.zst)](https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.pkg.tar.zst)
 ```sh
-wget https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.pkg.tar.zst
 pacman -U dupers_amd64.pkg.tar.zst
 ```
 
-## Usage
+## Quick Start
 
-https://user-images.githubusercontent.com/513842/140050025-04adc6ad-f7a4-4680-b83f-3fa3016f1504.mp4
+Get started with dupers in just a few commands:
+
+<small>Windows users will use backslashes, "dupers up ~\Downloads"</small>
+
+```sh
+# Add your main directories to the database (buckets)
+dupers up ~/Documents
+dupers up ~/Downloads
+dupers up /path/to/your/files
+
+# Find duplicate files
+dupers dupe ~/Pictures ~/Documents
+
+# Search for files by name
+dupers search "project"
+
+# View database information
+dupers database
+```
 
 ## Example usage
 
 #### Dupe check
 
-Run a check to find any duplicate photos.
+Run a check to find duplicate photos.
 
 ```sh
-# Windows
-dupers dupe D:\photos
-
-# Linux, macOS
-dupers dupe ~/photos
+dupers dupe ~/photos # Windows example: ~\photos or C:\photos
 
 # dupers        the program name
 # dupe          the command to run
-# D:\photos     the path containing a collection of files (a bucket)
+# ~/photos     the path containing a collection of files (a bucket)
 ```
 
 Run a check to see if the photo exists within the photo collection.
 
 ```sh
-# Windows
-dupers dupe photo.jpg D:\photos
-
-# Linux, macOS
-dupers dupe photo.jpg ~/photos
+dupers dupe photo.jpg ~/photos # Windows example: ~\photos or C:\photos
 
 # photo.jpg     the new file to check
-# D:\photos     the path containing a collection of files (a bucket)
+# ~/photos      the path containing a collection of files (a bucket)
 ```
 
-Run a check of the files in Downloads against the collection of storage files.
+Run a check of the files in Downloads against the collection of stored files.
 
 ```sh
-# Windows
-dupers dupe C:\Downloads D:\Storage
+dupers dupe ~/Downloads ~/storage # Windows example: ~\Downloads C:\storage
 
-# Linux, macOS
-dupers dupe ~/Downloads ~/storage
-
-# C:\Downloads  the path containing new files to check
-# D:\Storage    the path containing a collection of files (a bucket)
+# ~/Downloads  the path containing new files to check
+# ~/storage    the path containing a collection of files (a bucket)
 ```
 
 #### Dupe check multiple locations
@@ -115,16 +110,14 @@ dupers dupe ~/Downloads ~/storage
 Run a check of the files in Downloads against the collections of documents, music and images.
 
 ```sh
-# Windows
-dupers dupe C:\Downloads D:\documents D:\images E:\music
-
-# Linux, macOS
 dupers dupe ~/Downloads ~/documents ~/images ~/music
 
-# C:\Downloads  the path containing new files to check
-# D:\documents  a path containing a collection of files (a bucket)
-# D:\images     another path containing a collection of files (another bucket)
-# D:\music      another path containing a collection of files (and another bucket)
+# Windows example: dupers dupe ~\Downloads ~\Documents D:\images E:\music
+
+# ~/Downloads  the path containing new files to check
+# ~/documents  a path containing a collection of files (a bucket)
+# ~/images     another path containing a collection of files (another bucket)
+# ~/music      another path containing a collection of files (and another bucket)
 ```
 
 #### Search for a filename
@@ -143,15 +136,15 @@ dupers -name search .zip
 ```
 
 
-Search the database for photos containing `2010` in their file or directory names.
+Search the database for photos containing '2010' in their file or directory names.
 
 ```sh
-dupers search "2010" D:\photos
+dupers search "2010" ~/photos # Windows example: D:\photos
 
 # dupers     the program name
 # search     the command to run
 # "2010"     the search expression
-# D:\photos  the path containing a collection of files (a bucket)
+# ~/photos   the path containing a collection of files (a bucket)
 ```
 
 ## Performance
@@ -159,7 +152,7 @@ dupers search "2010" D:\photos
 Due to the nature of duplicate file checking, several issues can affect performance.
 
 #### Hardware
-With its constant opening and reading of files, hardware directly affects dupers' performance, CPU used and the read/write speed of the hard drive. Fast multithreaded CPUs and SSD drives help here.
+With its constant opening and reading of files, hardware directly affects dupers' performance, CPU usage, and the read/write speed of the hard drive. Fast multithreaded CPUs and SSD drives help here.
 
 #### Operating Systems
 
@@ -167,7 +160,7 @@ To restrict aggressive programs, terminal and command prompt applications only r
 
 #### Command flags
 
-When running dupe checking, a `-fast` flag can significantly improve performance when dealing with extensive file collections. It does this by only running dupe checks against the database and completely ignoring the files residing on the host system.
+When running dupe checking, a `-fast` flag can significantly improve performance when dealing with extensive file collections. It does this by only running duplicate checks against the database and completely ignoring the files residing on the host system.
 
 ###### Dupe command on a large collection using fast mode takes less than a second 😃
 ```ps
@@ -186,11 +179,11 @@ dupers dupe C:\Users\Me\Downloads D:\textfiles
 
 #### Multiple identical files
 
-Both the `dupe` and `search` commands only show the first unique file match. Dupers uses the SHA-256 file checksums as unique keys, and each key's value only holds a single path location.
+Both the `dupe` and `search` commands only show the first matching file. Dupers uses the SHA-256 file checksums as unique keys, and each key's value only holds a single path location.
 
 #### Windows Command Prompt directory paths
 
-Windows Command Prompt (cmd.exe) users cannot use tailing backslashes with quoted directories. Other terminal apps such as [Windows Terminal](https://www.microsoft.com/en-au/p/windows-terminal/9n0dx20hk701) do not suffer this issue.
+Windows Command Prompt (`cmd.exe`) users cannot use trailing backslashes with quoted directories. Other terminal apps such as [Windows Terminal](https://www.microsoft.com/en-au/p/windows-terminal/9n0dx20hk701) do not suffer this issue.
 
 ##### ✔️ Good
 ```ps
