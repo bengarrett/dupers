@@ -23,17 +23,37 @@ Dupers is available as standalone portable binaries and system packages. No inst
 
 **Windows:** [Download](https://github.com/bengarrett/dupers/releases/latest/download/dupers_windows_amd64.zip)
 
+**Linux:** [Download](https://github.com/bengarrett/dupers/releases/latest/download/dupers_linux_amd64.tar.gz)
+
 **macOS:** [Download](https://github.com/bengarrett/dupers/releases/latest/download/dupers_macOS_all.tar.gz)
 
-**Linux:** [Download](https://github.com/bengarrett/dupers/releases/latest/download/dupers_linux_amd64.tar.gz)
+Before use, macOS users will need to delete the 'quarantine' extended attribute that is applied to all 
+program downloads that are not notarized by Apple for a fee.
+
+```
+$ xattr -d com.apple.quarantine namzd
+```
+
+#### Homebrew
+
+macOS and Linux users can install via Homebrew:
+
+```bash
+brew tap bengarrett/dupers https://github.com/bengarrett/dupers
+brew install bengarrett/dupers/dupers
+```
+
+Update to the latest version with:
+
+```bash
+brew upgrade bengarrett/dupers/dupers
+```
 
 ### Linux Packages
 
 ##### [Ubuntu/Debian (.deb)](https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.deb)
 ```sh
 dpk -i dupers_amd64.deb
-```
-```
 ```
 
 ##### [Fedora (.rpm)](https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.rpm)
@@ -55,9 +75,9 @@ pacman -U dupers_amd64.pkg.tar.zst
 
 Get started with dupers in just a few commands:
 
-<small>Windows users will use backslashes, "dupers up ~\Downloads"</small>
-
 ```sh
+# Windows users will use backslashes: dupers up ~\Documents
+
 # Add your main directories to the database (buckets)
 dupers up ~/Documents
 dupers up ~/Downloads
@@ -149,27 +169,20 @@ dupers search "2010" ~/photos # Windows example: D:\photos
 
 ## Performance
 
-Due to the nature of duplicate file checking, several issues can affect performance.
+Due to the nature of duplicate file checking, hardware and operating systems do affect performance.
 
-#### Hardware
-With its constant opening and reading of files, hardware directly affects dupers' performance, CPU usage, and the read/write speed of the hard drive. Fast multithreaded CPUs and SSD drives help here.
-
-#### Operating Systems
-
-To restrict aggressive programs, terminal and command prompt applications only receive **25-35%** of the available CPU resources. You can improve this by adjusting the process priority of dupers in your operating system's activity or processes tool, but it may not give the desired effect.
-
-#### Command flags
+#### The fast flag
 
 When running dupe checking, a `-fast` flag can significantly improve performance when dealing with extensive file collections. It does this by only running duplicate checks against the database and completely ignoring the files residing on the host system.
 
 ###### Dupe command on a large collection using fast mode takes less than a second 😃
-```ps
+```sh
 dupers -fast dupe C:\Users\Me\Downloads D:\textfiles
 # Scanned 191842 files, taking 901ms
 ```
 
 ###### Dupe command on a large collection normally taking 46 seconds ☹️
-```ps
+```sh
 dupers dupe C:\Users\Me\Downloads D:\textfiles
 # Checking 51179 of 387859 items...
 # Scanned 191842 files, taking 46.3s
@@ -179,11 +192,11 @@ dupers dupe C:\Users\Me\Downloads D:\textfiles
 
 #### Multiple identical files
 
-Both the `dupe` and `search` commands only show the first matching file. Dupers uses the SHA-256 file checksums as unique keys, and each key's value only holds a single path location.
+Both the `dupe` and `search` commands __only show the first matching file__. Dupers uses the SHA-256 file checksums as unique keys, and each key value holds a single location path.
 
-#### Windows Command Prompt directory paths
+#### Command Prompt directories
 
-Windows Command Prompt (`cmd.exe`) users cannot use trailing backslashes with quoted directories. Other terminal apps such as [Windows Terminal](https://www.microsoft.com/en-au/p/windows-terminal/9n0dx20hk701) do not suffer this issue.
+The legacy Windows Command Prompt (`cmd.exe`) cannot use trailing backslashes with quoted directories. Windows Terminal does not suffer this issue.
 
 ##### ✔️ Good
 ```ps
@@ -204,7 +217,7 @@ dupers dupe "C:\Users\Ben\Some directory\"
 This is a misleading generic Windows error that occurs when interacting with the database.
 There is no guaranteed fix but try rebooting or running this command:
 
-```ps
+```sh
 # In an administrator console or administrator command prompt.
 sfc /scannow
 ```
