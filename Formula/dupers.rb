@@ -2,7 +2,7 @@ class Dupers < Formula
   desc "The blazing-fast file duplicate checker and filename search tool"
   homepage "https://github.com/bengarrett/dupers"
   url "https://github.com/bengarrett/dupers/archive/refs/tags/v1.2.0.tar.gz"
-  sha256 "f961d5206f6c6839618028ee318895ab336cdc0609edf20ec41f7eb6c34b120e"
+  sha256 "a9146fa58675b0ba3ef05e71fa62cfb3a13ab39f18285a1eca314bc5b26ede4d"
   license "LGPL-3.0"
   version "1.2.0"
   head "https://github.com/bengarrett/dupers.git", branch: "main"
