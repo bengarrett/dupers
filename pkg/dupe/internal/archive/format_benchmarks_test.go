@@ -14,9 +14,9 @@ import (
 // BenchmarkFormatIdentification benchmarks format identification for different archive types
 func BenchmarkFormatIdentification(b *testing.B) {
 	testFiles := map[string]string{
-		"ZIP":  "../../../../testdata/randomfiles.zip",
-		"TAR":  "../../../../testdata/randomfiles.tar.xz",
-		"7Z":   "../../../../testdata/randomfiles.7z",
+		"ZIP": "../../../../testdata/randomfiles.zip",
+		"TAR": "../../../../testdata/randomfiles.tar.xz",
+		"7Z":  "../../../../testdata/randomfiles.7z",
 	}
 
 	ctx := context.Background()
@@ -70,9 +70,9 @@ func BenchmarkOldVsNewIdentification(b *testing.B) {
 // BenchmarkExtractionPerformance benchmarks file extraction performance
 func BenchmarkExtractionPerformance(b *testing.B) {
 	testFiles := map[string]string{
-		"ZIP":  "../../../../testdata/randomfiles.zip",
-		"TAR":  "../../../../testdata/randomfiles.tar.xz",
-		"7Z":   "../../../../testdata/randomfiles.7z",
+		"ZIP": "../../../../testdata/randomfiles.zip",
+		"TAR": "../../../../testdata/randomfiles.tar.xz",
+		"7Z":  "../../../../testdata/randomfiles.7z",
 	}
 
 	ctx := context.Background()
@@ -127,13 +127,12 @@ func BenchmarkExtractionPerformance(b *testing.B) {
 							return err
 						}
 						defer file.Close()
-						
+
 						buf := make([]byte, 1024)
 						_, _ = file.Read(buf)
 					}
 					return nil
 				})
-				
 				if err != nil {
 					b.Error(err)
 				}
@@ -145,9 +144,9 @@ func BenchmarkExtractionPerformance(b *testing.B) {
 // BenchmarkMemoryUsage benchmarks memory allocation patterns
 func BenchmarkMemoryUsage(b *testing.B) {
 	testFiles := map[string]string{
-		"ZIP":  "../../../../testdata/randomfiles.zip",
-		"TAR":  "../../../../testdata/randomfiles.tar.xz",
-		"7Z":   "../../../../testdata/randomfiles.7z",
+		"ZIP": "../../../../testdata/randomfiles.zip",
+		"TAR": "../../../../testdata/randomfiles.tar.xz",
+		"7Z":  "../../../../testdata/randomfiles.7z",
 	}
 
 	ctx := context.Background()
@@ -155,7 +154,7 @@ func BenchmarkMemoryUsage(b *testing.B) {
 	for name, file := range testFiles {
 		b.Run(name, func(b *testing.B) {
 			b.ReportAllocs()
-			
+
 			for i := 0; i < b.N; i++ {
 				_, _, err := archives.Identify(ctx, file, nil)
 				if err != nil {

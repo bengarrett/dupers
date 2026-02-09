@@ -577,12 +577,12 @@ func TestExtractArchives(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to identify %s: %v", file, err)
 			}
-			
+
 			extractor, ok := format.(archives.Extractor)
 			if !ok {
 				t.Skipf("Format %s does not support extraction", format.Extension())
 			}
-			
+
 			var fileCount int
 			err = extractor.Extract(ctx, reader, func(ctx context.Context, fileInfo archives.FileInfo) error {
 				if !fileInfo.IsDir() {
@@ -600,11 +600,10 @@ func TestExtractArchives(t *testing.T) {
 				}
 				return nil
 			})
-			
 			if err != nil {
 				t.Errorf("Failed to extract %s: %v", file, err)
 			}
-			
+
 			if fileCount == 0 {
 				t.Errorf("No files extracted from %s", file)
 			}
@@ -628,16 +627,16 @@ func TestContextCancellation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to identify: %v", err)
 	}
-	
+
 	extractor, ok := format.(archives.Extractor)
 	if !ok {
 		t.Skip("Format does not support extraction")
 	}
-	
+
 	err = extractor.Extract(ctx, reader, func(ctx context.Context, fileInfo archives.FileInfo) error {
 		return nil
 	})
-	
+
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("Expected context.Canceled error, got: %v", err)
 	}
@@ -686,16 +685,16 @@ func TestErrorHandling(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to identify: %v", err)
 		}
-		
+
 		extractor, ok := format.(archives.Extractor)
 		if !ok {
 			t.Skip("Format does not support extraction")
 		}
-		
+
 		err = extractor.Extract(ctx, reader, func(ctx context.Context, fileInfo archives.FileInfo) error {
 			return nil
 		})
-		
+
 		if err == nil {
 			t.Error("Expected error for corrupted archive")
 		}

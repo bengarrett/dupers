@@ -26,8 +26,8 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
 	"github.com/karrick/godirwalk"
-	"github.com/mholt/archives"
 	"github.com/mholt/archiver/v3"
+	"github.com/mholt/archives"
 	bolt "go.etcd.io/bbolt"
 	bberr "go.etcd.io/bbolt/errors"
 	"golang.org/x/text/language"
@@ -714,7 +714,7 @@ func (c *Config) Read(db *bolt.DB, b parse.Bucket, name, mimeExt string) error {
 	if mimeExt != "" {
 		lookup = mimeExt
 	}
-	
+
 	// Open the archive file
 	file, err := os.Open(name)
 	if err != nil {
@@ -722,7 +722,7 @@ func (c *Config) Read(db *bolt.DB, b parse.Bucket, name, mimeExt string) error {
 		return nil
 	}
 	defer file.Close()
-	
+
 	// Use the new archives API for format identification
 	ctx := context.Background()
 	format, reader, err := archives.Identify(ctx, lookup, file)
@@ -730,58 +730,57 @@ func (c *Config) Read(db *bolt.DB, b parse.Bucket, name, mimeExt string) error {
 		printer.StderrCR(err)
 		return nil
 	}
-	
+
 	// Check if the format supports extraction
 	extractor, ok := format.(archives.Extractor)
 	if !ok {
 		color.Warn.Printf("Unsupported archive: '%s'\n", name)
 		return nil
 	}
-	
+
 	// Extract and process files
 	err = extractor.Extract(ctx, reader, func(ctx context.Context, fileInfo archives.FileInfo) error {
 		if fileInfo.IsDir() {
 			return nil
 		}
-		
+
 		// Open the file for reading
 		file, err := fileInfo.Open()
 		if err != nil {
 			return err
 		}
 		defer file.Close()
-		
+
 		// Create the full path
 		fullPath := filepath.Join(name, fileInfo.NameInArchive)
-		
+
 		// Check if we've already processed this item
 		if c.findItem(fullPath) {
 			return nil
 		}
-		
+
 		// Calculate checksum
 		buf, h := make([]byte, oneMb), sha256.New()
 		if _, err := io.CopyBuffer(h, file, buf); err != nil {
 			printer.Stderr(err)
 			return nil
 		}
-		
+
 		var sum parse.Checksum
 		copy(sum[:], h.Sum(nil))
-		
+
 		// Update database
 		if err := c.update(db, b, fullPath, sum); err != nil {
 			printer.Stderr(err)
 		}
-		
+
 		cnt++
 		return nil
 	})
-	
 	if err != nil {
 		printer.Stderr(err)
 	}
-	
+
 	if cnt > 0 {
 		c.Debugger(fmt.Sprintf("read %d items within the archive", cnt))
 	}
