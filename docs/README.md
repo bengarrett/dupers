@@ -55,8 +55,6 @@ brew upgrade bengarrett/dupers/dupers
 ```sh
 dpk -i dupers_amd64.deb
 ```
-```
-```
 
 ##### [Fedora (.rpm)](https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.rpm)
 ```sh
@@ -77,9 +75,9 @@ pacman -U dupers_amd64.pkg.tar.zst
 
 Get started with dupers in just a few commands:
 
-<small>Windows users will use backslashes, "dupers up ~\Downloads"</small>
-
 ```sh
+# Windows users will use backslashes: dupers up ~\Documents
+
 # Add your main directories to the database (buckets)
 dupers up ~/Documents
 dupers up ~/Downloads
@@ -171,14 +169,7 @@ dupers search "2010" ~/photos # Windows example: D:\photos
 
 ## Performance
 
-Due to the nature of duplicate file checking, several issues can affect performance.
-
-#### Hardware
-With its constant opening and reading of files, hardware directly affects dupers' performance, CPU usage, and the read/write speed of the hard drive. Fast multithreaded CPUs and SSD drives help here.
-
-#### Operating Systems
-
-To restrict aggressive programs, terminal and command prompt applications only receive **25-35%** of the available CPU resources. You can improve this by adjusting the process priority of dupers in your operating system's activity or processes tool, but it may not give the desired effect.
+Due to the nature of duplicate file checking, hardware and operating systems do affect performance.
 
 #### Command flags
 
@@ -201,7 +192,7 @@ dupers dupe C:\Users\Me\Downloads D:\textfiles
 
 #### Multiple identical files
 
-Both the `dupe` and `search` commands only show the first matching file. Dupers uses the SHA-256 file checksums as unique keys, and each key's value only holds a single path location.
+Both the `dupe` and `search` commands __only show the first matching file__. Dupers uses the SHA-256 file checksums as unique keys, and each key value holds a single location path.
 
 #### Windows Command Prompt directory paths
 
