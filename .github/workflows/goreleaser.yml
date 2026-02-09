@@ -96,7 +96,7 @@ jobs:
           git commit -m "ci: bump Homebrew formula to v${VERSION}"
           
           # Create a new branch and push it
-          BRANCH_NAME="update-formula-v${VERSION}"
+          BRANCH_NAME="update-formula-v${VERSION}-$(date +%s)"
           git checkout -b "${BRANCH_NAME}"
           git push origin "${BRANCH_NAME}"
           
