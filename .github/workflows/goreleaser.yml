@@ -48,10 +48,6 @@ jobs:
         with:
           fetch-depth: 0
           ref: main
-      - name: Setup GitHub CLI
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gh
       - name: Update Homebrew formula
         run: |
           # For manual triggers, use the specified version or latest tag
@@ -94,18 +90,4 @@ jobs:
             exit 0
           fi
           git commit -m "ci: bump Homebrew formula to v${VERSION}"
-          
-          # Create a new branch and push it
-          BRANCH_NAME="update-formula-v${VERSION}"
-          git checkout -b "${BRANCH_NAME}"
-          git push origin "${BRANCH_NAME}"
-          
-          # Create a pull request using GitHub CLI
-          echo "Creating pull request for formula update..."
-          gh pr create --title "ci: bump Homebrew formula to v${VERSION}" \
-            --body "Automated update of Homebrew formula for version v${VERSION}" \
-            --base main \
-            --head "${BRANCH_NAME}" \
-            --label "automated,formula-update"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          git push origin main
