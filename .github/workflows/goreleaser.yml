@@ -13,11 +13,9 @@ on:
         description: 'Force update even if formula is already up-to-date'
         required: false
         default: 'false'
-
 permissions:
   contents: write
   pull-requests: write
-
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
@@ -51,30 +49,26 @@ jobs:
         with:
           fetch-depth: 0
           ref: main
-
       - name: Setup GitHub CLI
         uses: actions/setup-gh-cli@v1
         with:
           version: 'latest'
-
       - name: Update Homebrew formula
         run: |
-          # Set version based on trigger type
+          # For manual triggers, use the specified version or latest tag
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             if [ -n "${{ github.event.inputs.version }}" ]; then
               VERSION="${{ github.event.inputs.version }}"
             else
-              # Get latest version tag
-              if git tag -l "v*" | grep -q .; then
-                VERSION=$(git tag -l "v*" | sort -V | tail -1 | sed 's/^v//')
-              else
-                echo "No version tags found, using v0.0.0"
-                VERSION="0.0.0"
-              fi
+              # If no version specified in manual trigger, use the latest version tag
+              LATEST_TAG=$(git tag -l "v*" | sort -V | tail -1 2>/dev/null)
+              LATEST_TAG=${LATEST_TAG:-v0.0.0}
+              VERSION=${LATEST_TAG#v}
             fi
             COMMIT=$(git rev-parse HEAD)
             BUILD_DATE=$(git log -1 --format=%aI "${COMMIT}")
             TAR_URL="https://github.com/bengarrett/dupers/archive/refs/tags/v${VERSION}.tar.gz"
+            SHA=$(curl -L "${TAR_URL}" | sha256sum | awk '{print $1}')
           else
             # For automatic tag-based triggers
             VERSION=${{ github.ref_name }}
@@ -82,62 +76,32 @@ jobs:
             COMMIT=${{ github.sha }}
             BUILD_DATE=$(git log -1 --format=%aI "${COMMIT}")
             TAR_URL="https://github.com/bengarrett/dupers/archive/refs/tags/v${VERSION}.tar.gz"
+            SHA=$(curl -L "${TAR_URL}" | sha256sum | awk '{print $1}')
           fi
 
-          # Verify formula file exists
-          if [ ! -f "Formula/dupers.rb" ]; then
-            echo "Error: Formula/dupers.rb not found"
-            exit 1
-          fi
-
-          # Download and calculate SHA with retries
-          MAX_RETRIES=3
-          for i in $(seq 1 $MAX_RETRIES); do
-            SHA=$(curl -s -L "${TAR_URL}" | sha256sum | awk '{print $1}') && break
-            if [ $i -eq $MAX_RETRIES ]; then
-              echo "Failed to download tarball after $MAX_RETRIES attempts"
-              exit 1
-            fi
-            sleep 5
-          done
-
-          # Update the formula
+          # Update the formula using sed
           sed -i "s|^  url ".*"$|  url "${TAR_URL}"|" Formula/dupers.rb
           sed -i "s|^  sha256 ".*"$|  sha256 "${SHA}"|" Formula/dupers.rb
           sed -i "s|^  version ".*"$|  version "${VERSION}"|" Formula/dupers.rb
 
-          # Configure git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Formula/dupers.rb
-
-          # Check if formula is already up-to-date
+          # Check if formula is already up-to-date, unless force_update is true
           if [ "${{ github.event.inputs.force_update }}" = "true" ]; then
             echo "Force update enabled - proceeding with commit"
           elif git diff --cached --quiet; then
             echo "Formula already up-to-date"
             exit 0
           fi
-
-          # Commit changes
-          git commit -m "ci: bump Homebrew formula to v${VERSION}" || {
-            echo "Failed to commit changes"
-            exit 1
-          }
-
-          # Create unique branch name and push
-          TIMESTAMP=$(date +%s)
-          BRANCH_NAME="update-formula-v${VERSION}-${TIMESTAMP}"
-          git checkout -b "${BRANCH_NAME}" || {
-            echo "Failed to create branch"
-            exit 1
-          }
-          git push origin "${BRANCH_NAME}" || {
-            echo "Failed to push branch"
-            exit 1
-          }
-
-          # Create pull request
+          git commit -m "ci: bump Homebrew formula to v${VERSION}"
+          
+          # Create a new branch and push it
+          BRANCH_NAME="update-formula-v${VERSION}-$(date +%s)"
+          git checkout -b "${BRANCH_NAME}"
+          git push origin "${BRANCH_NAME}"
+          
+          # Create a pull request using GitHub CLI
           echo "Creating pull request for formula update..."
           gh pr create --title "ci: bump Homebrew formula to v${VERSION}" \
             --body "Automated update of Homebrew formula for version v${VERSION}" \
