@@ -15,8 +15,11 @@ linters:
   exclusions:
     rules:
       - linters:
-          - errcheck
+          - cyclop
           - dupl
+          - errcheck
+          - funlen
+          - gocognit
           - lll
           - varnamelen
         path: _test\.go

@@ -12,6 +12,7 @@ vars:
 
 tasks:
   default:
+    aliases: [d]
     desc: Show available tasks
     cmds:
       - task --list-all
@@ -19,34 +20,46 @@ tasks:
   # ===== Development Tasks =====
 
   benchmark:
+    aliases: [bm]
     desc: Benchmark the code
     cmds:
       - go test -bench=. ./...
 
   lint:
+    aliases: [l]
     desc: Format and lint code
     cmds:
       - gci write ./..
       - gofumpt -w .
       - golangci-lint run
 
+  nil:
+    aliases: [n]
+    desc: "Run the static analysis techniques to catch Nil dereferences."
+    cmds:
+      - go tool nilaway -test=false ./...
+
   test:
+    aliases: [all]
     desc: Run all tests
     cmds:
       - go test ./...
   
   test-cover:
+    aliases: [tc]
     desc: Run all tests with coverage
     cmds:
-      - go test -cover ./...
+      - go test -count=1 -cover ./...
 
   test-race:
+    aliases: [tr]
     desc: Run tests with race detector
     cmds:
-      - go test -race ./...
+      - go test -count=1 -race ./...
 
-  fuzz:
-    desc: Run fuzz tests (30s each)
+  test-fuzz:
+    aliases: [tf]
+    desc: Run fuzz tests
     cmds:
       - go test -fuzz=FuzzChecksum -fuzztime=30s ./pkg/dupe/parse
       - go test -fuzz=FuzzExtension -fuzztime=30s ./pkg/dupe/internal/archive
@@ -54,60 +67,59 @@ tasks:
       - go test -fuzz=FuzzWindowsChk -fuzztime=30s ./pkg/cmd
       - go test -fuzz=FuzzSearchSummary -fuzztime=30s ./pkg/cmd
 
-  fuzz-continuous:
-    desc: Run fuzz tests continuously
-    cmds:
-      - go test -fuzz=FuzzChecksum ./pkg/dupe/parse
-      - go test -fuzz=FuzzExtension ./pkg/dupe/internal/archive
-      - go test -fuzz=FuzzMIME ./pkg/dupe/internal/archive
-      - go test -fuzz=FuzzWindowsChk ./pkg/cmd
-      - go test -fuzz=FuzzSearchSummary ./pkg/cmd
-
   # ===== Database Tasks =====
 
   db-info:
+    aliases: [di]
     desc: Show database information
     cmds:
       - go {{.RUNRACE}} db
 
   db-backup:
+    aliases: [db]
     desc: Create database backup
     cmds:
       - go {{.RUNRACE}} backup
 
   db-clean:
+    aliases: [dc]
     desc: Clean stale database entries
     cmds:
       - go {{.RUNRACE}} clean
 
   # ===== Duplicate Detection Tasks =====
 
-  dupe-file:
+  test-dupe-file:
+    aliases: [df]
     desc: Test duplicate file detection
     cmds:
       - go {{.RUNRACE}} dupe {{.FILE}} {{.TEST_DATA}}
 
-  dupe-dir:
+  test-dupe-dir:
+    aliases: [dd]
     desc: Test duplicate directory detection
     cmds:
       - go {{.RUNRACE}} dupe {{.TEST_DATA}} {{.TEST_DATA}}
 
   # ===== Search Tasks =====
 
-  search:
+  test-search:
+    aliases: [s]
     desc: Test search functionality
     cmds:
       - go {{.RUNRACE}} search "test" {{.TEST_DATA}}
 
   # ===== Setup/Cleanup Tasks =====
 
-  setup-test:
+  test-setup:
+    aliases: [st]
     desc: Setup test environment
     cmds:
       - mkdir -p {{.TEST_DIR}}
       - cp -r {{.TEST_DATA}}* {{.TEST_DIR}}/
 
-  cleanup-test:
+  test-cleanup:
+    aliases: [ct]
     desc: Cleanup test environment
     cmds:
       - rm -rf {{.TEST_DIR}}
@@ -115,18 +127,36 @@ tasks:
   # ===== Build/Release Tasks =====
 
   build:
+    aliases: [b]
     desc: Build the application
     cmds:
       - go build -o dupers .
 
-  release-snapshot:
+  build-snapshot:
+    aliases: [bs]
     desc: Create release snapshot
     cmds:
       - goreleaser release --snapshot --clean
 
+  pkg-patch:
+    aliases: [pp]
+    silent: false
+    desc: Update and apply patches to the web server dependencies.
+    cmds:
+      - cmd: go get -u=patch -x
+      - cmd: go mod verify
+
+  pkg-update:
+    aliases: [pu]
+    silent: false
+    desc: Update the web server dependencies.
+    cmds:
+      - cmd: go get -u -x
+      - cmd: go mod verify
   # ===== Documentation Tasks =====
 
   docs:
+    aliases: [gd]
     desc: Generate documentation
     cmds:
       - pkgsite -http localhost:8090
