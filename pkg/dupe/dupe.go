@@ -720,8 +720,11 @@ func (c *Config) Read(db *bolt.DB, b parse.Bucket, name, mimeExt string) error {
 		printer.StderrCR(err)
 		return nil
 	}
-	defer file.Close()
-
+	defer func() {
+		if err := file.Close(); err != nil {
+			printer.StderrCR(err)
+		}
+	}()
 	// Use the new archives API for format identification
 	ctx := context.Background()
 	format, reader, err := archives.Identify(ctx, lookup, file)
@@ -748,7 +751,11 @@ func (c *Config) Read(db *bolt.DB, b parse.Bucket, name, mimeExt string) error {
 		if err != nil {
 			return err
 		}
-		defer file.Close()
+		defer func() {
+			if err := file.Close(); err != nil {
+				printer.StderrCR(err)
+			}
+		}()
 
 		// Create the full path
 		fullPath := filepath.Join(name, fileInfo.NameInArchive)
@@ -1143,8 +1150,6 @@ func (c *Config) readRecover(archive string) {
 		c.Debugger(fmt.Sprint(err))
 	}
 }
-
-
 
 // update saves the checksum and path values to the bucket.
 func (c *Config) update(db *bolt.DB, b parse.Bucket, path string, sum parse.Checksum) error {

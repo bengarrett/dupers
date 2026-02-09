@@ -9,13 +9,10 @@ require (
 	github.com/bodgit/sevenzip v1.6.1
 	github.com/dsnet/compress v0.0.2-0.20230904184137-39efe44ab707 // indirect
 	github.com/dustin/go-humanize v1.0.1
-	github.com/golang/snappy v1.0.0 // indirect
 	github.com/gookit/color v1.6.0
 	github.com/h2non/filetype v1.1.3
 	github.com/karrick/godirwalk v1.17.0
-	github.com/nwaples/rardecode v1.1.3 // indirect
 	github.com/ulikunitz/xz v0.5.15 // indirect
-	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	go.etcd.io/bbolt v1.4.3
 	go4.org v0.0.0-20260112195520-a5071408f32f // indirect
 	golang.org/x/sys v0.41.0 // indirect

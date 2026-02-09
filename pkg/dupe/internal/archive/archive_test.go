@@ -18,6 +18,10 @@ import (
 
 var ErrTest = errors.New("test error")
 
+const (
+	randomfiles = "../../../../testdata/randomfiles.zip"
+)
+
 // TestExtension tests the Extension function with various inputs.
 func TestExtension(t *testing.T) {
 	tests := []struct {
@@ -516,7 +520,7 @@ func BenchmarkReadMIME(b *testing.B) {
 // Migration tests for github.com/mholt/archives package
 // These tests verify compatibility before migrating from mholt/archiver/v3
 
-// TestIdentifyFormats tests format identification with the new archives package
+// TestIdentifyFormats tests format identification with the new archives package.
 func TestIdentifyFormats(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -556,7 +560,7 @@ func TestIdentifyFormats(t *testing.T) {
 	}
 }
 
-// TestExtractArchives tests archive extraction with the new archives package
+// TestExtractArchives tests archive extraction with the new archives package.
 func TestExtractArchives(t *testing.T) {
 	testFiles := []string{
 		"../../../../testdata/randomfiles.zip",
@@ -611,12 +615,12 @@ func TestExtractArchives(t *testing.T) {
 	}
 }
 
-// TestContextCancellation tests context cancellation with the new archives package
+// TestContextCancellation tests context cancellation with the new archives package.
 func TestContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately
 
-	file := "../../../../testdata/randomfiles.zip"
+	file := randomfiles
 	f, err := os.Open(file)
 	if err != nil {
 		t.Skip("Test file not found")
@@ -642,12 +646,12 @@ func TestContextCancellation(t *testing.T) {
 	}
 }
 
-// TestPathTraversalSecurity tests path traversal protection with the new archives package
+// TestPathTraversalSecurity tests path traversal protection with the new archives package.
 func TestPathTraversalSecurity(t *testing.T) {
 	t.Skip("Migration test - requires github.com/mholt/archives package and malicious test archive")
 }
 
-// TestErrorHandling tests error handling with the new archives package
+// TestErrorHandling tests error handling with the new archives package.
 func TestErrorHandling(t *testing.T) {
 	ctx := context.Background()
 
@@ -701,18 +705,18 @@ func TestErrorHandling(t *testing.T) {
 	})
 }
 
-// TestIntegrationWithDupers tests integration with the existing dupers functionality
+// TestIntegrationWithDupers tests integration with the existing dupers functionality.
 func TestIntegrationWithDupers(t *testing.T) {
 	t.Skip("Migration test - requires github.com/mholt/archives package")
 }
 
-// BenchmarkMigrationPerformance compares old vs new API performance
+// BenchmarkMigrationPerformance compares old vs new API performance.
 func BenchmarkMigrationPerformance(b *testing.B) {
-	testFile := "../../../../testdata/randomfiles.zip"
+	testFile := randomfiles
 
 	// Old archiver/v3 benchmark
 	b.Run("archiver/v3", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			// This uses the current archiver/v3 implementation
 			f, err := archive.ReadMIME(testFile)
 			if err != nil {
@@ -729,14 +733,18 @@ func BenchmarkMigrationPerformance(b *testing.B) {
 	// New archives benchmark
 	b.Run("archives", func(b *testing.B) {
 		ctx := context.Background()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			f, err := os.Open(testFile)
 			if err != nil {
 				b.Error(err)
 				return
 			}
 			format, _, err := archives.Identify(ctx, testFile, f)
-			f.Close()
+			defer func() {
+				if err := f.Close(); err != nil {
+					b.Error(err)
+				}
+			}()
 			if err != nil {
 				b.Error(err)
 				return

@@ -11,7 +11,7 @@ import (
 	"github.com/mholt/archives"
 )
 
-// BenchmarkFormatIdentification benchmarks format identification for different archive types
+// BenchmarkFormatIdentification benchmarks format identification for different archive types.
 func BenchmarkFormatIdentification(b *testing.B) {
 	testFiles := map[string]string{
 		"ZIP": "../../../../testdata/randomfiles.zip",
@@ -23,7 +23,7 @@ func BenchmarkFormatIdentification(b *testing.B) {
 
 	for name, file := range testFiles {
 		b.Run(name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_, _, err := archives.Identify(ctx, file, nil)
 				if err != nil {
 					b.Error(err)
@@ -33,7 +33,7 @@ func BenchmarkFormatIdentification(b *testing.B) {
 	}
 }
 
-// BenchmarkOldVsNewIdentification compares filetype-based vs archives API identification performance
+// BenchmarkOldVsNewIdentification compares filetype-based vs archives API identification performance.
 func BenchmarkOldVsNewIdentification(b *testing.B) {
 	testFiles := []string{
 		"../../../../testdata/randomfiles.zip",
@@ -45,7 +45,7 @@ func BenchmarkOldVsNewIdentification(b *testing.B) {
 		b.Run(file, func(b *testing.B) {
 			// Filetype-based benchmark (current ReadMIME approach)
 			b.Run("filetype", func(b *testing.B) {
-				for i := 0; i < b.N; i++ {
+				for range b.N {
 					_, err := archive.ReadMIME(file)
 					if err != nil {
 						b.Error(err)
@@ -56,7 +56,7 @@ func BenchmarkOldVsNewIdentification(b *testing.B) {
 			// New archives API benchmark
 			b.Run("archives", func(b *testing.B) {
 				ctx := context.Background()
-				for i := 0; i < b.N; i++ {
+				for range b.N {
 					_, _, err := archives.Identify(ctx, file, nil)
 					if err != nil {
 						b.Error(err)
@@ -67,7 +67,7 @@ func BenchmarkOldVsNewIdentification(b *testing.B) {
 	}
 }
 
-// BenchmarkExtractionPerformance benchmarks file extraction performance
+// BenchmarkExtractionPerformance benchmarks file extraction performance.
 func BenchmarkExtractionPerformance(b *testing.B) {
 	testFiles := map[string]string{
 		"ZIP": "../../../../testdata/randomfiles.zip",
@@ -98,7 +98,7 @@ func BenchmarkExtractionPerformance(b *testing.B) {
 			}
 
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				// Reset file pointer
 				if _, err := f.Seek(0, 0); err != nil {
 					b.Error(err)
@@ -141,7 +141,7 @@ func BenchmarkExtractionPerformance(b *testing.B) {
 	}
 }
 
-// BenchmarkMemoryUsage benchmarks memory allocation patterns
+// BenchmarkMemoryUsage benchmarks memory allocation patterns.
 func BenchmarkMemoryUsage(b *testing.B) {
 	testFiles := map[string]string{
 		"ZIP": "../../../../testdata/randomfiles.zip",
@@ -155,7 +155,7 @@ func BenchmarkMemoryUsage(b *testing.B) {
 		b.Run(name, func(b *testing.B) {
 			b.ReportAllocs()
 
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_, _, err := archives.Identify(ctx, file, nil)
 				if err != nil {
 					b.Error(err)
