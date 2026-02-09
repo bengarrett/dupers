@@ -24,6 +24,8 @@ builds:
     binary: dupers
     env:
       - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X main.version={{.Version}}
     targets:
       - darwin_amd64_v1 # apple on intel
       - darwin_arm64_v8.0 # apple silicon
