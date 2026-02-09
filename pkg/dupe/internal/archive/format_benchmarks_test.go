@@ -33,7 +33,7 @@ func BenchmarkFormatIdentification(b *testing.B) {
 	}
 }
 
-// BenchmarkOldVsNewIdentification compares old vs new API identification performance
+// BenchmarkOldVsNewIdentification compares filetype-based vs archives API identification performance
 func BenchmarkOldVsNewIdentification(b *testing.B) {
 	testFiles := []string{
 		"../../../../testdata/randomfiles.zip",
@@ -43,8 +43,8 @@ func BenchmarkOldVsNewIdentification(b *testing.B) {
 
 	for _, file := range testFiles {
 		b.Run(file, func(b *testing.B) {
-			// Old API benchmark
-			b.Run("old", func(b *testing.B) {
+			// Filetype-based benchmark (current ReadMIME approach)
+			b.Run("filetype", func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
 					_, err := archive.ReadMIME(file)
 					if err != nil {
@@ -53,8 +53,8 @@ func BenchmarkOldVsNewIdentification(b *testing.B) {
 				}
 			})
 
-			// New API benchmark
-			b.Run("new", func(b *testing.B) {
+			// New archives API benchmark
+			b.Run("archives", func(b *testing.B) {
 				ctx := context.Background()
 				for i := 0; i < b.N; i++ {
 					_, _, err := archives.Identify(ctx, file, nil)

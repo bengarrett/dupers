@@ -26,7 +26,6 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
 	"github.com/karrick/godirwalk"
-	"github.com/mholt/archiver/v3"
 	"github.com/mholt/archives"
 	bolt "go.etcd.io/bbolt"
 	bberr "go.etcd.io/bbolt/errors"
@@ -1145,43 +1144,7 @@ func (c *Config) readRecover(archive string) {
 	}
 }
 
-func (c *Config) readWalk(db *bolt.DB, b parse.Bucket, archive string, cnt int, w archiver.Walker) (int, error) {
-	if db == nil {
-		return -1, bberr.ErrDatabaseNotOpen
-	}
-	return cnt, w.Walk(archive, func(f archiver.File) error {
-		notFile := f.IsDir() || !f.FileInfo.Mode().IsRegular()
-		if notFile || SkipFile(f.Name()) {
-			return nil
-		}
-		// Security: Prevent path traversal attacks from malicious archives
-		fullPath := filepath.Join(archive, f.Name())
-		cleanPath := filepath.Clean(fullPath)
-		archiveDir := filepath.Clean(archive) + string(filepath.Separator)
 
-		// Validate that the path doesn't escape the archive directory
-		// Also check for absolute paths that bypass the archive directory
-		if !strings.HasPrefix(cleanPath, archiveDir) || filepath.IsAbs(f.Name()) {
-			return fmt.Errorf("%w: %s", ErrPathTraversal, f.Name())
-		}
-		path := cleanPath
-		if c.findItem(path) {
-			return nil
-		}
-		buf, h := make([]byte, oneMb), sha256.New()
-		if _, err := io.CopyBuffer(h, f, buf); err != nil {
-			printer.Stderr(err)
-			return nil
-		}
-		var sum parse.Checksum
-		copy(sum[:], h.Sum(nil))
-		if err := c.update(db, b, path, sum); err != nil {
-			printer.Stderr(err)
-		}
-		cnt++
-		return nil
-	})
-}
 
 // update saves the checksum and path values to the bucket.
 func (c *Config) update(db *bolt.DB, b parse.Bucket, path string, sum parse.Checksum) error {

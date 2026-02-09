@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/h2non/filetype"
-	"github.com/mholt/archiver/v3"
+	"github.com/mholt/archives"
 )
 
 const (
@@ -141,38 +141,30 @@ func ReadMIME(name string) (string, error) {
 		return "", err
 	}
 	switch kind.MIME.Value {
-	case Mime7z, MimeBZ2, MimeGZ, MimeRAR, MimeTar, MimeZip:
+	case Mime7z, MimeBZ2, MimeGZ, MimeRAR, MimeTar, MimeXZ, MimeZip:
 		// supported archives
 		return kind.MIME.Value, nil
-	case MimeXZ, MimeCab, MimeX, MimeLZ, MimeAr:
-		// unsupported archives by mholt/archiver/v3 v3.5.x
+	case MimeCab, MimeX, MimeLZ, MimeAr:
+		// unsupported archives
 		return kind.MIME.Value, ErrFilename
 	}
 	// non-archives
 	return "", ErrFilename
 }
 
-// Supported returns true when the archiver format structure is valid.
+// Supported returns true when the archives format structure is valid.
 func Supported(f any) bool {
 	switch f.(type) {
 	case
-		*archiver.Brotli,
-		*archiver.Bz2,
-		*archiver.Gz,
-		*archiver.Lz4,
-		*archiver.Rar,
-		*archiver.Snappy,
-		*archiver.Tar,
-		*archiver.TarBrotli,
-		*archiver.TarBz2,
-		*archiver.TarGz,
-		*archiver.TarLz4,
-		*archiver.TarSz,
-		*archiver.TarXz,
-		*archiver.TarZstd,
-		*archiver.Xz,
-		*archiver.Zip,
-		*archiver.Zstd:
+		*archives.Brotli,
+		*archives.Bz2,
+		*archives.Gz,
+		*archives.Lz4,
+		*archives.Rar,
+		*archives.Tar,
+		*archives.Xz,
+		*archives.Zip,
+		*archives.Zstd:
 		return true
 	default:
 		return false

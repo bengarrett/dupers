@@ -24,7 +24,6 @@ require (
 
 require (
 	github.com/carlmjohnson/versioninfo v0.22.5
-	github.com/mholt/archiver/v3 v3.5.1
 	github.com/mholt/archives v0.1.5
 	github.com/nalgeon/be v0.3.0
 )
