@@ -197,9 +197,7 @@ func SearchHelp(w io.Writer) {
 	if flag.Lookup(cmd.Exact_) != nil {
 		var f *flag.Flag
 		f = flag.Lookup(cmd.Exact_)
-		if f != nil {
-			printf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
-		}
+		printf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)
 		f = flag.Lookup(cmd.Name_)
 		if f != nil {
 			printf(w, "    -%v, -%v\t\t%v\n", f.Name[:1], f.Name, f.Usage)

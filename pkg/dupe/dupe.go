@@ -715,7 +715,13 @@ func (c *Config) Read(db *bolt.DB, b parse.Bucket, name, mimeExt string) error {
 	}
 
 	// Open the archive file
-	file, err := os.Open(name)
+	root := filepath.Dir(name)
+	r, err := os.OpenRoot(root)
+	if err != nil {
+		printer.StderrCR(err)
+		return nil
+	}
+	file, err := r.Open(name)
 	if err != nil {
 		printer.StderrCR(err)
 		return nil
@@ -742,44 +748,9 @@ func (c *Config) Read(db *bolt.DB, b parse.Bucket, name, mimeExt string) error {
 
 	// Extract and process files
 	err = extractor.Extract(ctx, reader, func(ctx context.Context, fileInfo archives.FileInfo) error {
-		if fileInfo.IsDir() {
-			return nil
-		}
-
-		// Open the file for reading
-		file, err := fileInfo.Open()
-		if err != nil {
+		if err := c.processArchiveFile(db, b, name, fileInfo); err != nil {
 			return err
 		}
-		defer func() {
-			if err := file.Close(); err != nil {
-				printer.StderrCR(err)
-			}
-		}()
-
-		// Create the full path
-		fullPath := filepath.Join(name, fileInfo.NameInArchive)
-
-		// Check if we've already processed this item
-		if c.findItem(fullPath) {
-			return nil
-		}
-
-		// Calculate checksum
-		buf, h := make([]byte, oneMb), sha256.New()
-		if _, err := io.CopyBuffer(h, file, buf); err != nil {
-			printer.Stderr(err)
-			return nil
-		}
-
-		var sum parse.Checksum
-		copy(sum[:], h.Sum(nil))
-
-		// Update database
-		if err := c.update(db, b, fullPath, sum); err != nil {
-			printer.Stderr(err)
-		}
-
 		cnt++
 		return nil
 	})
@@ -790,6 +761,49 @@ func (c *Config) Read(db *bolt.DB, b parse.Bucket, name, mimeExt string) error {
 	if cnt > 0 {
 		c.Debugger(fmt.Sprintf("read %d items within the archive", cnt))
 	}
+	return nil
+}
+
+// processArchiveFile processes an individual file from an archive.
+func (c *Config) processArchiveFile(db *bolt.DB, b parse.Bucket, name string, fileInfo archives.FileInfo) error {
+	if fileInfo.IsDir() {
+		return nil
+	}
+
+	// Open the file for reading
+	file, err := fileInfo.Open()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			printer.StderrCR(err)
+		}
+	}()
+
+	// Create the full path
+	fullPath := filepath.Join(name, fileInfo.NameInArchive)
+
+	// Check if we've already processed this item
+	if c.findItem(fullPath) {
+		return nil
+	}
+
+	// Calculate checksum
+	buf, h := make([]byte, oneMb), sha256.New()
+	if _, err := io.CopyBuffer(h, file, buf); err != nil {
+		printer.Stderr(err)
+		return nil
+	}
+
+	var sum parse.Checksum
+	copy(sum[:], h.Sum(nil))
+
+	// Update database
+	if err := c.update(db, b, fullPath, sum); err != nil {
+		printer.Stderr(err)
+	}
+
 	return nil
 }
 

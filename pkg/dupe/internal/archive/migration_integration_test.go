@@ -18,7 +18,7 @@ import (
 )
 
 // TestMigrationIntegration tests the new archives API with actual archive files
-// to ensure the migration is working correctly
+// to ensure the migration is working correctly.
 func TestMigrationIntegration(t *testing.T) {
 	testFiles := []string{
 		"../../../../testdata/randomfiles.zip",
@@ -81,7 +81,7 @@ func TestMigrationIntegration(t *testing.T) {
 				n, err := file.Read(buf)
 				if err != nil && !errors.Is(err, io.EOF) {
 					// Handle nested archives that can't be read properly
-					if err != nil && (strings.Contains(err.Error(), "failed to read") || strings.Contains(err.Error(), "%!w")) {
+					if strings.Contains(err.Error(), "failed to read") || strings.Contains(err.Error(), "%!w") {
 						t.Logf("Skipping nested archive %s due to read error: %v", fileInfo.NameInArchive, err)
 						return nil
 					}
@@ -124,7 +124,7 @@ func TestMigrationIntegration(t *testing.T) {
 	}
 }
 
-// TestOldVsNewAPI compares the old and new API behavior
+// TestOldVsNewAPI compares the old and new API behavior.
 func TestOldVsNewAPI(t *testing.T) {
 	testFile := "../../../../testdata/randomfiles.zip"
 
@@ -155,7 +155,7 @@ func TestOldVsNewAPI(t *testing.T) {
 	}
 }
 
-// TestSafeOpen tests os.Open behavior with various inputs
+// TestSafeOpen tests os.Open behavior with various inputs.
 func TestSafeOpen(t *testing.T) {
 	testCases := []struct {
 		name        string
@@ -218,7 +218,7 @@ func TestSafeOpen(t *testing.T) {
 	}
 }
 
-// TestContextBehavior tests that context works correctly
+// TestContextBehavior tests that context works correctly.
 func TestContextBehavior(t *testing.T) {
 	ctx := context.Background()
 	testFile := "../../../../testdata/randomfiles.zip"
