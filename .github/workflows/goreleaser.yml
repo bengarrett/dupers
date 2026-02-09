@@ -108,3 +108,5 @@ jobs:
             --body "Automated update of Homebrew formula for version v${VERSION}" \
             --base main \
             --head "${BRANCH_NAME}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
