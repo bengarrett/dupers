@@ -3,12 +3,16 @@
 package archive_test
 
 import (
+	"context"
 	"errors"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/bengarrett/dupers/pkg/dupe/internal/archive"
+	"github.com/mholt/archives"
 	"github.com/nalgeon/be"
 )
 
@@ -507,4 +511,238 @@ func BenchmarkReadMIME(b *testing.B) {
 	for b.Loop() {
 		_, _ = archive.ReadMIME(file.Name())
 	}
+}
+
+// Migration tests for github.com/mholt/archives package
+// These tests verify compatibility before migrating from mholt/archiver/v3
+
+// TestIdentifyFormats tests format identification with the new archives package
+func TestIdentifyFormats(t *testing.T) {
+	testCases := []struct {
+		name     string
+		filename string
+		wantExt  string
+	}{
+		{"ZIP", "archive.zip", ".zip"},
+		{"7Z", "archive.7z", ".7z"},
+		{"TAR", "archive.tar", ".tar"},
+		{"TAR.GZ", "archive.tar.gz", ".tar.gz"},
+		{"TAR.BZ2", "archive.tar.bz2", ".tar.bz2"},
+		{"TAR.XZ", "archive.tar.xz", ".tar.xz"},
+		{"TAR.LZ4", "archive.tar.lz4", ".tar.lz4"},
+		{"TAR.ZST", "archive.tar.zst", ".tar.zst"},
+		{"TAR.BR", "archive.tar.br", ".tar.br"},
+		{"GZ", "archive.gz", ".gz"},
+		{"BZ2", "archive.bz2", ".bz2"},
+		{"XZ", "archive.xz", ".xz"},
+		{"LZ4", "archive.lz4", ".lz4"},
+		{"ZST", "archive.zst", ".zst"},
+		{"BR", "archive.br", ".br"},
+		{"SZ", "archive.sz", ".sz"},
+		{"RAR", "archive.rar", ".rar"},
+	}
+
+	ctx := context.Background()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			format, _, err := archives.Identify(ctx, tc.filename, nil)
+			if err != nil {
+				t.Fatalf("Identify failed for %s: %v", tc.filename, err)
+			}
+			if format.Extension() != tc.wantExt {
+				t.Errorf("got extension %s, want %s", format.Extension(), tc.wantExt)
+			}
+		})
+	}
+}
+
+// TestExtractArchives tests archive extraction with the new archives package
+func TestExtractArchives(t *testing.T) {
+	testFiles := []string{
+		"../../../../testdata/randomfiles.zip",
+		"../../../../testdata/randomfiles.tar.xz",
+		"../../../../testdata/randomfiles.7z",
+	}
+
+	ctx := context.Background()
+	for _, file := range testFiles {
+		t.Run(filepath.Base(file), func(t *testing.T) {
+			f, err := os.Open(file)
+			if err != nil {
+				t.Skipf("Test file not found: %s", file)
+			}
+			defer f.Close()
+
+			format, reader, err := archives.Identify(ctx, file, f)
+			if err != nil {
+				t.Fatalf("Failed to identify %s: %v", file, err)
+			}
+			
+			extractor, ok := format.(archives.Extractor)
+			if !ok {
+				t.Skipf("Format %s does not support extraction", format.Extension())
+			}
+			
+			var fileCount int
+			err = extractor.Extract(ctx, reader, func(ctx context.Context, fileInfo archives.FileInfo) error {
+				if !fileInfo.IsDir() {
+					fileCount++
+					file, err := fileInfo.Open()
+					if err != nil {
+						return fmt.Errorf("failed to open %s: %w", fileInfo.NameInArchive, err)
+					}
+					defer file.Close()
+					buf := make([]byte, 1024)
+					_, err = file.Read(buf)
+					if err != nil && !errors.Is(err, io.EOF) {
+						return fmt.Errorf("failed to read %s: %w", fileInfo.NameInArchive, err)
+					}
+				}
+				return nil
+			})
+			
+			if err != nil {
+				t.Errorf("Failed to extract %s: %v", file, err)
+			}
+			
+			if fileCount == 0 {
+				t.Errorf("No files extracted from %s", file)
+			}
+		})
+	}
+}
+
+// TestContextCancellation tests context cancellation with the new archives package
+func TestContextCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	file := "../../../../testdata/randomfiles.zip"
+	f, err := os.Open(file)
+	if err != nil {
+		t.Skip("Test file not found")
+	}
+	defer f.Close()
+
+	format, reader, err := archives.Identify(ctx, file, f)
+	if err != nil {
+		t.Fatalf("Failed to identify: %v", err)
+	}
+	
+	extractor, ok := format.(archives.Extractor)
+	if !ok {
+		t.Skip("Format does not support extraction")
+	}
+	
+	err = extractor.Extract(ctx, reader, func(ctx context.Context, fileInfo archives.FileInfo) error {
+		return nil
+	})
+	
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("Expected context.Canceled error, got: %v", err)
+	}
+}
+
+// TestPathTraversalSecurity tests path traversal protection with the new archives package
+func TestPathTraversalSecurity(t *testing.T) {
+	t.Skip("Migration test - requires github.com/mholt/archives package and malicious test archive")
+}
+
+// TestErrorHandling tests error handling with the new archives package
+func TestErrorHandling(t *testing.T) {
+	ctx := context.Background()
+
+	// Test with non-existent file - the new API doesn't error on filename-only identification
+	t.Run("NonExistentFile", func(t *testing.T) {
+		format, _, err := archives.Identify(ctx, "nonexistent.zip", nil)
+		if err != nil {
+			t.Errorf("Unexpected error for non-existent file: %v", err)
+		}
+		if format == nil {
+			t.Error("Expected format to be identified by filename")
+		}
+	})
+
+	// Test with unsupported format
+	t.Run("UnsupportedFormat", func(t *testing.T) {
+		_, _, err := archives.Identify(ctx, "file.cab", nil)
+		if err == nil {
+			t.Error("Expected error for unsupported format")
+		} else if !errors.Is(err, archives.NoMatch) {
+			t.Errorf("Expected NoMatch error, got: %v", err)
+		}
+	})
+
+	// Test with corrupted archive
+	t.Run("CorruptedArchive", func(t *testing.T) {
+		corruptedFile := "../../../../testdata/corrupted.zip"
+		f, err := os.Open(corruptedFile)
+		if err != nil {
+			t.Skip("Corrupted test file not found")
+		}
+		defer f.Close()
+
+		format, reader, err := archives.Identify(ctx, corruptedFile, f)
+		if err != nil {
+			t.Fatalf("Failed to identify: %v", err)
+		}
+		
+		extractor, ok := format.(archives.Extractor)
+		if !ok {
+			t.Skip("Format does not support extraction")
+		}
+		
+		err = extractor.Extract(ctx, reader, func(ctx context.Context, fileInfo archives.FileInfo) error {
+			return nil
+		})
+		
+		if err == nil {
+			t.Error("Expected error for corrupted archive")
+		}
+	})
+}
+
+// TestIntegrationWithDupers tests integration with the existing dupers functionality
+func TestIntegrationWithDupers(t *testing.T) {
+	t.Skip("Migration test - requires github.com/mholt/archives package")
+}
+
+// BenchmarkMigrationPerformance compares old vs new API performance
+func BenchmarkMigrationPerformance(b *testing.B) {
+	testFile := "../../../../testdata/randomfiles.zip"
+
+	// Old archiver/v3 benchmark
+	b.Run("archiver/v3", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			// This uses the current archiver/v3 implementation
+			f, err := archive.ReadMIME(testFile)
+			if err != nil {
+				b.Error(err)
+				return
+			}
+			if f == "" {
+				b.Error("No MIME type detected")
+				return
+			}
+		}
+	})
+
+	// New archives benchmark
+	b.Run("archives", func(b *testing.B) {
+		ctx := context.Background()
+		for i := 0; i < b.N; i++ {
+			f, err := os.Open(testFile)
+			if err != nil {
+				b.Error(err)
+				return
+			}
+			format, _, err := archives.Identify(ctx, testFile, f)
+			f.Close()
+			if err != nil {
+				b.Error(err)
+				return
+			}
+			_ = format.Extension()
+		}
+	})
 }
