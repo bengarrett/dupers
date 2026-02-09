@@ -15,6 +15,7 @@ on:
         default: 'false'
 permissions:
   contents: write
+  pull-requests: write
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
@@ -49,9 +50,9 @@ jobs:
           fetch-depth: 0
           ref: main
       - name: Setup GitHub CLI
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gh
+        uses: actions/setup-gh-cli@v1
+        with:
+          version: 'latest'
       - name: Update Homebrew formula
         run: |
           # For manual triggers, use the specified version or latest tag
@@ -105,7 +106,6 @@ jobs:
           gh pr create --title "ci: bump Homebrew formula to v${VERSION}" \
             --body "Automated update of Homebrew formula for version v${VERSION}" \
             --base main \
-            --head "${BRANCH_NAME}" \
-            --label "automated,formula-update"
+            --head "${BRANCH_NAME}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
