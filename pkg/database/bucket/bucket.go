@@ -59,7 +59,7 @@ func (c *Cleaner) Clean(db *bolt.DB) (int, int, int, error) {
 		if b == nil {
 			return fmt.Errorf("%w: %s", bberr.ErrBucketNotFound, c.Name)
 		}
-		err := b.ForEach(func(k, v []byte) error {
+		if err := b.ForEach(func(k, v []byte) error {
 			c.Items++
 			printStat(c.Debug, c.Quiet, c.Items, c.Total, k)
 			if _, errS := os.Stat(string(k)); errS != nil {
@@ -79,8 +79,7 @@ func (c *Cleaner) Clean(db *bolt.DB) (int, int, int, error) {
 				return nil
 			}
 			return nil
-		})
-		if err != nil {
+		}); err != nil {
 			c.Errs++
 			printer.StderrCR(err)
 		}

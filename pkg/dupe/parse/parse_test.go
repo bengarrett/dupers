@@ -226,9 +226,6 @@ func BenchmarkChecksum(b *testing.B) {
 				if err != nil {
 					b.Fatalf("Read failed: %v", err)
 				}
-				if err := os.Remove(file.Name()); err != nil {
-					b.Errorf("Failed to remove file: %v", err)
-				}
 				// Clean up
 				if err := os.Remove(file.Name()); err != nil {
 					b.Errorf("Failed to remove file: %v", err)

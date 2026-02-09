@@ -159,77 +159,110 @@ func Clean(db *bolt.DB, quiet, debug bool, buckets ...string) error {
 	}
 
 	for _, name := range cleaned {
-		var abs string
-		var cont bool
-		parser := bucket.Parser{
-			Name:  name,
-			Items: cnt,
-			Errs:  errs,
-			Debug: debug,
-		}
-		if cnt, errs, abs, cont = parser.Parse(db); cont {
-			// Bucket directory doesn't exist, remove the entire bucket
-			if err := db.Update(func(tx *bolt.Tx) error {
-				return tx.DeleteBucket([]byte(name))
-			}); err != nil {
-				printer.Debug(debug, fmt.Sprintf("failed to remove bucket %s: %v", name, err))
-				errs++
-			} else {
-				printer.Debug(debug, fmt.Sprintf("removed empty bucket: %s", name))
-				finds++
-			}
-			continue
-		}
-		cleaner := bucket.Cleaner{
-			Name:  abs,
-			Debug: debug,
-			Quiet: quiet,
-			Items: cnt,
-			Total: total,
-			Finds: finds,
-			Errs:  errs,
-		}
-		cnt, finds, errs, err = cleaner.Clean(db)
+		cnt, errs, finds, err = cleanBucket(db, name, cnt, errs, finds, total, quiet, debug)
 		if err != nil {
 			return err
 		}
-		
-		// Check if bucket is empty after cleaning and remove it
-		err := db.View(func(tx *bolt.Tx) error {
-			b := tx.Bucket([]byte(abs))
-			if b != nil {
-				// Count remaining items in bucket
-				itemCount := 0
-				b.ForEach(func(k, v []byte) error {
-					itemCount++
-					return nil
-				})
-				
-				// If bucket is empty, remove it
-				if itemCount == 0 {
-					if err := db.Update(func(tx *bolt.Tx) error {
-						return tx.DeleteBucket([]byte(abs))
-					}); err != nil {
-						printer.Debug(debug, fmt.Sprintf("failed to remove empty bucket %s: %v", abs, err))
-						errs++
-					} else {
-						printer.Debug(debug, fmt.Sprintf("removed empty bucket: %s", abs))
-						finds++
-					}
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			errs++
-		}
 	}
+
+	return handleCleanResult(quiet, debug, len(cleaned), errs, finds)
+}
+
+// cleanBucket handles the cleaning process for a single bucket.
+func cleanBucket(db *bolt.DB, name string, cnt, errs, finds, total int, quiet, debug bool) (int, int, int, error) {
+	var abs string
+	var cont bool
+
+	// Parse the bucket
+	parser := bucket.Parser{
+		Name:  name,
+		Items: cnt,
+		Errs:  errs,
+		Debug: debug,
+	}
+	cnt, errs, abs, cont = parser.Parse(db)
+
+	if cont {
+		// Bucket directory doesn't exist, remove the entire bucket
+		return removeEmptyBucket(db, name, cnt, errs, finds, debug)
+	}
+
+	// Clean the bucket
+	cleaner := bucket.Cleaner{
+		Name:  abs,
+		Debug: debug,
+		Quiet: quiet,
+		Items: cnt,
+		Total: total,
+		Finds: finds,
+		Errs:  errs,
+	}
+	cnt, finds, errs, err := cleaner.Clean(db)
+	if err != nil {
+		return cnt, errs, finds, err
+	}
+
+	// Check if bucket is empty after cleaning and remove it
+	return checkAndRemoveEmptyBucket(db, abs, cnt, errs, finds, debug)
+}
+
+// removeEmptyBucket removes a bucket that doesn't exist on the filesystem.
+func removeEmptyBucket(db *bolt.DB, name string, cnt, errs, finds int, debug bool) (int, int, int, error) {
+	err := db.Update(func(tx *bolt.Tx) error {
+		return tx.DeleteBucket([]byte(name))
+	})
+	if err != nil {
+		printer.Debug(debug, fmt.Sprintf("failed to remove bucket %s: %v", name, err))
+		return cnt, errs + 1, finds, nil
+	}
+	printer.Debug(debug, "removed empty bucket: "+name)
+	return cnt, errs, finds + 1, nil
+}
+
+// checkAndRemoveEmptyBucket checks if a bucket is empty and removes it if so.
+func checkAndRemoveEmptyBucket(db *bolt.DB, abs string, cnt, errs, finds int, debug bool) (int, int, int, error) {
+	var itemCount int
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(abs))
+		if b != nil {
+			var err error
+			itemCount, err = countBucketItems(b)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return cnt, errs + 1, finds, nil //nolint:nilerr
+	}
+
+	if itemCount == 0 {
+		return removeEmptyBucket(db, abs, cnt, errs, finds, debug)
+	}
+
+	return cnt, errs, finds, nil
+}
+
+// countBucketItems counts the number of items in a bucket.
+func countBucketItems(b *bolt.Bucket) (int, error) {
+	itemCount := 0
+	err := b.ForEach(func(k, v []byte) error {
+		itemCount++
+		return nil
+	})
+	return itemCount, err
+}
+
+// handleCleanResult handles the final result of the cleaning process.
+func handleCleanResult(quiet, debug bool, totalBuckets, errs, finds int) error {
 	if quiet {
 		return nil
 	}
-	if len(cleaned) == errs {
+	if totalBuckets == errs {
 		return nil
 	}
+
 	w := os.Stdout
 	if debug && finds == 0 {
 		printl(w, "")
@@ -532,7 +565,7 @@ func Info(db *bolt.DB) (string, error) {
 		printf(w, " (%v)", stat.Mode())
 	}
 	printl(w)
-	var bucketsB int
+	var bucketsB uint64
 	w, bucketsB, err = info(db, w)
 	if err != nil {
 		printl(w)
@@ -540,8 +573,9 @@ func Info(db *bolt.DB) (string, error) {
 		printl(w)
 	}
 	const oneAndAHalf, oneMB = 1.5, 1_000_000
+	dbSize := stat.Size()
 	tooBig := int64(float64(bucketsB) * oneAndAHalf)
-	if stat.Size() > oneMB && stat.Size() > tooBig {
+	if dbSize > oneMB && dbSize > tooBig {
 		printl(w)
 		printl(w, color.Notice.Sprint("To reduce the size of the database:"))
 		printl(w, color.Debug.Sprint("dupers backup && dupers clean"))
@@ -559,7 +593,17 @@ func safesize(i int64) uint64 {
 	return uint64(i)
 }
 
-func info(db *bolt.DB, w *tabwriter.Writer) (*tabwriter.Writer, int, error) {
+func writable(db *bolt.DB, w *tabwriter.Writer) *tabwriter.Writer {
+	ro := color.Green.Sprint("OK")
+	if writable := db.IsReadOnly(); !writable {
+		ro = color.Danger.Sprint("NO")
+	}
+	printf(w, "\tWritable:\t%s", ro)
+	printl(w)
+	return w
+}
+
+func info(db *bolt.DB, w *tabwriter.Writer) (*tabwriter.Writer, uint64, error) {
 	if db == nil {
 		return nil, 0, bberr.ErrDatabaseNotOpen
 	}
@@ -570,14 +614,8 @@ func info(db *bolt.DB, w *tabwriter.Writer) (*tabwriter.Writer, int, error) {
 		}
 		item map[string]vals
 	)
-
-	ro := color.Green.Sprint("OK")
-	if writable := db.IsReadOnly(); !writable {
-		ro = color.Danger.Sprint("NO")
-	}
-	printf(w, "\tWritable:\t%s", ro)
-	printl(w)
-	items, cnt, sizes := make(item), 0, 0
+	w = writable(db, w)
+	items, cnt, sizes := make(item), 0, uint64(0)
 	if err := db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
 			v := tx.Bucket(name)
@@ -587,10 +625,10 @@ func info(db *bolt.DB, w *tabwriter.Writer) (*tabwriter.Writer, int, error) {
 			cnt++
 
 			// Calculate bucket size by summing up key+value sizes
-			bucketSize := 0
+			var bucketSize uint64
 			itemCount := 0
 			err := v.ForEach(func(k, val []byte) error {
-				bucketSize += len(k) + len(val)
+				bucketSize += uint64(len(k)) + uint64(len(val))
 				itemCount++
 				return nil
 			})
@@ -599,7 +637,7 @@ func info(db *bolt.DB, w *tabwriter.Writer) (*tabwriter.Writer, int, error) {
 			}
 
 			sizes += bucketSize
-			items[string(name)] = vals{itemCount, humanize.Bytes(uint64(bucketSize))}
+			items[string(name)] = vals{itemCount, humanize.Bytes(bucketSize)}
 			return nil
 		})
 	}); err != nil {
@@ -659,11 +697,12 @@ func List(db *bolt.DB, bucket string) (Lists, error) {
 			return bberr.ErrBucketNotFound
 		}
 		h := [32]byte{}
-		return b.ForEach(func(k, v []byte) error {
+		err := b.ForEach(func(k, v []byte) error {
 			copy(h[:], v)
 			lists[Filepath(k)] = h
 			return nil
 		})
+		return err
 	}); err != nil {
 		return nil, err
 	}

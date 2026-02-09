@@ -1,5 +1,5 @@
 // © Ben Garrett https://github.com/bengarrett/dupers
-package dupe_test
+package database_test
 
 import (
 	"bytes"
