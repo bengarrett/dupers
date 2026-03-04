@@ -27,11 +27,11 @@ Dupers is available as standalone portable binaries and system packages. No inst
 
 **macOS:** [Download](https://github.com/bengarrett/dupers/releases/latest/download/dupers_macOS_all.tar.gz)
 
-Before use, macOS users will need to delete the 'quarantine' extended attribute that is applied to all 
+Before use, macOS users will need to delete the 'quarantine' extended attribute that is applied to all
 program downloads that are not notarized by Apple for a fee.
 
 ```
-$ xattr -d com.apple.quarantine namzd
+$ xattr -d com.apple.quarantine dupers
 ```
 
 #### Homebrew
@@ -52,21 +52,25 @@ brew upgrade bengarrett/dupers/dupers
 ### Linux Packages
 
 ##### [Ubuntu/Debian (.deb)](https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.deb)
+
 ```sh
 dpk -i dupers_amd64.deb
 ```
 
 ##### [Fedora (.rpm)](https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.rpm)
+
 ```sh
 rpm -i dupers_amd64.rpm
 ```
 
 ##### [Alpine Linux (.apk)](https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.apk)
+
 ```sh
 apk add dupers_amd64.apk
 ```
 
 ##### [Arch Linux (.zst)](https://github.com/bengarrett/dupers/releases/latest/download/dupers_amd64.pkg.tar.zst)
+
 ```sh
 pacman -U dupers_amd64.pkg.tar.zst
 ```
@@ -155,7 +159,6 @@ dupers -name search .zip
 # .zip       the search expression
 ```
 
-
 Search the database for photos containing '2010' in their file or directory names.
 
 ```sh
@@ -176,12 +179,14 @@ Due to the nature of duplicate file checking, hardware and operating systems do 
 When running dupe checking, a `-fast` flag can significantly improve performance when dealing with extensive file collections. It does this by only running duplicate checks against the database and completely ignoring the files residing on the host system.
 
 ###### Dupe command on a large collection using fast mode takes less than a second 😃
+
 ```sh
 dupers -fast dupe C:\Users\Me\Downloads D:\textfiles
 # Scanned 191842 files, taking 901ms
 ```
 
 ###### Dupe command on a large collection normally taking 46 seconds ☹️
+
 ```sh
 dupers dupe C:\Users\Me\Downloads D:\textfiles
 # Checking 51179 of 387859 items...
@@ -192,18 +197,20 @@ dupers dupe C:\Users\Me\Downloads D:\textfiles
 
 #### Multiple identical files
 
-Both the `dupe` and `search` commands __only show the first matching file__. Dupers uses the SHA-256 file checksums as unique keys, and each key value holds a single location path.
+Both the `dupe` and `search` commands **only show the first matching file**. Dupers uses the SHA-256 file checksums as unique keys, and each key value holds a single location path.
 
 #### Command Prompt directories
 
 The legacy Windows Command Prompt (`cmd.exe`) cannot use trailing backslashes with quoted directories. Windows Terminal does not suffer this issue.
 
 ##### ✔️ Good
+
 ```ps
 dupers dupe "C:\Users\Ben\Some directory"
 ```
 
 ##### ❌ Incorrect
+
 ```ps
 dupers dupe "C:\Users\Ben\Some directory\"
 ```
