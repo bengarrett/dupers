@@ -21,11 +21,11 @@ Dupers is available as standalone portable binaries and system packages. No inst
 
 ### Portable Binaries
 
-**Windows:** [Download](https://github.com/bengarrett/dupers/releases/latest/download/dupers_windows_amd64.zip)
+**Windows:** [Download](https://github.com/bengarrett/dupers/releases/latest/download/dupers_windows.zip)
 
-**Linux:** [Download](https://github.com/bengarrett/dupers/releases/latest/download/dupers_linux_amd64.tar.gz)
+**Linux:** [Download](https://github.com/bengarrett/dupers/releases/latest/download/dupers_linux.gz)
 
-**macOS:** [Download](https://github.com/bengarrett/dupers/releases/latest/download/dupers_macOS_all.tar.gz)
+**macOS:** [Download](https://github.com/bengarrett/dupers/releases/latest/download/dupers_apple_silicon.gz)
 
 Before use, macOS users will need to delete the 'quarantine' extended attribute that is applied to all
 program downloads that are not notarized by Apple for a fee.
