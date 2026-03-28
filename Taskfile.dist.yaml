@@ -35,7 +35,7 @@ tasks:
 
   nil:
     aliases: [n]
-    desc: "Run the static analysis techniques to catch Nil dereferences."
+    desc: 'Run the static analysis techniques to catch Nil dereferences.'
     cmds:
       - go tool nilaway -test=false ./...
 
@@ -44,7 +44,7 @@ tasks:
     desc: Run all tests
     cmds:
       - go test ./...
-  
+
   test-cover:
     aliases: [tc]
     desc: Run all tests with coverage
@@ -141,7 +141,7 @@ tasks:
   pkg-patch:
     aliases: [pp]
     silent: false
-    desc: Update and apply patches to the web server dependencies.
+    desc: Update and apply patches to the app.
     cmds:
       - cmd: go get -u=patch -x
       - cmd: go mod verify
@@ -149,7 +149,7 @@ tasks:
   pkg-update:
     aliases: [pu]
     silent: false
-    desc: Update the web server dependencies.
+    desc: Update the app package dependencies.
     cmds:
       - cmd: go get -u -x
       - cmd: go mod verify

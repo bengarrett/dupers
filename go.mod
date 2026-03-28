@@ -15,8 +15,8 @@ require (
 	github.com/ulikunitz/xz v0.5.15 // indirect
 	go.etcd.io/bbolt v1.4.3
 	go4.org v0.0.0-20260112195520-a5071408f32f // indirect
-	golang.org/x/sys v0.41.0 // indirect
-	golang.org/x/text v0.34.0
+	golang.org/x/sys v0.42.0 // indirect
+	golang.org/x/text v0.35.0
 )
 
 require (
@@ -31,19 +31,19 @@ require (
 	github.com/bodgit/plumbing v1.3.0 // indirect
 	github.com/bodgit/windows v1.0.1 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
-	github.com/klauspost/compress v1.18.3 // indirect
+	github.com/klauspost/compress v1.18.5 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/mikelolasagasti/xz v1.0.1 // indirect
-	github.com/minio/minlz v1.0.1 // indirect
-	github.com/nwaples/rardecode/v2 v2.2.0 // indirect
-	github.com/pierrec/lz4/v4 v4.1.25 // indirect
+	github.com/minio/minlz v1.1.0 // indirect
+	github.com/nwaples/rardecode/v2 v2.2.2 // indirect
+	github.com/pierrec/lz4/v4 v4.1.26 // indirect
 	github.com/sorairolake/lzip-go v0.3.8 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.uber.org/nilaway v0.0.0-20250805202745-8ad05f089790 // indirect
-	golang.org/x/mod v0.32.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/tools v0.41.0 // indirect
+	golang.org/x/mod v0.33.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/tools v0.42.0 // indirect
 )
 
 tool go.uber.org/nilaway/cmd/nilaway
