@@ -88,7 +88,7 @@ type Flags struct {
 	Lookup   *bool `usage:"query the database for a much faster match, the results\n\t may be stale as it does not detect file changes on\n\t your system"` //nolint:lll
 	Rm       *bool `usage:"delete the duplicate files found in the\n\t <directory to check>"`
 	RmPlus   *bool `usage:"delete the duplicate files and remove empty directories\n\t from the <directory to check>"`
-	Sensen   *bool `usage:"delete everything in the <directory to check> except\n\t for directories containing unique Windows programs and\n\t assets"` //nolint:lll
+	Sensen   *bool `usage:"delete directories in the <directory to check> except\n\t directories containing unique Windows programs and\n\t assets"` //nolint:lll
 
 	// global options
 

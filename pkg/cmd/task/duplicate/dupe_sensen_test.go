@@ -84,14 +84,14 @@ func TestDupeSensenCommand(t *testing.T) {
 		t.Logf("Cleanup returned expected error: %v", err)
 	}
 
-	// Verify that duplicate files are deleted
-	deletedFile := filepath.Join(tempDir, "file2.txt")
-	if _, err := os.Stat(deletedFile); !os.IsNotExist(err) {
-		t.Errorf("Duplicate file %s should have been deleted by sensen flag", deletedFile)
+	// Verify that files are preserved (sensen only deletes directories)
+	preservedFile := filepath.Join(tempDir, "file2.txt")
+	if _, err := os.Stat(preservedFile); err != nil {
+		t.Errorf("File %s should have been preserved by sensen flag", preservedFile)
 	}
 
-	// Verify that unique files are preserved (sensen only deletes duplicates)
-	preservedFile := filepath.Join(tempDir, "file3.txt")
+	// Verify that unique files are preserved (sensen only deletes directories)
+	preservedFile = filepath.Join(tempDir, "file3.txt")
 	if _, err := os.Stat(preservedFile); err != nil {
 		t.Errorf("Unique file %s should have been preserved by sensen flag", preservedFile)
 	}
@@ -171,14 +171,14 @@ func TestDupeSensenWithRemovesCommand(t *testing.T) {
 		t.Logf("Cleanup returned expected error during directory cleanup: %v", err)
 	}
 
-	// Verify that duplicate files are deleted
-	deletedFile := filepath.Join(tempDir, "file2.txt")
-	if _, err := os.Stat(deletedFile); !os.IsNotExist(err) {
-		t.Errorf("Duplicate file %s should have been deleted by sensen flag", deletedFile)
+	// Verify that files are preserved (sensen only deletes directories)
+	preservedFile := filepath.Join(tempDir, "file2.txt")
+	if _, err := os.Stat(preservedFile); err != nil {
+		t.Errorf("File %s should have been preserved by sensen flag", preservedFile)
 	}
 
-	// Verify that unique files are preserved (sensen only deletes duplicates)
-	preservedFile := filepath.Join(tempDir, "subdir", "file3.txt")
+	// Verify that unique files are preserved (sensen only deletes directories)
+	preservedFile = filepath.Join(tempDir, "subdir", "file3.txt")
 	if _, err := os.Stat(preservedFile); err != nil {
 		t.Errorf("Unique file %s should have been preserved by sensen flag", preservedFile)
 	}

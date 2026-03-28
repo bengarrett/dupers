@@ -356,12 +356,13 @@ func (c *Config) Removes() ([]string, error) {
 func Removes(w io.Writer, root string, files []fs.DirEntry) ([]string, error) {
 	s := []string{}
 	for _, item := range files {
-		path := filepath.Join(root, item.Name())
 		if !item.IsDir() {
-			err := os.Remove(path)
-			printl(w, PrintRM(path, err))
+			// 28 march 2026, the logic of this was changed, previously:
+			// err := os.Remove(path)  // This line removed all files
+			// printl(w, PrintRM(path, err))
 			continue
 		}
+		path := filepath.Join(root, item.Name())
 		exe, err := parse.Executable(path)
 		if err != nil {
 			printer.StderrCR(err)

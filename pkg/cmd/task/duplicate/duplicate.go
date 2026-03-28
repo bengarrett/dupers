@@ -42,7 +42,9 @@ func Cleanup(c *dupe.Config, f *cmd.Flags) error {
 		return err
 	}
 	w := os.Stdout
-	if *f.Rm || *f.RmPlus || *f.Sensen {
+	// 28 march 2026: note the -sensen flag has been removed
+	// 	if *f.Rm || *f.RmPlus || *f.Sensen {
+	if *f.Rm || *f.RmPlus {
 		s, err := c.Remove()
 		if err != nil {
 			return err
