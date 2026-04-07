@@ -108,22 +108,6 @@ func runSensen(w io.Writer, c *dupe.Config) error {
 	if err := c.DelEmptyDirs(w); err != nil {
 		return err
 	}
-	// v1.01
-	//
-	// if *f.Sensen {
-	// 	removes, err := c.Removes()
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	for _, name := range removes {
-	// 		dupe.PrintRM(name, ErrNoRM)
-	// 	}
-	// }
-	// if *f.RmPlus || *f.Sensen {
-	// 	if err := c.Clean(w); err != nil {
-	// 		return err
-	// 	}
-	// }
 	return nil
 }
 
@@ -201,25 +185,25 @@ func ignore(err error) {
 // normalise the names of the buckets.
 func normalise(db *bolt.DB, c *dupe.Config) error {
 	var errs error
-	for i, b := range c.Buckets {
-		abs, err := database.Abs(string(b))
+	for i, bucket := range c.Buckets {
+		abs, err := database.Abs(string(bucket))
 		if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("x %w: %s", err, b))
+			errs = errors.Join(errs, fmt.Errorf("x %w: %s", err, bucket))
 			c.Buckets[i] = ""
 
 			continue
 		}
 		if err := database.Exist(db, abs); err != nil {
 			if errors.Is(err, bberr.ErrBucketNotFound) {
-				s := "Scan and add this new directory to the database:\n" +
+				question := "Scan and add this new directory to the database:\n" +
 					color.Warn.Sprintf(" %s\n\n", abs) +
 					"This could take awhile with large numbers of files"
-				if printer.AskYN(s, c.Yes, printer.Yes) {
+				if printer.AskYN(question, c.Yes, printer.Yes) {
 					// continue automatically adds the bucket to the database
 					continue
 				}
 			}
-			errs = errors.Join(errs, fmt.Errorf("y %w: %s", err, b))
+			errs = errors.Join(errs, fmt.Errorf("y %w: %s", err, bucket))
 		}
 		c.Buckets[i] = dupe.Bucket(abs)
 	}
@@ -237,17 +221,17 @@ func Lookup(db *bolt.DB, c *dupe.Config) error {
 		return dupe.ErrNilConfig
 	}
 	c.Debugger("read the hash values in the buckets.")
-	fastFlagErr := false
+	flagErr := false
 	for _, bucket := range c.Buckets {
 		if i, err := c.SetCompares(db, bucket); err != nil {
 			printer.StderrCR(err)
 		} else if i > 0 {
 			continue
 		}
-		fastFlagErr = true
+		flagErr = true
 		printl(os.Stderr, "The -fast flag cannot be used for this dupe query")
 	}
-	if fastFlagErr {
+	if flagErr {
 		return ErrFast
 	}
 	return nil

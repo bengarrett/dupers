@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/bengarrett/dupers/internal/printer"
-	"github.com/bengarrett/dupers/pkg/database/bucket"
 	"github.com/bengarrett/dupers/pkg/database/csv"
 	"github.com/gookit/color"
 	bolt "go.etcd.io/bbolt"
@@ -47,12 +46,12 @@ func Backup() (string, int64, error) {
 	if err != nil {
 		return "", 0, err
 	}
-	name := filepath.Join(dir, backup())
-	written, err := CopyFile(src, name)
+	dest := filepath.Join(dir, backup())
+	written, err := CopyFile(src, dest)
 	if err != nil {
 		return "", 0, err
 	}
-	return name, written, nil
+	return dest, written, nil
 }
 
 // backup generates a time sensitive name for the backup file.
@@ -77,7 +76,7 @@ func CopyFile(name, dest string) (int64, error) {
 	}
 	defer func() { _ = f.Close() }()
 	// create backup file
-	bf, err := os.Create(dest)
+	bf, err := os.Create(dest) //nolint:gosec
 	if err != nil {
 		return 0, err
 	}
@@ -108,11 +107,11 @@ func CSVExport(db *bolt.DB, bucket string) (string, error) {
 	records := [][]string{
 		{"sha256_sum", meta},
 	}
-	ls, errLS := List(db, bucket)
+	list, errLS := List(db, bucket)
 	if errLS != nil {
 		return "", errLS
 	}
-	for file, sum := range ls {
+	for file, sum := range list {
 		rel := strings.TrimPrefix(string(file), bucket)
 		records = append(records, []string{hex.EncodeToString(sum[:]), rel})
 	}
@@ -310,36 +309,4 @@ func Scanner(file *os.File) (string, *Lists, error) {
 		lists[Filepath(key)] = sum
 	}
 	return bucket, &lists, nil
-}
-
-// Usage checks the validity and usage of the named bucket in the database.
-func Usage(db *bolt.DB, name string, assumeYes bool) (string, error) {
-	if db == nil {
-		return "", bberr.ErrDatabaseNotOpen
-	}
-	if name == "" {
-		return "", ErrNoBucket
-	}
-	for {
-		path := ""
-		if err := db.View(func(tx *bolt.Tx) error {
-			if b := tx.Bucket([]byte(name)); b == nil {
-				path = name
-				if bucket.Stats(path, assumeYes) {
-					return nil
-				}
-			}
-			if path = bucket.Rename(name, assumeYes); path != "" {
-				if bucket.Stats(path, assumeYes) {
-					return nil
-				}
-			}
-			return nil
-		}); err != nil {
-			return "", err
-		}
-		if path != "" {
-			return path, nil
-		}
-	}
 }

@@ -571,7 +571,7 @@ func TestExtractArchives(t *testing.T) {
 	ctx := context.Background()
 	for _, file := range testFiles {
 		t.Run(filepath.Base(file), func(t *testing.T) {
-			f, err := os.Open(file)
+			f, err := os.Open(file) //nolint:gosec
 			if err != nil {
 				t.Skipf("Test file not found: %s", file)
 			}

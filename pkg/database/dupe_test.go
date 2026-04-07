@@ -162,7 +162,7 @@ func TestRemovers(t *testing.T) {
 	bucket1, err := mock.Bucket(t, 1)
 	be.Err(t, err, nil)
 	be.True(t, bucket1 != "")
-	path := mock.MirrorData(t)
+	path := mock.Mirror(t)
 	c := dupe.Config{Test: true, Quiet: false, Debug: false}
 	err = c.SetSource(path)
 	be.Err(t, err, nil)

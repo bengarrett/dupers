@@ -80,7 +80,7 @@ func BenchmarkExtractionPerformance(b *testing.B) {
 	for name, file := range testFiles {
 		b.Run(name, func(b *testing.B) {
 			// Open the file
-			f, err := os.Open(file)
+			f, err := os.Open(file) //nolint:gosec
 			if err != nil {
 				b.Skipf("Test file not found: %s", file)
 			}

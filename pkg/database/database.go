@@ -665,26 +665,6 @@ func info(db *bolt.DB, w *tabwriter.Writer) (*tabwriter.Writer, uint64, error) {
 	return w, sizes, nil
 }
 
-// IsEmpty returns a bberr.ErrBucketNotFound error when the database has no buckets.
-func IsEmpty(db *bolt.DB) error {
-	if db == nil {
-		return bberr.ErrDatabaseNotOpen
-	}
-	cnt := 0
-	if err := db.View(func(tx *bolt.Tx) error {
-		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
-			cnt++
-			return nil
-		})
-	}); err != nil {
-		return err
-	}
-	if cnt == 0 {
-		return bberr.ErrBucketNotFound
-	}
-	return nil
-}
-
 // List returns the filepaths and SHA256 checksums stored in the bucket.
 func List(db *bolt.DB, bucket string) (Lists, error) {
 	if db == nil {

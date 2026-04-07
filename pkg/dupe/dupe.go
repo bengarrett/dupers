@@ -90,13 +90,14 @@ func (c *Config) Writer(w io.Writer, s string) {
 	printf(w, "∙%s\n", s)
 }
 
-// StatSource returns the number of files in the source directory to check.
-// If the source is a file, files will always equal 1.
+// StatSource returns the number of files found in the source to check.
 //
-// It returns the following values in order,
-//   - boolean is directory value
-//   - int is the number of files
-//   - int verse is the nunber of items in the buckets for the dupe check
+// If the given source is a file, the total number of files value will always be 1.
+//
+// The func returns the following results,
+//   - the boolean is true when the source is a directory
+//   - the first int are the total number of files in the source
+//   - the second int are the number of items in the buckets for the dupe check
 func (c *Config) StatSource() (bool, int, int, error) {
 	c.Debugger("count the files within the paths")
 	src := c.GetSource()
@@ -123,39 +124,8 @@ func (c *Config) StatSource() (bool, int, int, error) {
 	return isDir, files, versus, nil
 }
 
-// Check stats and returns the named file or directory.
-// If it does not exist, it looks up an absolute path and returns the result.
-// If the item is a file it returns both the named file and an ErrPathIsFile error.
-func (c *Config) Check(name string) (bool, string, error) {
-	if name == "" {
-		return false, "", ErrPathEmpty
-	}
-	stat, err := os.Stat(name)
-	if err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			c.Debugger("path is not found")
-			return false, "", err
-		}
-		c.Debugger("path is not found, but there is an absolute resolved path")
-		name, err = filepath.Abs(name)
-		if err != nil {
-			return false, "", os.ErrNotExist
-		}
-		stat, err = os.Stat(name)
-		if err != nil {
-			return false, "", err
-		}
-	}
-	if !stat.IsDir() {
-		if stat.Size() == 0 {
-			return false, name, ErrFileEmpty
-		}
-		return false, name, nil
-	}
-	return true, name, nil
-}
-
 // Checksum the named file and save it to the bucket.
+// The saved checksum is a SHA256 hash.
 func (c *Config) Checksum(db *bolt.DB, name, bucket string) error {
 	if db == nil {
 		return bberr.ErrDatabaseNotOpen
@@ -211,7 +181,7 @@ func (c *Config) DelEmptyDirs(w io.Writer) error {
 				return err
 			}
 			fmt.Fprintln(os.Stderr, "->>", osDirname)
-			panic("")
+			// panic("") // TODO: DEBUG && REMOVE
 			// Attempt to read only the first directory entry.
 			hasAtLeastOneChild := s.Scan()
 			// If error reading from directory, wrap up and return.
@@ -329,7 +299,7 @@ func (c *Config) DelDupeFiles() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if l := c.lookupOne(checksum); l == "" {
+		if one := c.lookupOne(checksum); one == "" {
 			continue
 		}
 		err = os.Remove(path)
@@ -373,24 +343,6 @@ func (c *Config) DelDirsExcept() ([]string, error) {
 	}
 	return delDirsExcept(w, name, dirEntries)
 }
-
-// removes directories that do not contain MS-DOS or Windows programs.
-// func removes(root string, files []fs.DirEntry) string {
-// 	w := new(bytes.Buffer)
-//
-// 	for _, item := range files {
-// 		if !item.IsDir() {
-// 			continue
-// 		}
-// 		path := filepath.Join(root, item.Name())
-// 		if parse.Executable(path) {
-// 			continue
-// 		}
-// 		err := os.RemoveAll(path)
-// 		fmt.Fprintln(w, printRM(path, err))
-// 	}
-// 	return w.String()
-// }
 
 // delDirsExcept directories that do not contain MS-DOS or Windows programs.
 // The strings contains the path of any undeletable files.

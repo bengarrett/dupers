@@ -38,7 +38,7 @@ func TestMigrationIntegration(t *testing.T) {
 			t.Logf("Identified %s as %s", file, format.Extension())
 
 			// Test that we can open and read the file
-			fileHandle, err := os.Open(file)
+			fileHandle, err := os.Open(file) //nolint:gosec
 			if err != nil {
 				t.Fatalf("Failed to open %s: %v", file, err)
 			}

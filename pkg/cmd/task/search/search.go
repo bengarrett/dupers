@@ -83,9 +83,10 @@ func Error(err error) error {
 		printer.StderrCR(err)
 		return nil
 	}
+	w := os.Stdout
 	if errors.Is(err, bberr.ErrBucketNotFound) {
 		printer.StderrCR(err)
-		printl(os.Stdout, "To add this directory as a bucket to the database, run:")
+		printl(w, "To add this directory as a bucket to the database, run:")
 		dir := err.Error()
 		if errors.Unwrap(err) != nil {
 			s := bberr.ErrBucketNotFound.Error() + ": "

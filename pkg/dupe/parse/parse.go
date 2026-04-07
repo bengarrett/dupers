@@ -46,11 +46,6 @@ type Scanner struct {
 
 var ErrNoSource = errors.New("cannot use an empty source")
 
-// Compares returns the number of items in the Compare Scanner.
-func (p *Scanner) Compares() int {
-	return len(p.Compare)
-}
-
 // SetAllBuckets sets all the database buckets for use with the dupe or search commands.
 func (p *Scanner) SetAllBuckets(db *bolt.DB) error {
 	if db == nil {

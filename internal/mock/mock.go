@@ -97,20 +97,6 @@ func RootDir(t *testing.T) string {
 	return filepath.Join(filepath.Dir(file), "..", "..")
 }
 
-// TempDir returns a hidden tmp mock directory path within the
-// root directory of the program's source code.
-// If the directory doesn't exist, it is created.
-func TempDir(t *testing.T) string {
-	t.Helper()
-	const msg = "mock temporary directory"
-	root := RootDir(t)
-	tmp, err := os.MkdirTemp(root, ".mock-*") //nolint:usetesting
-	if err != nil {
-		t.Errorf("%s: %s", msg, err)
-	}
-	return tmp
-}
-
 // Bucket returns the absolute path of test bucket.
 func Bucket(t *testing.T, i int) (string, error) {
 	t.Helper()
@@ -296,8 +282,8 @@ func Open(t *testing.T, path string) (*bolt.DB, string) {
 	return db, path
 }
 
-// MirrorData recursively copies the directory content of src into the hidden tmp mock directory.
-func MirrorData(t *testing.T) string {
+// Mirror recursively copies the directory content of src into the hidden tmp mock directory.
+func Mirror(t *testing.T) string {
 	t.Helper()
 	const msg = "mock mirror temporary testdata"
 	const dirAllAccess fs.FileMode = 0o777

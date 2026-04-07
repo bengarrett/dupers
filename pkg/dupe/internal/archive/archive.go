@@ -153,6 +153,7 @@ func ReadMIME(name string) (string, error) {
 }
 
 // Supported returns true when the archives format structure is valid.
+// It is used for tests.
 func Supported(f any) bool {
 	switch f.(type) {
 	case

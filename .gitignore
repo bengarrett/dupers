@@ -20,5 +20,6 @@ test/tmp/*
 dist/
 dupers
 .task
+.task_test/
 .tmp/
 .mock*/

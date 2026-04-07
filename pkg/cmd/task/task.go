@@ -65,14 +65,14 @@ func Directories() error {
 	if runtime.GOOS != winOS {
 		return nil
 	}
-	const minArgs = 2
-	if len(flag.Args()) < minArgs {
+	const minLn = 2
+	if len(flag.Args()) < minLn {
 		return nil
 	}
 	var errs error
 	directories := flag.Args()[1:]
-	for _, dir := range directories {
-		if err := cmd.WindowsChk(dir); err != nil {
+	for _, name := range directories {
+		if err := cmd.WindowsChk(name); err != nil {
 			errs = errors.Join(errs, err)
 			continue
 		}
@@ -214,9 +214,8 @@ func SetStat(db *bolt.DB, c *dupe.Config, args ...string) error {
 		return nil
 	}
 	if err := c.SetBuckets(buckets...); err != nil {
-		var pathError *fs.PathError
-		// TODO: simplification
-		if errors.As(err, &pathError) {
+		// var pathError *fs.PathError
+		if pathError, ok := errors.AsType[*fs.PathError](err); ok {
 			printer.StderrCR(bberr.ErrBucketNotFound)
 			printf(os.Stdout, "Bucket: %s\n", pathError.Path)
 			printer.Example("\ndupers dupe " + args[1] + " [buckets to lookup]")
@@ -224,8 +223,7 @@ func SetStat(db *bolt.DB, c *dupe.Config, args ...string) error {
 		return err
 	}
 	if err := StatSource(c); err != nil {
-		var pathError *fs.PathError
-		if errors.As(err, &pathError) {
+		if pathError, ok := errors.AsType[*fs.PathError](err); ok {
 			printer.StderrCR(os.ErrNotExist)
 			printf(os.Stdout, "Bucket: %s\n", pathError.Path)
 			printer.Example("\ndupers dupe <file or directory> [buckets to lookup]")
@@ -236,6 +234,7 @@ func SetStat(db *bolt.DB, c *dupe.Config, args ...string) error {
 	return nil
 }
 
+// WalkScan is part of the dupe command.
 func WalkScan(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
 	if db == nil {
 		return bberr.ErrDatabaseNotOpen
@@ -328,17 +327,14 @@ func Search(db *bolt.DB, f *cmd.Flags, test bool, args ...string) error {
 	if db == nil {
 		return bberr.ErrDatabaseNotOpen
 	}
-	if f == nil {
+	if f == nil || f.Filename == nil || f.Exact == nil || f.Quiet == nil {
 		return ErrNilFlags
 	}
-	if f.Filename == nil || f.Exact == nil || f.Quiet == nil {
-		return ErrNilFlags
-	}
-	l := len(args)
-	if l == 0 {
+	count := len(args)
+	if count == 0 {
 		return ErrArgs
 	}
-	if err := search.CmdErr(l, test); err != nil {
+	if err := search.CmdErr(count, test); err != nil {
 		return err
 	}
 	const minArgs = 2
@@ -346,7 +342,7 @@ func Search(db *bolt.DB, f *cmd.Flags, test bool, args ...string) error {
 		return ErrArgs
 	}
 	term, buckets := args[1], []string{}
-	if l > minArgs {
+	if count > minArgs {
 		buckets = args[minArgs:]
 	}
 	matches, err := search.Compare(db, f, term, buckets)
