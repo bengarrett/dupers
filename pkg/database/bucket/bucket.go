@@ -55,11 +55,11 @@ func (c *Cleaner) Clean(db *bolt.DB) (int, int, int, error) {
 		return 0, 0, 0, bberr.ErrDatabaseNotOpen
 	}
 	if err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(c.Name))
-		if b == nil {
+		bucket := tx.Bucket([]byte(c.Name))
+		if bucket == nil {
 			return fmt.Errorf("%w: %s", bberr.ErrBucketNotFound, c.Name)
 		}
-		if err := b.ForEach(func(k, v []byte) error {
+		if err := bucket.ForEach(func(k, v []byte) error {
 			c.Items++
 			printStat(c.Debug, c.Quiet, c.Items, c.Total, k)
 			if _, errS := os.Stat(string(k)); errS != nil {
@@ -107,40 +107,40 @@ func (p *Parser) Parse(db *bolt.DB) (int, int, string, bool) {
 		printer.StderrCR(bberr.ErrDatabaseNotOpen)
 		return -1, -1, "", true
 	}
-	abs, err := Abs(p.Name)
-	if err != nil {
-		printer.StderrCR(err)
+	path, err1 := Abs(p.Name)
+	if err1 != nil {
+		printer.StderrCR(err1)
 		return p.Items, p.Errs, "", true
 	}
-	printer.Debug(p.Debug, "bucket: "+abs)
+	printer.Debug(p.Debug, "bucket: "+path)
 
 	// check the bucket directory exists on the file system
-	fi, errS := os.Stat(abs)
+	stat, err := os.Stat(path)
 	switch {
-	case os.IsNotExist(errS):
-		printer.StderrCR(fmt.Errorf("%w: %s", ErrBucketSkip, abs))
+	case os.IsNotExist(err):
+		printer.StderrCR(fmt.Errorf("%w: %s", ErrBucketSkip, path))
 		p.Errs++
 
-		if i, errc := Count(db, p.Name); errc == nil {
+		if i, err2 := Count(db, p.Name); err2 == nil {
 			p.Items += i
 		}
 
 		return p.Items, p.Errs, "", true
-	case errS != nil:
-		printer.StderrCR(errS)
+	case err != nil:
+		printer.StderrCR(err)
 		p.Errs++
 
 		return p.Items, p.Errs, "", true
-	case !fi.IsDir():
-		printer.StderrCR(fmt.Errorf("%w: %s", ErrBucketAsFile, abs))
+	case !stat.IsDir():
+		printer.StderrCR(fmt.Errorf("%w: %s", ErrBucketAsFile, path))
 		p.Errs++
-		if i, errc := Count(db, p.Name); errc == nil {
+		if i, err3 := Count(db, p.Name); err3 == nil {
 			p.Items += i
 		}
 
 		return p.Items, p.Errs, "", true
 	}
-	return p.Items, p.Errs, abs, false
+	return p.Items, p.Errs, path, false
 }
 
 // Abs returns an absolute representation of the named bucket.

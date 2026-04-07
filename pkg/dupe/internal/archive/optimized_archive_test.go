@@ -67,7 +67,7 @@ func TestFormatCache(t *testing.T) {
 		t.Errorf("Expected cache size 2 before clear, got %d", initialSize)
 	}
 
-	cache.ClearCache()
+	cache.Clear()
 	finalSize := cache.GetCacheSize()
 	if finalSize != 0 {
 		t.Errorf("Expected cache size 0 after clear, got %d", finalSize)
@@ -153,7 +153,7 @@ func TestBatchExtractor(t *testing.T) {
 	}
 
 	// Test cache clearing
-	cache.ClearCache()
+	cache.Clear()
 	if cache.GetCacheSize() != 0 {
 		t.Error("Cache should be empty after clear")
 	}

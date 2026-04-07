@@ -38,59 +38,100 @@ func Cleanup(c *dupe.Config, f *cmd.Flags) error {
 	if c == nil {
 		return dupe.ErrNilConfig
 	}
-	if err := checkF(f); err != nil {
+	w := os.Stdout
+	switch {
+	case f == nil:
+		return cmd.ErrNilFlag
+	case f.Sensen == nil:
+		return fmt.Errorf("%w: sensen", cmd.ErrNilFlag)
+	case f.Rm == nil:
+		return fmt.Errorf("%w: rm", cmd.ErrNilFlag)
+	case f.RmPlus == nil:
+		return fmt.Errorf("%w: rmplus", cmd.ErrNilFlag)
+	case f.Yes == nil:
+		return fmt.Errorf("%w: yes", cmd.ErrNilFlag)
+	case *f.Rm:
+		return runRemove(w, c)
+	case *f.RmPlus:
+		return runRemovePlus(w, c)
+	case *f.Sensen:
+		return runSensen(w, c)
+	default:
+		return nil
+	}
+}
+
+// runRemove deletes duplicate files.
+// This is intended fpr the -rm flag.
+func runRemove(w io.Writer, c *dupe.Config) error {
+	s, err := c.DelDupeFiles()
+	if err != nil {
 		return err
 	}
-	w := os.Stdout
-	// 28 march 2026: note the -sensen flag has been removed
-	// 	if *f.Rm || *f.RmPlus || *f.Sensen {
-	if *f.Rm || *f.RmPlus {
-		s, err := c.Remove()
-		if err != nil {
-			return err
-		}
-		_, _ = fmt.Fprint(w, s)
+	_, _ = fmt.Fprint(w, s)
+	return nil
+}
+
+// runRemovePlus deletes duplicate files and empty directories.
+// This is intended for the -rm+ flag.
+func runRemovePlus(w io.Writer, c *dupe.Config) error {
+	s, err := c.DelDupeFiles()
+	if err != nil {
+		return err
 	}
-	if *f.Sensen {
-		removes, err := c.Removes()
-		if err != nil {
-			return err
-		}
-		for _, name := range removes {
-			dupe.PrintRM(name, ErrNoRM)
-		}
-	}
-	if *f.RmPlus || *f.Sensen {
-		if err := c.Clean(w); err != nil {
-			return err
-		}
+	_, _ = fmt.Fprint(w, s)
+	if err := c.DelEmptyDirs(w); err != nil {
+		return err
 	}
 	return nil
 }
 
-func checkF(f *cmd.Flags) error {
-	if f == nil {
-		return cmd.ErrNilFlag
+// runSensen does the following and is intended for the -sensen flag.
+//   - deletes duplicate files
+//   - delete directories except those with MS-DOS app
+//   - delete empty directories
+func runSensen(w io.Writer, c *dupe.Config) error {
+	s, err := c.DelDupeFiles()
+	if err != nil {
+		return err
 	}
-	if f.Sensen == nil {
-		return fmt.Errorf("%w: sensen", cmd.ErrNilFlag)
+	_, _ = fmt.Fprint(w, s)
+	// deleted, err := c.Removes()
+	deleted, err := c.DelDirsExcept()
+	if err != nil {
+		return err
 	}
-	if f.Rm == nil {
-		return fmt.Errorf("%w: rm", cmd.ErrNilFlag)
+	for _, path := range deleted {
+		dupe.PrintRM(path, ErrNoRM)
 	}
-	if f.RmPlus == nil {
-		return fmt.Errorf("%w: rmplus", cmd.ErrNilFlag)
+	// if err := c.Clean(w); err != nil {
+	if err := c.DelEmptyDirs(w); err != nil {
+		return err
 	}
-	if f.Yes == nil {
-		return fmt.Errorf("%w: yes", cmd.ErrNilFlag)
-	}
+	// v1.01
+	//
+	// if *f.Sensen {
+	// 	removes, err := c.Removes()
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	for _, name := range removes {
+	// 		dupe.PrintRM(name, ErrNoRM)
+	// 	}
+	// }
+	// if *f.RmPlus || *f.Sensen {
+	// 	if err := c.Clean(w); err != nil {
+	// 		return err
+	// 	}
+	// }
 	return nil
 }
 
 // Check parses the arguments of the dupe command.
-func Check(args, buckets, minArgs int) {
+func Check(expected int, args ...string) {
+	count := len(args)
 	w := os.Stdout
-	if args < minArgs {
+	if count < expected {
 		printer.StderrCR(ErrNoArgs)
 		printl(w, "\nThe dupe command requires a directory or file to check.")
 		if runtime.GOOS == winOS {
@@ -100,7 +141,7 @@ func Check(args, buckets, minArgs int) {
 		}
 		printer.Example("\ndupers dupe <directory or file to check> [buckets to lookup]")
 	}
-	if buckets == 0 && args == minArgs {
+	if count == expected {
 		printl(w, color.Warn.Sprint("The database is empty.\n"))
 		if runtime.GOOS == winOS {
 			printl(w, "This dupe request requires at least one directory or drive letter to lookup.")

@@ -3,7 +3,7 @@ module github.com/bengarrett/dupers
 // go 1.20 was the last version to support Windows 7, 8, Server 2008.
 // go 1.10 was the last version to support Windows XP, OS-X 10.8
 // go 1.3 droped support of Windows 2000.
-go 1.25.7
+go 1.26.1
 
 require (
 	github.com/bodgit/sevenzip v1.6.1
@@ -27,7 +27,7 @@ require (
 
 require (
 	github.com/STARRY-S/zip v0.2.3 // indirect
-	github.com/andybalholm/brotli v1.2.0 // indirect
+	github.com/andybalholm/brotli v1.2.1 // indirect
 	github.com/bodgit/plumbing v1.3.0 // indirect
 	github.com/bodgit/windows v1.0.1 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect

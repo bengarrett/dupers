@@ -186,25 +186,32 @@ func (c *Config) Checksum(db *bolt.DB, name, bucket string) error {
 	return nil
 }
 
-// Clean removes all empty directories from c.Source.
-// Directories containing hidden system directories or files are not considered empty.
+// Deprecated: Use [DelEmptyDirs] instead.
 func (c *Config) Clean(w io.Writer) error {
+	return c.DelEmptyDirs(w)
+}
+
+// DelEmptyDirs removes all empty directories from c.Source.
+// Directories containing hidden system directories or files are not considered empty.
+func (c *Config) DelEmptyDirs(w io.Writer) error {
 	c.Debugger("remove all empty directories.")
-	path := c.GetSource()
-	if path == "" {
+	pathname := c.GetSource()
+	if pathname == "" {
 		return nil
 	}
 	var count int
-	if err := godirwalk.Walk(path, &godirwalk.Options{
+	if err := godirwalk.Walk(pathname, &godirwalk.Options{
 		Unsorted: true,
 		Callback: func(_ string, _ *godirwalk.Dirent) error {
 			return nil
 		},
-		PostChildrenCallback: func(osPathname string, _ *godirwalk.Dirent) error {
-			s, err := godirwalk.NewScanner(osPathname)
+		PostChildrenCallback: func(osDirname string, _ *godirwalk.Dirent) error {
+			s, err := godirwalk.NewScanner(osDirname)
 			if err != nil {
 				return err
 			}
+			fmt.Fprintln(os.Stderr, "->>", osDirname)
+			panic("")
 			// Attempt to read only the first directory entry.
 			hasAtLeastOneChild := s.Scan()
 			// If error reading from directory, wrap up and return.
@@ -214,15 +221,20 @@ func (c *Config) Clean(w io.Writer) error {
 			if hasAtLeastOneChild {
 				return nil
 			}
-			if osPathname == path {
+			if osDirname == pathname {
+				fmt.Fprintln(os.Stderr, pathname, ">>>>", osDirname, ">>>>", len(pathname))
+				if strings.Contains(pathname, "emptyDir") {
+					panic(pathname)
+				}
 				return nil
 			}
 			count++
-			err = os.Remove(osPathname)
-			if err == nil {
-				count++
+			err = os.Remove(osDirname)
+			if err != nil {
+				return err
 			}
-			return err
+			count++
+			return nil
 		},
 	}); err != nil {
 		return err
@@ -231,7 +243,7 @@ func (c *Config) Clean(w io.Writer) error {
 		printl(w, "No empty directories required removal.")
 		return nil
 	}
-	printf(w, "Removed %d empty directories in: '%s'\n", count, path)
+	printf(w, "Removed %d empty directories in: '%s'\n", count, pathname)
 	return nil
 }
 
@@ -289,8 +301,13 @@ func (c *Config) Print() (string, error) { //nolint:gocognit
 	return w.String(), nil
 }
 
-// Remove duplicate files from the source directory.
+// Deprecated: Use [DelDupeFiles] instead.
 func (c *Config) Remove() (string, error) {
+	return c.DelDupeFiles()
+}
+
+// DelDupeFiles duplicate files from the source directory.
+func (c *Config) DelDupeFiles() (string, error) {
 	c.Debugger("remove all duplicate files.")
 	w := new(bytes.Buffer)
 	if len(c.Sources) == 0 || len(c.Compare) == 0 {
@@ -321,26 +338,32 @@ func (c *Config) Remove() (string, error) {
 	return w.String(), nil
 }
 
-// Removes the directories from the source that do not contain unique MS-DOS or Windows programs.
-// The strings contains the path of any non-deletable files.
+// Deprecated: Use [DelDirsExcept] instead.
 func (c *Config) Removes() ([]string, error) {
+	return c.DelDirsExcept()
+}
+
+// DelDirsExcept the directories from the source that do not contain unique MS-DOS or Windows programs.
+// The strings contains the path of any non-deletable files.
+func (c *Config) DelDirsExcept() ([]string, error) {
 	c.Debugger("removes directories that don't contain any DOS or Windows apps.")
-	root := c.GetSource()
-	if _, err := os.Stat(root); errors.Is(err, os.ErrNotExist) {
-		return nil, fmt.Errorf("%w: %s", ErrPathNoFound, root)
+	name := c.GetSource()
+	_, err := os.Stat(name)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("%w: %s", ErrPathNoFound, name)
 	} else if err != nil {
 		return nil, err
 	}
 	if len(c.Sources) == 0 {
 		return nil, nil
 	}
-	files, err := os.ReadDir(root)
+	dirEntries, err := os.ReadDir(name)
 	if err != nil {
 		return nil, err
 	}
 	w := os.Stdout
 	if !c.Test {
-		printf(w, "%s %s\n", color.Secondary.Sprint("Target directory:"), color.Debug.Sprint(root))
+		printf(w, "%s %s\n", color.Secondary.Sprint("Target directory:"), color.Debug.Sprint(name))
 		printl(w, "Delete everything in the target directory, except for directories"+
 			"\ncontaining unique Windows or MS-DOS programs and assets?")
 		if input := printer.AskYN("Please confirm", c.Yes, printer.Nil); !input {
@@ -348,27 +371,42 @@ func (c *Config) Removes() ([]string, error) {
 		}
 		printl(w)
 	}
-	return Removes(w, root, files)
+	return delDirsExcept(w, name, dirEntries)
 }
 
-// Removes directories that do not contain MS-DOS or Windows programs.
+// removes directories that do not contain MS-DOS or Windows programs.
+// func removes(root string, files []fs.DirEntry) string {
+// 	w := new(bytes.Buffer)
+//
+// 	for _, item := range files {
+// 		if !item.IsDir() {
+// 			continue
+// 		}
+// 		path := filepath.Join(root, item.Name())
+// 		if parse.Executable(path) {
+// 			continue
+// 		}
+// 		err := os.RemoveAll(path)
+// 		fmt.Fprintln(w, printRM(path, err))
+// 	}
+// 	return w.String()
+// }
+
+// delDirsExcept directories that do not contain MS-DOS or Windows programs.
 // The strings contains the path of any undeletable files.
-func Removes(w io.Writer, root string, files []fs.DirEntry) ([]string, error) {
+func delDirsExcept(w io.Writer, name string, dirEntries []fs.DirEntry) ([]string, error) {
 	s := []string{}
-	for _, item := range files {
-		if !item.IsDir() {
-			// 28 march 2026, the logic of this was changed, previously:
-			// err := os.Remove(path)  // This line removed all files
-			// printl(w, PrintRM(path, err))
+	for _, entry := range dirEntries {
+		if !entry.IsDir() {
 			continue
 		}
-		path := filepath.Join(root, item.Name())
-		exe, err := parse.Executable(path)
+		path := filepath.Join(name, entry.Name())
+		foundExe, err := parse.Executable(path)
 		if err != nil {
 			printer.StderrCR(err)
 			continue
 		}
-		if exe {
+		if foundExe {
 			continue
 		}
 		err = os.RemoveAll(path)
@@ -436,20 +474,20 @@ func (c *Config) WalkDirs(db *bolt.DB) error {
 }
 
 // WalkDir walks the named bucket directory for any new files to add their checksums to the database.
-func (c *Config) WalkDir(db *bolt.DB, name parse.Bucket) error {
+func (c *Config) WalkDir(db *bolt.DB, bucket parse.Bucket) error {
 	if db == nil {
 		return bberr.ErrDatabaseNotOpen
 	}
-	if name == "" {
+	if bucket == "" {
 		return ErrNoNamedBucket
 	}
-	root := string(name)
+	root := string(bucket)
 	if err := c.init(db); err != nil {
 		return err
 	}
 	skip := c.skipFiles()
 	// create a new bucket if needed
-	if err := c.create(db, name); err != nil {
+	if err := c.create(db, bucket); err != nil {
 		return err
 	}
 	// walk the root directory
@@ -554,14 +592,14 @@ func SkipFS(dir, file, regular bool, d fs.DirEntry) error {
 	}
 	// SkipDirs should only apply to directories, not files
 	if d.IsDir() {
-		return SkipDirs(d.Name())
+		return SkipDirectory(d.Name())
 	}
 	return nil
 }
 
-// SkipDirs tells WalkDir to ignore specific system and hidden directories.
+// SkipDirectory tells WalkDir to ignore specific system and hidden directories.
 // This function should only be called for directories, not files.
-func SkipDirs(name string) error {
+func SkipDirectory(name string) error {
 	// skip specific directories by name
 	switch strings.ToLower(name) {
 	// the SkipDir return tells WalkDir to skip all files in these directories
@@ -611,18 +649,18 @@ func Bucket(name string) parse.Bucket {
 // WalkArchiver walks the bucket directory saving the checksums of new files to the database.
 // Any archived files supported by archiver will also have its content hashed.
 // Archives within archives are currently left unwalked.
-func (c *Config) WalkArchiver(db *bolt.DB, name parse.Bucket) error {
-	if name == "" {
+func (c *Config) WalkArchiver(db *bolt.DB, bucket parse.Bucket) error {
+	if bucket == "" {
 		return ErrNoNamedBucket
 	}
-	root := string(name)
+	root := string(bucket)
 
 	if err := c.init(db); err != nil {
 		return err
 	}
 	skip := c.skipFiles()
 	// create a new bucket if needed
-	if err := c.create(db, name); err != nil {
+	if err := c.create(db, bucket); err != nil {
 		return err
 	}
 	// get a list of all the bucket filenames
@@ -655,7 +693,7 @@ func (c *Config) WalkArchiver(db *bolt.DB, name parse.Bucket) error {
 }
 
 // Read7Zip opens the named 7-Zip archive, hashes and saves the content to the bucket.
-func (c *Config) Read7Zip(db *bolt.DB, b parse.Bucket, name string) error {
+func (c *Config) Read7Zip(db *bolt.DB, bucket parse.Bucket, name string) error {
 	if db == nil {
 		return bberr.ErrDatabaseNotOpen
 	}
@@ -692,7 +730,7 @@ func (c *Config) Read7Zip(db *bolt.DB, b parse.Bucket, name string) error {
 		}
 		var sum parse.Checksum
 		copy(sum[:], h.Sum(nil))
-		if err := c.update(db, b, path, sum); err != nil {
+		if err := c.update(db, bucket, path, sum); err != nil {
 			return err
 		}
 	}
@@ -703,7 +741,7 @@ func (c *Config) Read7Zip(db *bolt.DB, b parse.Bucket, name string) error {
 }
 
 // Read opens the named archive, hashes and saves the content to the bucket.
-func (c *Config) Read(db *bolt.DB, b parse.Bucket, name, mimeExt string) error {
+func (c *Config) Read(db *bolt.DB, bucket parse.Bucket, name, mimeExt string) error {
 	if db == nil {
 		return bberr.ErrDatabaseNotOpen
 	}
@@ -749,7 +787,7 @@ func (c *Config) Read(db *bolt.DB, b parse.Bucket, name, mimeExt string) error {
 
 	// Extract and process files
 	err = extractor.Extract(ctx, reader, func(ctx context.Context, fileInfo archives.FileInfo) error {
-		if err := c.processArchiveFile(db, b, name, fileInfo); err != nil {
+		if err := c.processArchiveFile(db, bucket, name, fileInfo); err != nil {
 			return err
 		}
 		cnt++
@@ -766,7 +804,7 @@ func (c *Config) Read(db *bolt.DB, b parse.Bucket, name, mimeExt string) error {
 }
 
 // processArchiveFile processes an individual file from an archive.
-func (c *Config) processArchiveFile(db *bolt.DB, b parse.Bucket, name string, fileInfo archives.FileInfo) error {
+func (c *Config) processArchiveFile(db *bolt.DB, bucket parse.Bucket, name string, fileInfo archives.FileInfo) error {
 	if fileInfo.IsDir() {
 		return nil
 	}
@@ -801,7 +839,7 @@ func (c *Config) processArchiveFile(db *bolt.DB, b parse.Bucket, name string, fi
 	copy(sum[:], h.Sum(nil))
 
 	// Update database
-	if err := c.update(db, b, fullPath, sum); err != nil {
+	if err := c.update(db, bucket, fullPath, sum); err != nil {
 		printer.Stderr(err)
 	}
 
@@ -869,19 +907,19 @@ func (c *Config) statSources(root string) error {
 }
 
 // create a new, empty bucket in the database.
-func (c *Config) create(db *bolt.DB, name parse.Bucket) error {
+func (c *Config) create(db *bolt.DB, bucket parse.Bucket) error {
 	if db == nil {
 		return bberr.ErrDatabaseNotOpen
 	}
-	if _, err := os.Stat(string(name)); err != nil {
+	if _, err := os.Stat(string(bucket)); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("%w: %s", ErrPathNoFound, name)
+			return fmt.Errorf("%w: %s", ErrPathNoFound, bucket)
 		}
 		return err
 	}
 	return db.Update(func(tx *bolt.Tx) error {
-		if b := tx.Bucket([]byte(name)); b == nil {
-			_, err := tx.CreateBucket([]byte(name))
+		if b := tx.Bucket([]byte(bucket)); b == nil {
+			_, err := tx.CreateBucket([]byte(bucket))
 			return err
 		}
 		return nil
@@ -979,7 +1017,7 @@ func (c *Config) walkDebug(s string, err error) error {
 	return err
 }
 
-func (c *Config) readArchive(db *bolt.DB, b parse.Bucket, path string) error {
+func (c *Config) readArchive(db *bolt.DB, bucket parse.Bucket, path string) error {
 	if db == nil {
 		return bberr.ErrDatabaseNotOpen
 	}
@@ -1003,7 +1041,7 @@ func (c *Config) readArchive(db *bolt.DB, b parse.Bucket, path string) error {
 	}
 	c.Files++
 	c.Debugger(fmt.Sprintf("walkCompare #%d", c.Files))
-	if errD := c.walkCompare(db, string(b), path); errD != nil {
+	if errD := c.walkCompare(db, string(bucket), path); errD != nil {
 		if !errors.Is(errD, ErrPathExist) {
 			printer.ErrFatal(errD)
 		}
@@ -1014,9 +1052,9 @@ func (c *Config) readArchive(db *bolt.DB, b parse.Bucket, path string) error {
 	case unknownExt:
 		return nil
 	case archive.Ext7z:
-		return c.Read7Zip(db, b, path)
+		return c.Read7Zip(db, bucket, path)
 	default:
-		return c.Read(db, b, path, mimeExt)
+		return c.Read(db, bucket, path, mimeExt)
 	}
 }
 
@@ -1095,7 +1133,7 @@ func (c *Config) statSource() (bool, int, error) {
 		}
 		return false, 1, nil
 	}
-	if err := SkipDirs(name); err != nil {
+	if err := SkipDirectory(name); err != nil {
 		return false, 0, err
 	}
 	files := 0
@@ -1123,8 +1161,8 @@ func (c *Config) statSource() (bool, int, error) {
 	return true, files, nil
 }
 
-func (c *Config) walkBucket(b parse.Bucket, buckets int) (int, error) {
-	root := string(b)
+func (c *Config) walkBucket(bucket parse.Bucket, buckets int) (int, error) {
+	root := string(bucket)
 	stat, err := os.Stat(root)
 	if err != nil {
 		return 0, err
@@ -1132,7 +1170,7 @@ func (c *Config) walkBucket(b parse.Bucket, buckets int) (int, error) {
 	if !stat.IsDir() {
 		return 0, ErrPathIsFile
 	}
-	if err := SkipDirs(root); err != nil {
+	if err := SkipDirectory(root); err != nil {
 		return 0, err
 	}
 	c.Debugger("walking bucket: " + root)
@@ -1167,7 +1205,7 @@ func (c *Config) readRecover(archive string) {
 }
 
 // update saves the checksum and path values to the bucket.
-func (c *Config) update(db *bolt.DB, b parse.Bucket, path string, sum parse.Checksum) error {
+func (c *Config) update(db *bolt.DB, bucket parse.Bucket, path string, sum parse.Checksum) error {
 	if db == nil {
 		return bberr.ErrDatabaseNotOpen
 	}
@@ -1176,7 +1214,7 @@ func (c *Config) update(db *bolt.DB, b parse.Bucket, path string, sum parse.Chec
 	}
 	c.Debugger("update archiver: " + path)
 	if err := db.Update(func(tx *bolt.Tx) error {
-		b1 := tx.Bucket([]byte(b))
+		b1 := tx.Bucket([]byte(bucket))
 		if b1 == nil {
 			return bberr.ErrBucketNotFound
 		}

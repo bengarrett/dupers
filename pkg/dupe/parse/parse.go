@@ -69,9 +69,9 @@ func (p *Scanner) SetAllBuckets(db *bolt.DB) error {
 // SetBuckets adds the bucket name to a list of buckets.
 func (p *Scanner) SetBuckets(names ...string) error {
 	// find returns true if n exists in p.Buckets
-	find := func(n string) bool {
-		for _, x := range p.Buckets {
-			if n == string(x) {
+	find := func(name string) bool {
+		for _, bucket := range p.Buckets {
+			if name == string(bucket) {
 				return true
 			}
 		}
@@ -79,23 +79,23 @@ func (p *Scanner) SetBuckets(names ...string) error {
 	}
 
 	var errs error
-	for _, name := range names {
-		if name == "" {
+	for _, s := range names {
+		if s == "" {
 			continue
 		}
-		n, err := filepath.Abs(name)
+		name, err := filepath.Abs(s)
 		if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("%w: %s", err, n))
+			errs = errors.Join(errs, fmt.Errorf("%w: %s", err, name))
 			continue
 		}
-		if _, err := os.Stat(n); err != nil {
-			errs = errors.Join(errs, fmt.Errorf("%w: %s", err, n))
+		if _, err := os.Stat(name); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("%w: %s", err, name))
 			continue
 		}
-		if find(n) {
+		if find(name) {
 			continue
 		}
-		p.Buckets = append(p.Buckets, Bucket(n))
+		p.Buckets = append(p.Buckets, Bucket(name))
 	}
 	if errs != nil {
 		return errs
@@ -108,17 +108,17 @@ func (p *Scanner) SetCompares(db *bolt.DB, name Bucket) (int, error) {
 	if db == nil {
 		return 0, bberr.ErrDatabaseNotOpen
 	}
-	ls, err := database.List(db, string(name))
+	list, err := database.List(db, string(name))
 	if err != nil {
 		return 0, err
 	}
 	if p.Compare == nil {
 		p.Compare = make(Checksums)
 	}
-	for fp, sum := range ls {
-		p.Compare[sum] = string(fp)
+	for path, sum := range list {
+		p.Compare[sum] = string(path)
 	}
-	return len(ls), nil
+	return len(list), nil
 }
 
 // SetTimer starts a process timer.
@@ -134,33 +134,33 @@ func (p *Scanner) GetSource() string {
 	return p.Sources[0]
 }
 
-// SetSource sets the named string as the directory or file to check.
-func (p *Scanner) SetSource(name string) error {
-	if name == "" {
+// SetSource sets the string as the directory or file to check.
+func (p *Scanner) SetSource(path string) error {
+	if path == "" {
 		return ErrNoSource
 	}
-	n, err := filepath.Abs(name)
+	name, err := filepath.Abs(path)
 	if err != nil {
 		return err
 	}
-	if _, err := os.Stat(n); err != nil {
+	if _, err := os.Stat(name); err != nil {
 		return err
 	}
 	if len(p.Sources) == 0 {
-		p.Sources = append(p.Sources, n)
+		p.Sources = append(p.Sources, name)
 		return nil
 	}
-	p.Sources[0] = n
+	p.Sources[0] = name
 	return nil
 }
 
-// BucketS returns a list of buckets used by the database.
-func (p *Scanner) BucketS() string {
-	s := make([]string, 0, len(p.Buckets))
+// BucketsStr returns a list of buckets used by the database.
+func (p *Scanner) BucketsStr() string {
+	elems := make([]string, 0, len(p.Buckets))
 	for _, b := range p.Buckets {
-		s = append(s, string(b))
+		elems = append(elems, string(b))
 	}
-	return strings.Join(s, " ")
+	return strings.Join(elems, " ")
 }
 
 // Timer returns the time taken since the process timer was instigated.
@@ -181,31 +181,31 @@ func Print(quiet, exact bool, term string, m *database.Matches) string {
 	w := new(bytes.Buffer)
 	// collect the bucket names which will be used to sort the results
 	bucket, buckets := matchBuckets(m)
-	for i, buck := range buckets {
+	for i, name := range buckets {
 		cnt := 0
 		if i > 0 {
 			fmt.Fprintln(w)
 		}
 		// print the matches, the filenames are unsorted
-		for file, b := range *m {
-			if string(b) != buck {
+		for path, dbname := range *m {
+			if string(dbname) != name {
 				continue
 			}
 			cnt++
-			if string(b) != bucket {
-				bucket = string(b)
+			if string(dbname) != bucket {
+				bucket = string(dbname)
 				if !quiet {
 					if cnt > 1 {
 						fmt.Fprintln(w)
 					}
-					fmt.Fprintf(w, "%s: %s", color.Info.Sprint("Search results in"), b)
+					fmt.Fprintf(w, "%s: %s", color.Info.Sprint("Search results in"), dbname)
 				}
 			}
 			if quiet {
-				fmt.Fprintf(w, "%s\n", file)
+				fmt.Fprintf(w, "%s\n", path)
 				continue
 			}
-			mark := Marker(file, term, exact)
+			mark := Marker(path, term, exact)
 			if cnt == 1 {
 				fmt.Fprintf(w, "%s%s\n", color.Success.Sprint(printer.MatchPrefix),
 					mark)
@@ -221,17 +221,17 @@ func Print(quiet, exact bool, term string, m *database.Matches) string {
 // Read the named file to return a SHA256 checksum of it's data.
 func Read(name string) (Checksum, error) {
 	name = filepath.Clean(name)
-	f, err := os.Open(name)
+	src, err := os.Open(name)
 	if err != nil {
 		return Checksum{}, err
 	}
-	defer func() { _ = f.Close() }()
-	buf, h := make([]byte, oneMb), sha256.New()
-	if _, err := io.CopyBuffer(h, f, buf); err != nil {
+	defer func() { _ = src.Close() }()
+	buf, dst := make([]byte, oneMb), sha256.New()
+	if _, err := io.CopyBuffer(dst, src, buf); err != nil {
 		return Checksum{}, err
 	}
 	var c Checksum
-	copy(c[:], h.Sum(nil))
+	copy(c[:], dst.Sum(nil))
 	return c, nil
 }
 
@@ -268,31 +268,29 @@ func matchBuckets(m *database.Matches) (string, []string) {
 	return bucket, buckets
 }
 
-// Executable returns true if the root directory contains an MS-DOS or Windows program file.
-func Executable(root string) (bool, error) {
-	isProgram := false
-	if err := filepath.WalkDir(root, func(_ string, d fs.DirEntry, err error) error {
+// Executable returns true if the directory contains an MS-DOS or Windows program file.
+func Executable(dir string) (bool, error) {
+	foundExe := false
+	if err := filepath.WalkDir(dir, func(_ string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if isProgram {
+		if foundExe {
 			return nil
 		}
-		if !d.IsDir() {
-			if program(d.Name()) {
-				isProgram = true
-				return nil
-			}
+		if !d.IsDir() && isExecutable(d.Name()) {
+			foundExe = true
+			return nil
 		}
 		return nil
 	}); err != nil {
 		return false, err
 	}
-	return isProgram, nil
+	return foundExe, nil
 }
 
-// program returns true if the named file uses an MS-DOS or Windows program file extension.
-func program(name string) bool {
+// isExecutable returns true if the named file uses an MS-DOS or Windows executable file extension.
+func isExecutable(name string) bool {
 	switch strings.ToLower(filepath.Ext(name)) {
 	case ".com", ".exe":
 		return true

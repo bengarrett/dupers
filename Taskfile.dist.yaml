@@ -2,7 +2,7 @@
 #
 # Clean, simplified Taskfile for dupers
 # Focuses on essential development and testing workflows
-version: '3'
+version: "3"
 
 vars:
   FILE: ./testdata/files_to_check/qziD6WMRvPyk
@@ -12,10 +12,9 @@ vars:
 
 tasks:
   default:
-    aliases: [d]
-    desc: Show available tasks
+    # --list only shows tasks without descriptions
     cmds:
-      - task --list-all
+      - task --list
 
   # ===== Development Tasks =====
 
@@ -35,31 +34,37 @@ tasks:
 
   nil:
     aliases: [n]
-    desc: 'Run the static analysis techniques to catch Nil dereferences.'
+    desc: "Run the static analysis techniques to catch Nil dereferences."
     cmds:
       - go tool nilaway -test=false ./...
 
-  test:
-    aliases: [all]
-    desc: Run all tests
+  tests:
+    aliases: [t]
+    desc: Setup, run all tests, and then cleanup
     cmds:
+      - task test-setup
       - go test ./...
+      - task test-cleanup
 
-  test-cover:
-    aliases: [tc]
-    desc: Run all tests with coverage
+  testscover:
+    aliases: [c]
+    desc: Setup, coverage all tests, and then cleanup
     cmds:
+      - task test-setup
       - go test -count=1 -cover ./...
+      - task test-cleanup
 
-  test-race:
-    aliases: [tr]
-    desc: Run tests with race detector
+  testsrace:
+    aliases: [r]
+    desc: Setup, race detect all tests, and then cleanup
     cmds:
+      - task test-setup
       - go test -count=1 -race ./...
+      - task test-cleanup
 
-  test-fuzz:
-    aliases: [tf]
-    desc: Run fuzz tests
+  fuzz:
+    aliases: [f]
+    desc: Fuzzing specific tests
     cmds:
       - go test -fuzz=FuzzChecksum -fuzztime=30s ./pkg/dupe/parse
       - go test -fuzz=FuzzExtension -fuzztime=30s ./pkg/dupe/internal/archive
@@ -90,37 +95,39 @@ tasks:
   # ===== Duplicate Detection Tasks =====
 
   test-dupe-file:
-    aliases: [df]
+    aliases: [tf]
     desc: Test duplicate file detection
     cmds:
+      - task test-setup
       - go {{.RUNRACE}} dupe {{.FILE}} {{.TEST_DATA}}
+      - task test-cleanup
 
   test-dupe-dir:
-    aliases: [dd]
+    aliases: [td]
     desc: Test duplicate directory detection
     cmds:
+      - task test-setup
       - go {{.RUNRACE}} dupe {{.TEST_DATA}} {{.TEST_DATA}}
+      - task test-cleanup
 
   # ===== Search Tasks =====
 
   test-search:
-    aliases: [s]
+    aliases: [ts]
     desc: Test search functionality
     cmds:
+      - task test-setup
       - go {{.RUNRACE}} search "test" {{.TEST_DATA}}
+      - task test-cleanup
 
   # ===== Setup/Cleanup Tasks =====
 
   test-setup:
-    aliases: [st]
-    desc: Setup test environment
     cmds:
       - mkdir -p {{.TEST_DIR}}
       - cp -r {{.TEST_DATA}}* {{.TEST_DIR}}/
 
   test-cleanup:
-    aliases: [ct]
-    desc: Cleanup test environment
     cmds:
       - rm -rf {{.TEST_DIR}}
 
@@ -128,13 +135,13 @@ tasks:
 
   build:
     aliases: [b]
-    desc: Build the application
+    desc: Build the application using Go
     cmds:
       - go build -o dupers .
 
   build-snapshot:
     aliases: [bs]
-    desc: Create release snapshot
+    desc: Create a release snapshot using GoReleaser
     cmds:
       - goreleaser release --snapshot --clean
 

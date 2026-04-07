@@ -49,7 +49,7 @@ func TestConfig_Remove(t *testing.T) {
 	color.Enable = false
 	c := dupe.Config{Test: true}
 	// remove nothing
-	s, err := c.Remove()
+	s, err := c.DelDupeFiles()
 	be.Err(t, err, nil)
 	ok := strings.Contains(s, "No duplicate files to remove")
 	be.True(t, ok)
@@ -63,7 +63,7 @@ func TestConfig_Remove(t *testing.T) {
 	c.Compare = make(parse.Checksums)
 	c.Compare[sum] = dest
 	// test remove
-	s, err = c.Remove()
+	s, err = c.DelDupeFiles()
 	be.Err(t, err, nil)
 	ok = strings.Contains(s, "removed:")
 	be.True(t, ok)
@@ -72,7 +72,7 @@ func TestConfig_Remove(t *testing.T) {
 func TestConfig_Clean(t *testing.T) {
 	c := dupe.Config{Test: true}
 	var b bytes.Buffer
-	err := c.Clean(&b)
+	err := c.DelEmptyDirs(&b)
 	be.Err(t, err, nil)
 	// copy file
 	dest := copyfile(t, 1)
@@ -84,7 +84,7 @@ func TestConfig_Clean(t *testing.T) {
 	be.Err(t, err, nil)
 	err = os.MkdirAll(filepath.Join(tmp, "config-clean-empty-dir"), mock.PrivateDir)
 	be.Err(t, err, nil)
-	err = c.Clean(&b)
+	err = c.DelEmptyDirs(&b)
 	be.Err(t, err, nil)
 }
 
@@ -168,7 +168,7 @@ func TestRemovers(t *testing.T) {
 	be.Err(t, err, nil)
 	i := mock.SensenTmp(t, path)
 	be.Equal(t, int64(20), i)
-	paths, err := c.Removes()
+	paths, err := c.DelDirsExcept()
 	be.Err(t, err, nil)
 	be.Equal(t, len(paths), 0)
 	removed := mock.RemoveTmp(t, path)

@@ -54,15 +54,15 @@ type Aliases struct {
 // Usage of the command aliases.
 func (a *Aliases) Usage(name string) string {
 	t := reflect.TypeFor[Aliases]()
-	sf, ok := t.FieldByName(name)
+	field, ok := t.FieldByName(name)
 	if !ok {
 		return ""
 	}
-	val, ok := sf.Tag.Lookup("usage")
+	s, ok := field.Tag.Lookup("usage")
 	if !ok {
 		return ""
 	}
-	return val
+	return s
 }
 
 // Define optional aliases for the program and commands flags.
@@ -103,15 +103,15 @@ type Flags struct {
 // Usage of the command flags.
 func (f *Flags) Usage(name string) string {
 	t := reflect.TypeFor[Flags]()
-	sf, ok := t.FieldByName(name)
+	field, ok := t.FieldByName(name)
 	if !ok {
 		return ""
 	}
-	val, ok := sf.Tag.Lookup("usage")
+	s, ok := field.Tag.Lookup("usage")
 	if !ok {
 		return ""
 	}
-	return val
+	return s
 }
 
 // Define options for the program and commands.
@@ -174,8 +174,8 @@ func (f *Flags) Aliases(a *Aliases, c *dupe.Config) *dupe.Config {
 
 func (f *Flags) aliases() {
 	// handle misuse when a global flag is passed as an argument
-	for _, arg := range flag.Args() {
-		switch strings.ToLower(arg) {
+	for _, s := range flag.Args() {
+		switch strings.ToLower(s) {
 		case "-d", "-debug", "--debug":
 			*f.Debug = true
 		case "-m", "-mono", "--mono":
@@ -249,13 +249,13 @@ func createWindowsDirError() error {
 // Home returns the user home directory.
 // If that fails it returns the current working directory.
 func Home() string {
-	h, err := os.UserHomeDir()
+	dir, err := os.UserHomeDir()
 	if err != nil {
-		if h, err = os.Getwd(); err != nil {
+		if dir, err = os.Getwd(); err != nil {
 			printer.StderrCR(err)
 		}
 	}
-	return h
+	return dir
 }
 
 // Self returns the path to the dupers executable file.

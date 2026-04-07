@@ -161,16 +161,16 @@ func Dupe(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
 		return err
 	}
 
-	const minReq, source = 3, 1
-	const minArgs = source + 1
-	l := len(args)
+	const source = 1
+	const expected = source + 1
+	count := len(args)
 	switch {
-	case l == 1:
-		duplicate.Check(l, 0, minArgs)
+	case count == 1:
+		duplicate.Check(expected, args...)
 		return ErrToFewArgs
-	case l < minArgs:
+	case count < expected:
 		if len(b) == 0 {
-			duplicate.Check(l, 0, minArgs)
+			duplicate.Check(expected, args...)
 			return ErrEmptyDB
 		}
 		return ErrArgs
@@ -178,10 +178,11 @@ func Dupe(db *bolt.DB, c *dupe.Config, f *cmd.Flags, args ...string) error {
 	if len(args) < source {
 		return ErrArgs
 	}
-	if err := c.SetSource(args[source]); err != nil {
+	path := args[source]
+	if err := c.SetSource(path); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			printer.StderrCR(os.ErrNotExist)
-			printf(os.Stdout, "File or directory path: %s\n", args[source])
+			printf(os.Stdout, "File or directory path: %s\n", path)
 			printer.Example("\ndupers dupe <file or directory> [buckets to lookup]")
 		}
 		return err
@@ -209,11 +210,12 @@ func SetStat(db *bolt.DB, c *dupe.Config, args ...string) error {
 		if err := c.SetAllBuckets(db); err != nil {
 			return err
 		}
-		c.Debugger("use all buckets: " + c.BucketS())
+		c.Debugger("use all buckets: " + c.BucketsStr())
 		return nil
 	}
 	if err := c.SetBuckets(buckets...); err != nil {
 		var pathError *fs.PathError
+		// TODO: simplification
 		if errors.As(err, &pathError) {
 			printer.StderrCR(bberr.ErrBucketNotFound)
 			printf(os.Stdout, "Bucket: %s\n", pathError.Path)
@@ -230,7 +232,7 @@ func SetStat(db *bolt.DB, c *dupe.Config, args ...string) error {
 		}
 		return err
 	}
-	c.Debugger("use buckets: " + c.BucketS())
+	c.Debugger("use buckets: " + c.BucketsStr())
 	return nil
 }
 
@@ -347,17 +349,17 @@ func Search(db *bolt.DB, f *cmd.Flags, test bool, args ...string) error {
 	if l > minArgs {
 		buckets = args[minArgs:]
 	}
-	m, err := search.Compare(db, f, term, buckets)
+	matches, err := search.Compare(db, f, term, buckets)
 	if err != nil {
 		return err
 	}
-	printr(os.Stdout, dupe.Print(*f.Quiet, *f.Exact, term, m))
+	printr(os.Stdout, dupe.Print(*f.Quiet, *f.Exact, term, matches))
 	if !*f.Quiet {
-		l := 0
-		if m != nil {
-			l = len(*m)
+		total := 0
+		if matches != nil {
+			total = len(*matches)
 		}
-		printl(os.Stdout, cmd.SearchSummary(l, term, *f.Exact, *f.Filename))
+		printl(os.Stdout, cmd.SearchSummary(total, term, *f.Exact, *f.Filename))
 	}
 	return nil
 }
@@ -447,7 +449,7 @@ func StatSource(c *dupe.Config) error {
 	printl(w)
 	printf(w, "%s to lookup, for finding duplicates:", verb)
 	printl(w)
-	printf(w, " %s ", c.BucketS())
+	printf(w, " %s ", c.BucketsStr())
 	if verses == 0 {
 		printf(w, "(%s)", color.Danger.Sprintf("%s files", p.Sprint(verses)))
 		printl(w)
@@ -466,7 +468,7 @@ func StatSource(c *dupe.Config) error {
 
 func dirPrompt(w io.Writer, c *dupe.Config) error {
 	printl(w, "About to scan and save this directory to the database:")
-	printf(w, " %s", c.BucketS())
+	printf(w, " %s", c.BucketsStr())
 	printl(w)
 	printl(w)
 	if !printer.AskYN("Is this what you want (no will exit)", c.Yes, printer.Yes) {

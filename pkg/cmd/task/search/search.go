@@ -28,8 +28,9 @@ func printl(w io.Writer, a ...any) {
 }
 
 // CmdErr parses the arguments of the search command.
-func CmdErr(lenArgs int, test bool) error {
-	if lenArgs > 1 {
+// Args int should be the number of arguments.
+func CmdErr(args int, test bool) error {
+	if args > 1 {
 		return nil
 	}
 	w := os.Stderr

@@ -128,14 +128,14 @@ func Bucket(t *testing.T, i int) (string, error) {
 		return "", ErrBucket
 	}
 	path := filepath.Join(RootDir(t), test, name)
-	f, err := filepath.Abs(path)
+	abs, err := filepath.Abs(path)
 	if err != nil {
 		t.Errorf("%s: %e", msg, err)
 	}
 	if runtime.GOOS == win {
-		f = strings.ToLower(f)
+		abs = strings.ToLower(abs)
 	}
-	return f, nil
+	return abs, nil
 }
 
 // Export returns the absolute path of export csv file for a bucket.
@@ -147,11 +147,11 @@ func Export(t *testing.T, i int) string {
 	}
 	name := fmt.Sprintf("export-bucket%d.csv", i)
 	path := filepath.Join(RootDir(t), test, name)
-	f, err := filepath.Abs(path)
+	abs, err := filepath.Abs(path)
 	if err != nil {
 		t.Errorf("%s: %s", msg, ErrItem)
 	}
-	return f
+	return abs
 }
 
 // Item returns the absolute path of test source file item.
@@ -184,11 +184,11 @@ func Extension(t *testing.T, ext string) string {
 		return ""
 	}
 	path := filepath.Join(RootDir(t), test, elem)
-	f, err := filepath.Abs(path)
+	abs, err := filepath.Abs(path)
 	if err != nil {
 		t.Errorf("%s: %s", msg, err)
 	}
-	return f
+	return abs
 }
 
 // NamedDB returns the absolute path of a mock Bolt database with a randomly generated filename.
@@ -224,29 +224,29 @@ func Create(t *testing.T) string {
 	defer func() { _ = db.Close() }()
 	err = db.Update(func(tx *bolt.Tx) error {
 		// delete any existing buckets from the mock database
-		if err := tx.ForEach(func(name []byte, b *bolt.Bucket) error {
+		if err := tx.ForEach(func(name []byte, bucket *bolt.Bucket) error {
 			return tx.DeleteBucket(name)
 		}); err != nil {
 			return err
 		}
 		// create the new mock bucket #1
-		bucket1, err := Bucket(t, 1)
+		b1, err := Bucket(t, 1)
 		if err != nil {
 			return err
 		}
-		b, err := tx.CreateBucket([]byte(bucket1))
+		b, err := tx.CreateBucket([]byte(b1))
 		if err != nil {
-			return fmt.Errorf("%w: create bucket: %s", err, bucket1)
+			return fmt.Errorf("%w: create bucket: %s", err, b1)
 		}
 		// create the new, but empty mock bucket #2
 		const item = 2
-		bucket2, err := Bucket(t, item)
+		b2, err := Bucket(t, item)
 		if err != nil {
 			return err
 		}
-		_, err = tx.CreateBucket([]byte(bucket2))
+		_, err = tx.CreateBucket([]byte(b2))
 		if err != nil {
-			return fmt.Errorf("%w: create bucket: %s", err, bucket1)
+			return fmt.Errorf("%w: create bucket: %s", err, b1)
 		}
 		for i := range sources() {
 			item := Item(t, i)
@@ -269,19 +269,19 @@ func Create(t *testing.T) string {
 // Read the named file and return its SHA256 checksum.
 func read(name string) ([32]byte, error) {
 	name = filepath.Clean(name)
-	f, err := os.Open(name)
+	src, err := os.Open(name)
 	if err != nil {
 		return [32]byte{}, err
 	}
 	defer func() {
-		_ = f.Close()
+		_ = src.Close()
 	}()
 	buf := make([]byte, oneMb)
-	h := sha256.New()
-	if _, err := io.CopyBuffer(h, f, buf); err != nil {
+	dst := sha256.New()
+	if _, err := io.CopyBuffer(dst, src, buf); err != nil {
 		return [32]byte{}, err
 	}
-	return [32]byte(h.Sum(nil)), nil
+	return [32]byte(dst.Sum(nil)), nil
 }
 
 // Open the mock database.
@@ -302,27 +302,27 @@ func MirrorData(t *testing.T) string {
 	const msg = "mock mirror temporary testdata"
 	const dirAllAccess fs.FileMode = 0o777
 	src := filepath.Join(RootDir(t), test)
-	from, err := filepath.Abs(src)
+	root, err := filepath.Abs(src)
 	if err != nil {
 		t.Errorf("%s: %s", msg, err)
 	}
 	tmpDir := t.TempDir()
-	err = filepath.WalkDir(from, func(path string, d fs.DirEntry, err error) error {
-		if path == from {
+	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if path == root {
 			return nil
 		}
-		dest := filepath.Join(tmpDir, strings.Replace(path, from, "", 1))
+		dest := filepath.Join(tmpDir, strings.Replace(path, root, "", 1))
 		if d.IsDir() {
-			if errM := os.MkdirAll(dest, dirAllAccess); errM != nil {
-				log.Println(errM)
+			if err1 := os.MkdirAll(dest, dirAllAccess); err1 != nil {
+				log.Println(err1)
 			}
 			return nil
 		}
 		if !d.Type().IsRegular() {
 			return nil
 		}
-		if _, errC := database.CopyFile(path, dest); errC != nil {
-			log.Println(errC)
+		if _, err2 := database.CopyFile(path, dest); err2 != nil {
+			log.Println(err2)
 		}
 		return nil
 	})
@@ -333,11 +333,11 @@ func MirrorData(t *testing.T) string {
 }
 
 // RemoveTmp deletes the hidden tmp mock directory and returns the number of files deleted.
-func RemoveTmp(t *testing.T, path string) int {
+func RemoveTmp(t *testing.T, root string) int {
 	t.Helper()
 	const msg = "mock remove temporary path"
 	count := 0
-	err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() {
 			return nil
 		}
@@ -347,7 +347,7 @@ func RemoveTmp(t *testing.T, path string) int {
 	if err != nil {
 		t.Errorf("%s %s", msg, err)
 	}
-	err = os.RemoveAll(path)
+	err = os.RemoveAll(root)
 	if err != nil {
 		t.Errorf("%s %s", msg, err)
 	}
@@ -373,8 +373,8 @@ func SensenTmp(t *testing.T, path string) int64 {
 			dest = name
 		}
 	}
-	item := Item(t, 1)
-	i, err := database.CopyFile(item, filepath.Join(dest, "some-pretend-windows-app.exe"))
+	name := Item(t, 1)
+	i, err := database.CopyFile(name, filepath.Join(dest, "some-pretend-windows-app.exe"))
 	if err != nil {
 		t.Errorf("%s: %s", msg, err)
 	}

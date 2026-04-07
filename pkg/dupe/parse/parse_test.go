@@ -137,7 +137,7 @@ func Test_SetBucket(t *testing.T) {
 	count = len(s.Buckets)
 	expected = 2
 	be.Equal(t, expected, count)
-	b := s.BucketS()
+	b := s.BucketsStr()
 	ok := strings.Contains(b, "bucket1")
 	be.True(t, ok)
 	ok = strings.Contains(b, "bucket2")

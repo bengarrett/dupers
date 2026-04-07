@@ -87,13 +87,12 @@ func TestDupeDeleteCommand(t *testing.T) {
 	// c.Compare[sum3] = filepath.Join(tempDir, "file3.txt") // Commented out intentionally
 
 	// Set up flags for delete operation
+	y, n := true, false
 	f := &cmd.Flags{}
-	deleteFlag := true
-	f.Rm = &deleteFlag
-	noFlag := false
-	f.RmPlus = &noFlag
-	f.Sensen = &noFlag
-	f.Yes = &noFlag
+	f.Rm = &y
+	f.RmPlus = &n
+	f.Sensen = &n
+	f.Yes = &n
 
 	// Test cleanup function which handles the delete operation
 	err = duplicate.Cleanup(c, f)

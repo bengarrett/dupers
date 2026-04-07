@@ -18,7 +18,7 @@ var (
 	ErrNotFound          = errors.New("archive not found in cache")
 )
 
-// FormatCache caches format identification results to avoid repeated work.
+// FormatCache caches format identification results.
 type FormatCache struct {
 	Mu    sync.RWMutex
 	Cache map[string]archives.Format
@@ -54,8 +54,8 @@ func (fc *FormatCache) GetFormat(ctx context.Context, filename string) (archives
 	return format, nil
 }
 
-// ClearCache clears the format cache.
-func (fc *FormatCache) ClearCache() {
+// Clear clears the format cache.
+func (fc *FormatCache) Clear() {
 	fc.Mu.Lock()
 	fc.Cache = make(map[string]archives.Format)
 	fc.Mu.Unlock()

@@ -44,23 +44,23 @@ func Extension(find string) string {
 		return ""
 	}
 
-	lfind := strings.ToLower(find)
+	s := strings.ToLower(find)
 
 	// Direct map lookup for extensions (deterministic)
-	if ext, ok := extensionToMIME[lfind]; ok {
+	if ext, ok := extensionToMIME[s]; ok {
 		return ext
 	}
 
 	// Check for extension without dot prefix (e.g., "zip" -> ".zip")
 	if !strings.HasPrefix(find, ".") {
-		if _, ok := extensionToMIME["."+lfind]; ok {
+		if _, ok := extensionToMIME["."+s]; ok {
 			// For filename without dot prefix, return the extension itself, not the MIME type
-			return "." + lfind
+			return "." + s
 		}
 	}
 
 	// Direct map lookup for MIME types (deterministic) - lowest priority
-	if ext, ok := mimeToExtension[lfind]; ok {
+	if ext, ok := mimeToExtension[s]; ok {
 		return ext
 	}
 
