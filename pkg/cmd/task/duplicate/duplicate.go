@@ -96,7 +96,6 @@ func runSensen(w io.Writer, c *dupe.Config) error {
 		return err
 	}
 	_, _ = fmt.Fprint(w, s)
-	// deleted, err := c.Removes()
 	deleted, err := c.DelDirsExcept()
 	if err != nil {
 		return err
@@ -104,7 +103,6 @@ func runSensen(w io.Writer, c *dupe.Config) error {
 	for _, path := range deleted {
 		dupe.PrintRM(path, ErrNoRM)
 	}
-	// if err := c.Clean(w); err != nil {
 	if err := c.DelEmptyDirs(w); err != nil {
 		return err
 	}

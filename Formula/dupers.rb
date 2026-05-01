@@ -4,7 +4,7 @@ class Dupers < Formula
   url "https://github.com/bengarrett/dupers/archive/refs/tags/v1.2.1.tar.gz"
   sha256 "fc43baff8da1a03d7ab93465168d3177fe4034dd9ce5a40ddfde75631c6d2624"
   license "LGPL-3.0"
-  version "1.2.1"
+  version "1.2.2"
   head "https://github.com/bengarrett/dupers.git", branch: "main"
 
   depends_on "go" => :build

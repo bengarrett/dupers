@@ -164,24 +164,23 @@ func (c *Config) Clean(w io.Writer) error {
 // DelEmptyDirs removes all empty directories from c.Source.
 // Directories containing hidden system directories or files are not considered empty.
 func (c *Config) DelEmptyDirs(w io.Writer) error {
+	// checked against: https://github.com/bengarrett/dupers/blob/v1.1.0/pkg/dupe/dupe.go#L247
 	c.Debugger("remove all empty directories.")
-	pathname := c.GetSource()
-	if pathname == "" {
+	path := c.GetSource()
+	if path == "" {
 		return nil
 	}
 	var count int
-	if err := godirwalk.Walk(pathname, &godirwalk.Options{
+	if err := godirwalk.Walk(path, &godirwalk.Options{
 		Unsorted: true,
 		Callback: func(_ string, _ *godirwalk.Dirent) error {
 			return nil
 		},
-		PostChildrenCallback: func(osDirname string, _ *godirwalk.Dirent) error {
-			s, err := godirwalk.NewScanner(osDirname)
+		PostChildrenCallback: func(osPathname string, _ *godirwalk.Dirent) error {
+			s, err := godirwalk.NewScanner(osPathname)
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(os.Stderr, "->>", osDirname)
-			// panic("") // TODO: DEBUG && REMOVE
 			// Attempt to read only the first directory entry.
 			hasAtLeastOneChild := s.Scan()
 			// If error reading from directory, wrap up and return.
@@ -191,18 +190,14 @@ func (c *Config) DelEmptyDirs(w io.Writer) error {
 			if hasAtLeastOneChild {
 				return nil
 			}
-			if osDirname == pathname {
-				fmt.Fprintln(os.Stderr, pathname, ">>>>", osDirname, ">>>>", len(pathname))
-				if strings.Contains(pathname, "emptyDir") {
-					panic(pathname)
-				}
+			if osPathname == path {
 				return nil
 			}
 			count++
-			err = os.Remove(osDirname)
-			if err != nil {
+			if err := os.Remove(osPathname); err != nil {
 				return err
 			}
+			// everything okay
 			count++
 			return nil
 		},
@@ -213,7 +208,7 @@ func (c *Config) DelEmptyDirs(w io.Writer) error {
 		printl(w, "No empty directories required removal.")
 		return nil
 	}
-	printf(w, "Removed %d empty directories in: '%s'\n", count, pathname)
+	printf(w, "Removed %d empty directories in: '%s'\n", count, path)
 	return nil
 }
 
@@ -278,6 +273,7 @@ func (c *Config) Remove() (string, error) {
 
 // DelDupeFiles duplicate files from the source directory.
 func (c *Config) DelDupeFiles() (string, error) {
+	// checked against: https://github.com/bengarrett/dupers/blob/v1.1.0/pkg/dupe/dupe.go#L364
 	c.Debugger("remove all duplicate files.")
 	w := new(bytes.Buffer)
 	if len(c.Sources) == 0 || len(c.Compare) == 0 {
@@ -316,6 +312,7 @@ func (c *Config) Removes() ([]string, error) {
 // DelDirsExcept the directories from the source that do not contain unique MS-DOS or Windows programs.
 // The strings contains the path of any non-deletable files.
 func (c *Config) DelDirsExcept() ([]string, error) {
+	// checked against: https://github.com/bengarrett/dupers/blob/v1.1.0/pkg/dupe/dupe.go#L397
 	c.Debugger("removes directories that don't contain any DOS or Windows apps.")
 	name := c.GetSource()
 	_, err := os.Stat(name)
@@ -347,12 +344,15 @@ func (c *Config) DelDirsExcept() ([]string, error) {
 // delDirsExcept directories that do not contain MS-DOS or Windows programs.
 // The strings contains the path of any undeletable files.
 func delDirsExcept(w io.Writer, name string, dirEntries []fs.DirEntry) ([]string, error) {
+	// checked against: https://github.com/bengarrett/dupers/blob/v1.1.0/pkg/dupe/dupe.go#L427
 	s := []string{}
 	for _, entry := range dirEntries {
+		path := filepath.Join(name, entry.Name())
 		if !entry.IsDir() {
+			err := os.Remove(path)
+			printl(w, PrintRM(path, err))
 			continue
 		}
-		path := filepath.Join(name, entry.Name())
 		foundExe, err := parse.Executable(path)
 		if err != nil {
 			printer.StderrCR(err)
@@ -917,6 +917,7 @@ func (c *Config) init(db *bolt.DB) error {
 
 // lookup the checksum value in c.compare and return the file path.
 func (c *Config) lookupOne(sum parse.Checksum) string {
+	// checked against: https://github.com/bengarrett/dupers/blob/v1.1.0/pkg/dupe/dupe.go#L674
 	if len(c.Compare) == 0 {
 		c.Compare = make(parse.Checksums)
 	}

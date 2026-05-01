@@ -2,7 +2,7 @@
 #
 # Clean, simplified Taskfile for dupers
 # Focuses on essential development and testing workflows
-version: "3"
+version: '3'
 
 vars:
   FILE: ./testdata/files_to_check/qziD6WMRvPyk
@@ -29,12 +29,13 @@ tasks:
     desc: Format and lint code
     cmds:
       - gci write ./..
+      - go fix ./...
       - gofumpt -w .
       - golangci-lint run
 
   nil:
     aliases: [n]
-    desc: "Run the static analysis techniques to catch Nil dereferences."
+    desc: 'Run the static analysis techniques to catch Nil dereferences.'
     cmds:
       - go tool nilaway -test=false ./...
 
