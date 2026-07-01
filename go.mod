@@ -13,10 +13,10 @@ require (
 	github.com/h2non/filetype v1.1.3
 	github.com/karrick/godirwalk v1.17.0
 	github.com/ulikunitz/xz v0.5.15 // indirect
-	go.etcd.io/bbolt v1.4.3
+	go.etcd.io/bbolt v1.5.0
 	go4.org v0.0.0-20260112195520-a5071408f32f // indirect
-	golang.org/x/sys v0.43.0 // indirect
-	golang.org/x/text v0.37.0
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/text v0.38.0
 )
 
 require (
@@ -42,9 +42,9 @@ require (
 	github.com/stangelandcl/ppmd v0.1.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.uber.org/nilaway v0.0.0-20250805202745-8ad05f089790 // indirect
-	golang.org/x/mod v0.35.0 // indirect
-	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/tools v0.44.0 // indirect
+	golang.org/x/mod v0.36.0 // indirect
+	golang.org/x/sync v0.21.0 // indirect
+	golang.org/x/tools v0.45.0 // indirect
 )
 
 tool go.uber.org/nilaway/cmd/nilaway
