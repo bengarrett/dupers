@@ -48,7 +48,8 @@ func printf(w io.Writer, format string, a ...any) {
 	_, _ = fmt.Fprintf(w, format, a...)
 }
 
-func tasks(selection string, c *dupe.Config, f cmd.Flags) error {
+func tasks(selection string, c *dupe.Config, f cmd.Flags) (err error) {
+	const format = "database task error: %w"
 	switch selection {
 	case task.Dupe_:
 		db, err := database.OpenWrite()
@@ -56,7 +57,9 @@ func tasks(selection string, c *dupe.Config, f cmd.Flags) error {
 			return err
 		}
 		defer func() {
-			_ = db.Close()
+			if cErr := db.Close(); err != nil {
+				err = errors.Join(err, fmt.Errorf(format, cErr))
+			}
 		}()
 		return task.Dupe(db, c, &f, flag.Args()...)
 	case task.Search_:
@@ -65,7 +68,9 @@ func tasks(selection string, c *dupe.Config, f cmd.Flags) error {
 			return err
 		}
 		defer func() {
-			_ = db.Close()
+			if cErr := db.Close(); cErr != nil {
+				err = errors.Join(err, fmt.Errorf(format, cErr))
+			}
 		}()
 		return task.Search(db, &f, false, flag.Args()...)
 	case
@@ -78,7 +83,9 @@ func tasks(selection string, c *dupe.Config, f cmd.Flags) error {
 			return err
 		}
 		defer func() {
-			_ = db.Close()
+			if cErr := db.Close(); cErr != nil {
+				err = errors.Join(err, fmt.Errorf(format, cErr))
+			}
 		}()
 		return task.Database(db, c, flag.Args()...)
 	case
@@ -93,7 +100,9 @@ func tasks(selection string, c *dupe.Config, f cmd.Flags) error {
 			return err
 		}
 		defer func() {
-			_ = db.Close()
+			if cErr := db.Close(); err != nil {
+				err = errors.Join(err, fmt.Errorf(format, cErr))
+			}
 		}()
 		return task.Database(db, c, flag.Args()...)
 	default:
@@ -103,6 +112,7 @@ func tasks(selection string, c *dupe.Config, f cmd.Flags) error {
 }
 
 func main() {
+	const ok, bad = 0, 1
 	alias, cfg, flg := cmd.Aliases{}, dupe.Config{}, cmd.Flags{}
 	cfg.SetTimer()
 	flg.Define()
@@ -123,7 +133,7 @@ func main() {
 	}
 	if help != "" {
 		_, _ = fmt.Fprint(os.Stdout, help)
-		os.Exit(0)
+		os.Exit(ok)
 	}
 
 	if err := task.Directories(); err != nil {
@@ -134,10 +144,10 @@ func main() {
 	cfg.Debugger("command selection: " + selection)
 	if err := tasks(selection, &cfg, flg); err != nil {
 		if errors.Is(err, database.ErrNotFound) {
-			os.Exit(0)
+			os.Exit(ok)
 		}
 		if errors.Is(err, database.ErrZeroByte) {
-			os.Exit(1)
+			os.Exit(bad)
 		}
 		cfg.Debugger("error details: " + fmt.Sprintf("%+V", err))
 		printer.ErrFatal(err)

@@ -6,17 +6,17 @@ module github.com/bengarrett/dupers
 go 1.26.2
 
 require (
-	github.com/bodgit/sevenzip v1.6.4
+	github.com/bodgit/sevenzip v1.6.5
 	github.com/dsnet/compress v0.0.2-0.20230904184137-39efe44ab707 // indirect
 	github.com/dustin/go-humanize v1.0.1
 	github.com/gookit/color v1.6.1
 	github.com/h2non/filetype v1.1.3
 	github.com/karrick/godirwalk v1.17.0
-	github.com/ulikunitz/xz v0.5.15 // indirect
+	github.com/ulikunitz/xz v0.5.16 // indirect
 	go.etcd.io/bbolt v1.5.0
 	go4.org v0.0.0-20260112195520-a5071408f32f // indirect
-	golang.org/x/sys v0.45.0 // indirect
-	golang.org/x/text v0.38.0
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/text v0.40.0
 )
 
 require (
@@ -27,24 +27,24 @@ require (
 
 require (
 	github.com/STARRY-S/zip v0.2.3 // indirect
-	github.com/andybalholm/brotli v1.2.1 // indirect
+	github.com/andybalholm/brotli v1.2.2 // indirect
 	github.com/bodgit/plumbing v1.3.0 // indirect
 	github.com/bodgit/windows v1.0.1 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
-	github.com/klauspost/compress v1.18.6 // indirect
+	github.com/klauspost/compress v1.19.2 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/mikelolasagasti/xz v1.0.1 // indirect
-	github.com/minio/minlz v1.1.1 // indirect
-	github.com/nwaples/rardecode/v2 v2.2.2 // indirect
-	github.com/pierrec/lz4/v4 v4.1.26 // indirect
+	github.com/minio/minlz v1.2.0 // indirect
+	github.com/nwaples/rardecode/v2 v2.3.0 // indirect
+	github.com/pierrec/lz4/v4 v4.1.28 // indirect
 	github.com/sorairolake/lzip-go v0.3.8 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
-	github.com/stangelandcl/ppmd v0.1.0 // indirect
+	github.com/stangelandcl/ppmd v0.1.1 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.uber.org/nilaway v0.0.0-20250805202745-8ad05f089790 // indirect
-	golang.org/x/mod v0.36.0 // indirect
-	golang.org/x/sync v0.21.0 // indirect
-	golang.org/x/tools v0.45.0 // indirect
+	golang.org/x/mod v0.37.0 // indirect
+	golang.org/x/sync v0.22.0 // indirect
+	golang.org/x/tools v0.47.0 // indirect
 )
 
 tool go.uber.org/nilaway/cmd/nilaway

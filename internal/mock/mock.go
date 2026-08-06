@@ -131,7 +131,8 @@ func Export(t *testing.T, i int) string {
 	if i >= len(sources()) || i < 0 {
 		t.Errorf("%s: %s", msg, ErrItem)
 	}
-	name := fmt.Sprintf("export-bucket%d.csv", i)
+	const format = "export-bucket%d.csv"
+	name := fmt.Sprintf(format, i)
 	path := filepath.Join(RootDir(t), test, name)
 	abs, err := filepath.Abs(path)
 	if err != nil {
@@ -188,7 +189,8 @@ func NamedDB(t *testing.T) string {
 	}
 	f, err := os.CreateTemp(path, filename)
 	if err != nil {
-		t.Errorf("%s create temp using %q: %s", msg, filename, err)
+		const format = "%s create temp using %q: %s"
+		t.Errorf(format, msg, filename, err)
 	}
 	defer func() {
 		_ = f.Close()
@@ -202,6 +204,7 @@ func NamedDB(t *testing.T) string {
 func Create(t *testing.T) string {
 	t.Helper()
 	const msg = "mock database creation"
+	const format = "%w: create bucket: %s"
 	path := NamedDB(t)
 	db, err := bolt.Open(path, PrivateFile, nil)
 	if err != nil {
@@ -222,7 +225,7 @@ func Create(t *testing.T) string {
 		}
 		b, err := tx.CreateBucket([]byte(b1))
 		if err != nil {
-			return fmt.Errorf("%w: create bucket: %s", err, b1)
+			return fmt.Errorf(format, err, b1)
 		}
 		// create the new, but empty mock bucket #2
 		const item = 2
@@ -232,7 +235,7 @@ func Create(t *testing.T) string {
 		}
 		_, err = tx.CreateBucket([]byte(b2))
 		if err != nil {
-			return fmt.Errorf("%w: create bucket: %s", err, b1)
+			return fmt.Errorf(format, err, b1)
 		}
 		for i := range sources() {
 			item := Item(t, i)
@@ -274,10 +277,10 @@ func read(name string) ([32]byte, error) {
 // This will need to be closed after use.
 func Open(t *testing.T, path string) (*bolt.DB, string) {
 	t.Helper()
-	const msg = "mock open database"
+	const format = "mock open database: %s"
 	db, err := bolt.Open(path, PrivateFile, nil)
 	if err != nil {
-		t.Errorf("%s: %s", msg, err)
+		t.Errorf(format, err)
 	}
 	return db, path
 }
@@ -285,12 +288,12 @@ func Open(t *testing.T, path string) (*bolt.DB, string) {
 // Mirror recursively copies the directory content of src into the hidden tmp mock directory.
 func Mirror(t *testing.T) string {
 	t.Helper()
-	const msg = "mock mirror temporary testdata"
+	const format = "mock mirror temporary testdata: %s"
 	const dirAllAccess fs.FileMode = 0o777
 	src := filepath.Join(RootDir(t), test)
 	root, err := filepath.Abs(src)
 	if err != nil {
-		t.Errorf("%s: %s", msg, err)
+		t.Errorf(format, err)
 	}
 	tmpDir := t.TempDir()
 	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
@@ -313,7 +316,7 @@ func Mirror(t *testing.T) string {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("%s: %s", msg, err)
+		t.Errorf(format, err)
 	}
 	return tmpDir
 }
@@ -321,7 +324,7 @@ func Mirror(t *testing.T) string {
 // RemoveTmp deletes the hidden tmp mock directory and returns the number of files deleted.
 func RemoveTmp(t *testing.T, root string) int {
 	t.Helper()
-	const msg = "mock remove temporary path"
+	const format = "mock remove temporary path: %s"
 	count := 0
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() {
@@ -331,11 +334,11 @@ func RemoveTmp(t *testing.T, root string) int {
 		return nil
 	})
 	if err != nil {
-		t.Errorf("%s %s", msg, err)
+		t.Errorf(format, err)
 	}
 	err = os.RemoveAll(root)
 	if err != nil {
-		t.Errorf("%s %s", msg, err)
+		t.Errorf(format, err)
 	}
 	return count
 }
@@ -345,24 +348,26 @@ func RemoveTmp(t *testing.T, root string) int {
 // The returned int is the number of bytes copied.
 func SensenTmp(t *testing.T, path string) int64 {
 	t.Helper()
-	const msg = "mock sensen temporary"
+	const format = "mock sensen temporary: %s"
 	const expected = 16
 	n := 0
 	dest := ""
 	for n < 25 {
 		n++
-		name := filepath.Join(path, fmt.Sprintf("mock-dir-%d", n))
+		const format = "mock-dir-%d"
+		name := filepath.Join(path, fmt.Sprintf(format, n))
 		if err := os.MkdirAll(name, PrivateDir); err != nil {
-			t.Errorf("%s: %s", msg, err)
+			t.Errorf(format, err)
 		}
 		if n == expected {
 			dest = name
 		}
 	}
 	name := Item(t, 1)
-	i, err := database.CopyFile(name, filepath.Join(dest, "some-pretend-windows-app.exe"))
+	dest = filepath.Join(dest, "some-pretend-windows-app.exe")
+	i, err := database.CopyFile(name, dest)
 	if err != nil {
-		t.Errorf("%s: %s", msg, err)
+		t.Errorf(format, err)
 	}
 	return i
 }
@@ -370,9 +375,9 @@ func SensenTmp(t *testing.T, path string) int64 {
 // Sum compares b against the expected SHA-256 binary checksum of the test source file item.
 func Sum(t *testing.T, item int, b [32]byte) bool {
 	t.Helper()
-	const msg = "mock sum sha-256 checksum"
+	const format = "mock sum sha-256 checksum %d: %s"
 	if item >= len(checksums()) || item < 0 {
-		t.Errorf("%s %d: %s", msg, item, ErrItem)
+		t.Errorf(format, item, ErrItem)
 	}
 	if checksums()[item] == hex.EncodeToString(b[:]) {
 		return true
@@ -383,9 +388,9 @@ func Sum(t *testing.T, item int, b [32]byte) bool {
 // ItemSum returns the SHA-256 binary checksum of the test source file item.
 func ItemSum(t *testing.T, item int) string {
 	t.Helper()
-	const msg = "mock item sha-256 checksum"
+	const format = "mock item sha-256 checksum %d: %s"
 	if item >= len(checksums()) || item < 0 {
-		t.Errorf("%s %d: %s", msg, item, ErrItem)
+		t.Errorf(format, item, ErrItem)
 	}
 	return checksums()[item]
 }

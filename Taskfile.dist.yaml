@@ -28,7 +28,8 @@ tasks:
     aliases: [l]
     desc: Format and lint code
     cmds:
-      - gci write ./..
+      - cmd: gci write ./..
+        platforms: [linux]
       - go fix ./...
       - gofumpt -w .
       - golangci-lint run

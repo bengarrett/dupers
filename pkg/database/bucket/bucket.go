@@ -62,14 +62,14 @@ func (c *Cleaner) Clean(db *bolt.DB) (int, int, int, error) {
 		if err := bucket.ForEach(func(k, v []byte) error {
 			c.Items++
 			printStat(c.Debug, c.Quiet, c.Items, c.Total, k)
-			if _, errS := os.Stat(string(k)); errS != nil {
+			if _, sErr := os.Stat(string(k)); sErr != nil {
 				f := string(k)
 				if st, err2 := os.Stat(filepath.Dir(f)); err2 == nil {
 					if !st.IsDir() && st.Size() > 0 {
 						return nil
 					}
 				}
-				printer.Debug(c.Debug, fmt.Sprintf("%s: %s", k, errS))
+				printer.Debug(c.Debug, fmt.Sprintf("%s: %s", k, sErr))
 				if errUp := db.Update(func(tx *bolt.Tx) error {
 					return tx.Bucket([]byte(c.Name)).Delete(k)
 				}); errUp != nil {

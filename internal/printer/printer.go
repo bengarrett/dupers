@@ -208,7 +208,8 @@ func AskYN(question string, alwaysYes bool, recommend YN) bool {
 
 	w := os.Stdout
 	prompt, suffix := recommend.Define()
-	ask := fmt.Sprintf("\r%s? [%s]%s: ", question, prompt, suffix)
+	const format = "\r%s? [%s]%s: "
+	ask := fmt.Sprintf(format, question, prompt, suffix)
 	printf(w, "%s", ask)
 	if alwaysYes {
 		printl(w, yes)
@@ -229,12 +230,13 @@ func AskYN(question string, alwaysYes bool, recommend YN) bool {
 		}
 
 		if b == EnterKey() {
+			const format = "%s%s%s\n"
 			switch recommend {
 			case Yes:
-				printf(w, "%s%s%s\n", CursorUp, ask, "y")
+				printf(w, format, CursorUp, ask, "y")
 				return true
 			case No:
-				printf(w, "%s%s%s\n", CursorUp, ask, "n")
+				printf(w, format, CursorUp, ask, "n")
 				return false
 			case Nil:
 				continue
@@ -264,7 +266,8 @@ func (y YN) Define() (string, string) {
 // The prompt will loop until Enter key or Ctrl-C are pressed.
 func Prompt(question string) string {
 	r := bufio.NewReader(os.Stdin)
-	printf(os.Stdout, "\r%s?: ", question)
+	const format = "\r%s?: "
+	printf(os.Stdout, format, question)
 	for {
 		s, err := r.ReadString(EnterKey())
 		if err != nil {

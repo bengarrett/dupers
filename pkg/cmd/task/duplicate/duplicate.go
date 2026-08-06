@@ -115,21 +115,23 @@ func Check(expected int, args ...string) {
 	w := os.Stdout
 	if count < expected {
 		printer.StderrCR(ErrNoArgs)
+		const cmd = "\ndupers dupe <directory or file to check> [buckets to lookup]"
 		printl(w, "\nThe dupe command requires a directory or file to check.")
 		if runtime.GOOS == winOS {
 			printl(w, "The optional bucket can be one or more directories or drive letters.")
-		} else {
-			printl(w, "The optional bucket can be one or more directory paths.")
+			printer.Example(cmd)
+			return
 		}
-		printer.Example("\ndupers dupe <directory or file to check> [buckets to lookup]")
+		printl(w, "The optional bucket can be one or more directory paths.")
+		printer.Example(cmd)
 	}
 	if count == expected {
 		printl(w, color.Warn.Sprint("The database is empty.\n"))
+		s := "This dupe request requires at least one directory to lookup."
 		if runtime.GOOS == winOS {
-			printl(w, "This dupe request requires at least one directory or drive letter to lookup.")
-		} else {
-			printl(w, "This dupe request requires at least one directory to lookup.")
+			s = "This dupe request requires at least one directory or drive letter to lookup."
 		}
+		printl(w, s)
 		printl(w, "These lookup directories will be stored to the database as buckets.")
 		if len(flag.Args()) > 0 {
 			s := fmt.Sprintf("\ndupers dupe %s <one or more directories>\n", flag.Args()[1])

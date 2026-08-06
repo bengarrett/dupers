@@ -280,7 +280,8 @@ func Help() string {
 	DatabaseHelp(w)
 	ProgramOpts(w)
 	if err := w.Flush(); err != nil {
-		return fmt.Sprintf("could not flush the help text: %s", err)
+		const format = "could not flush the help text: %s"
+		return fmt.Sprintf(format, err)
 	}
 	return b.String()
 }
@@ -297,7 +298,8 @@ func HelpDatabase() string {
 	DatabaseHelp(w)
 	ProgramOpts(w)
 	if err := w.Flush(); err != nil {
-		return fmt.Sprintf("could not flush the help text: %s", err)
+		const format = "could not flush the help text: %s"
+		return fmt.Sprintf(format, err)
 	}
 	return b.String()
 }
@@ -307,7 +309,8 @@ func HelpDupe() string {
 	DupeHelp(w)
 	ProgramOpts(w)
 	if err := w.Flush(); err != nil {
-		return fmt.Sprintf("could not flush the help text: %s", err)
+		const format = "could not flush the help text: %s"
+		return fmt.Sprintf(format, err)
 	}
 	return b.String()
 }
@@ -317,7 +320,8 @@ func HelpSearch() string {
 	SearchHelp(w)
 	ProgramOpts(w)
 	if err := w.Flush(); err != nil {
-		return fmt.Sprintf("could not flush the help text: %s", err)
+		const format = "could not flush the help text: %s"
+		return fmt.Sprintf(format, err)
 	}
 	return b.String()
 }
@@ -369,8 +373,8 @@ func backupDB(quiet bool) error {
 	if quiet {
 		printl(os.Stdout, name)
 	}
-	s := fmt.Sprintf("A new copy of the database (%s) is at: %s",
-		humanize.Bytes(safesize(writ)), name)
+	const format = "A new copy of the database (%s) is at: %s"
+	s := fmt.Sprintf(format, humanize.Bytes(safesize(writ)), name)
 	printer.Quiet(quiet, s)
 	return nil
 }

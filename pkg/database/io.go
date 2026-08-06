@@ -57,11 +57,12 @@ func Backup() (string, int64, error) {
 // backup generates a time sensitive name for the backup file.
 func backup() string {
 	now, ext := time.Now().Format(backupTime), filepath.Ext(boltName)
-	return fmt.Sprintf("%s-backup-%s%s", strings.TrimSuffix(boltName, ext), now, ext)
+	const format = "%s-backup-%s%s"
+	return fmt.Sprintf(format, strings.TrimSuffix(boltName, ext), now, ext)
 }
 
 // CopyFile duplicates the named file to the destination filepath.
-func CopyFile(name, dest string) (int64, error) {
+func CopyFile(name, dest string) (written int64, err error) {
 	if name == "" {
 		return 0, ErrNoFilename
 	}
@@ -80,7 +81,11 @@ func CopyFile(name, dest string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer func() { _ = bf.Close() }()
+	defer func() {
+		if cErr := bf.Close(); cErr != nil {
+			err = errors.Join(err, fmt.Errorf("could not close: %s: %w", dest, cErr))
+		}
+	}()
 	// duplicate data
 	return io.Copy(bf, f)
 }
@@ -307,6 +312,9 @@ func Scanner(file *os.File) (string, *Lists, error) {
 			break
 		}
 		lists[Filepath(key)] = sum
+	}
+	if err := scanner.Err(); err != nil {
+		return "", nil, fmt.Errorf("%w, scanning csv file problem: %s", err, file.Name())
 	}
 	return bucket, &lists, nil
 }

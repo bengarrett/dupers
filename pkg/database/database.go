@@ -51,6 +51,7 @@ const (
 )
 
 var (
+	ErrClose     = errors.New("cannot close file or item")
 	ErrEmpty     = errors.New("database is empty and contains no items")
 	ErrNoCompact = errors.New("compression has not reduced the database size")
 	ErrNoClean   = errors.New("database has nothing to clean")
@@ -305,20 +306,28 @@ func cleaner(db *bolt.DB, debug bool, buckets []string) ([]string, error) {
 }
 
 // Compact the database by reclaiming internal space.
-func Compact(db *bolt.DB, debug bool) error {
+func Compact(db *bolt.DB, debug bool) (err error) { //nolint:funlen
 	if db == nil {
 		return bberr.ErrDatabaseNotOpen
 	}
 	printer.Debug(debug, "running database compact")
+
+	defer func() {
+		if cErr := db.Close(); cErr != nil {
+			err = errors.Join(err, fmt.Errorf("compact database: %w", ErrClose))
+		}
+	}()
 
 	// make a temporary database
 	f, err := os.CreateTemp(os.TempDir(), "dupers-*.db")
 	if err != nil {
 		return err
 	}
-	// Ensure file is always closed and cleaned up
 	defer func() {
-		_ = f.Close()
+		// ensure temporary db gets closed and removed
+		if cErr := f.Close(); cErr != nil {
+			err = errors.Join(err, fmt.Errorf("temporary database: %w", ErrClose))
+		}
 		_ = os.Remove(f.Name())
 	}()
 
@@ -327,9 +336,11 @@ func Compact(db *bolt.DB, debug bool) error {
 	if err != nil {
 		return fmt.Errorf("%w: open %s", err, f.Name())
 	}
-	// Ensure target DB is always closed
 	defer func() {
-		_ = target.Close()
+		// ensure target DB is always closed
+		if cErr := target.Close(); cErr != nil {
+			err = errors.Join(err, fmt.Errorf("target database: %w", ErrClose))
+		}
 	}()
 
 	printer.Debug(debug, "opened replacement database: "+f.Name())
@@ -350,21 +361,16 @@ func Compact(db *bolt.DB, debug bool) error {
 			return err
 		}
 		s1 := fmt.Sprintf("original database: %d bytes, %s", statSrc.Size(), statSrc.Name())
-		printer.Debug(debug, s1)
 		s2 := fmt.Sprintf("new database:      %d bytes, %s", statDst.Size(), statDst.Name())
+		printer.Debug(debug, s1)
 		printer.Debug(debug, s2)
 	}
 
 	path := db.Path()
-	if err = db.Close(); err != nil {
-		return err
-	}
-
 	i, err := CopyFile(f.Name(), path)
 	if err != nil {
 		return err
 	}
-
 	s := fmt.Sprintf("copied %d bytes to: %s", i, path)
 	printer.Debug(debug, s)
 	return nil
@@ -438,7 +444,8 @@ func compare(db *bolt.DB, ignoreCase, pathBase bool, term []byte, buckets ...str
 		})
 		if err != nil {
 			if errors.Is(err, bberr.ErrBucketNotFound) {
-				return nil, fmt.Errorf("%w: '%s'", err, abs)
+				const format = "%w: '%s'"
+				return nil, fmt.Errorf(format, err, abs)
 			}
 			return nil, err
 		}
@@ -492,7 +499,8 @@ func DB() (string, error) {
 	// create database directory if it doesn't exist
 	if _, err = os.Stat(dir); os.IsNotExist(err) {
 		if errMk := os.MkdirAll(dir, PrivateDir); errMk != nil {
-			return "", fmt.Errorf("cannot create database directory: %w: %s", errMk, dir)
+			const format = "cannot create database directory: %w: %s"
+			return "", fmt.Errorf(format, errMk, dir)
 		}
 	}
 	// create a new database if it doesn't exist, this prevents
@@ -521,13 +529,16 @@ func DB() (string, error) {
 }
 
 // Create a new database at the given path.
-func Create(path string) error {
+func Create(path string) (err error) {
 	db, err := bolt.Open(path, PrivateFile, write())
 	if err != nil {
-		return fmt.Errorf("could not create a new database: %w: %s", err, path)
+		const format = "could not create a new database: %w: %s"
+		return fmt.Errorf(format, err, path)
 	}
 	defer func() {
-		_ = db.Close()
+		if cErr := db.Close(); cErr != nil {
+			err = errors.Join(err, fmt.Errorf("cannot close the new database: %w", ErrClose))
+		}
 	}()
 	return nil
 }

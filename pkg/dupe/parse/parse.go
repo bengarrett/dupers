@@ -206,7 +206,8 @@ func Print(quiet, exact bool, term string, m *database.Matches) string {
 					mark)
 				continue
 			}
-			fmt.Fprintf(w, "  %s%s\t%s\n", color.Primary.Sprint(cnt),
+			fmt.Fprintf(w, "  %s%s\t%s\n",
+				color.Primary.Sprint(cnt),
 				color.Secondary.Sprint("."), mark)
 		}
 	}

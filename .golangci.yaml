@@ -1,9 +1,10 @@
-version: "2"
+version: '2'
 linters:
   default: all
   disable:
     - depguard
     - exhaustruct
+    - gomodguard
     - nlreturn
     - noinlineerr
     - paralleltest
@@ -20,9 +21,13 @@ linters:
           - errcheck
           - funlen
           - gocognit
+          - goconst
           - lll
           - varnamelen
         path: _test\.go
+      - linters:
+          - goconst
+        path: _fuzz\.go
   settings:
     cyclop:
       max-complexity: 15

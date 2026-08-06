@@ -214,8 +214,8 @@ func (c *Config) DelEmptyDirs(w io.Writer) error {
 
 // Print the results of a dupe request.
 func (c *Config) Print() (string, error) { //nolint:gocognit
-	c.Debugger(fmt.Sprintf("print duplicate results\ncomparing %d sources against %d unique items to compare",
-		len(c.Sources), len(c.Compare)))
+	const format = "print duplicate results\ncomparing %d sources against %d unique items to compare"
+	c.Debugger(fmt.Sprintf(format, len(c.Sources), len(c.Compare)))
 
 	w := new(bytes.Buffer)
 	finds := 0
@@ -281,8 +281,9 @@ func (c *Config) DelDupeFiles() (string, error) {
 		return w.String(), nil
 	}
 	printl(w)
+	const format = " %d. remove read: %s"
 	for i, path := range c.Sources {
-		c.Debugger(fmt.Sprintf(" %d. remove read: %s", i, path))
+		c.Debugger(fmt.Sprintf(format, i, path))
 		stat, err := os.Stat(path)
 		if os.IsNotExist(err) {
 			c.Debugger("path is not exist: " + path)
