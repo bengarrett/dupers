@@ -62,7 +62,7 @@ func backup() string {
 }
 
 // CopyFile duplicates the named file to the destination filepath.
-func CopyFile(name, dest string) (written int64, err error) {
+func CopyFile(name, dest string) (written int64, err error) { //nolint:nonamedreturns
 	if name == "" {
 		return 0, ErrNoFilename
 	}

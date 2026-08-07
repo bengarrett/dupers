@@ -48,7 +48,7 @@ func printf(w io.Writer, format string, a ...any) {
 	_, _ = fmt.Fprintf(w, format, a...)
 }
 
-func tasks(selection string, c *dupe.Config, f cmd.Flags) (err error) {
+func tasks(selection string, c *dupe.Config, f cmd.Flags) (err error) { //nolint:nonamedreturns
 	const format = "database task error: %w"
 	switch selection {
 	case task.Dupe_:
