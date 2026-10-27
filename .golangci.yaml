@@ -19,6 +19,7 @@ linters:
           - cyclop
           - dupl
           - errcheck
+          - exhaustruct_v5
           - funlen
           - gocognit
           - goconst

@@ -171,7 +171,7 @@ func (c *Config) DelEmptyDirs(w io.Writer) error {
 		return nil
 	}
 	var count int
-	if err := godirwalk.Walk(path, &godirwalk.Options{
+	if err := godirwalk.Walk(path, &godirwalk.Options{ //nolint:exhaustruct_v5
 		Unsorted: true,
 		Callback: func(_ string, _ *godirwalk.Dirent) error {
 			return nil

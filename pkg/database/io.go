@@ -257,7 +257,10 @@ func OpenRead() (*bolt.DB, error) {
 
 // read bolt option to open in read only mode with a file lock timeout.
 func read() *bolt.Options {
-	return &bolt.Options{ReadOnly: true, Timeout: Timeout}
+	return &bolt.Options{ //nolint:exhaustruct_v5
+		Timeout:  Timeout,
+		ReadOnly: true,
+	}
 }
 
 // OpenWrite opens the Bolt database for writing and reading.
@@ -275,7 +278,9 @@ func OpenWrite() (*bolt.DB, error) {
 
 // write bolt option to open in write mode with a file lock timeout.
 func write() *bolt.Options {
-	return &bolt.Options{Timeout: Timeout}
+	return &bolt.Options{ //nolint:exhaustruct_v5
+		Timeout: Timeout,
+	}
 }
 
 // Scanner reads the content of an export csv file.

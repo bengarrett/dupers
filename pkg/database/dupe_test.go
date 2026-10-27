@@ -21,8 +21,9 @@ import (
 func TestConfig_Print(t *testing.T) {
 	item1 := mock.Item(t, 1)
 	item2 := mock.Item(t, 2)
-	c := dupe.Config{}
-	c.Sources = []string{item1, item2}
+	c := dupe.Config{
+		Sources: []string{item1, item2},
+	}
 	sum, err := parse.Read(item1)
 	be.Err(t, err, nil)
 	c.Compare = make(parse.Checksums)

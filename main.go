@@ -113,7 +113,11 @@ func tasks(selection string, c *dupe.Config, f cmd.Flags) (err error) { //nolint
 
 func main() {
 	const ok, bad = 0, 1
-	alias, cfg, flg := cmd.Aliases{}, dupe.Config{}, cmd.Flags{}
+	var (
+		alias cmd.Aliases
+		cfg   dupe.Config
+		flg   cmd.Flags
+	)
 	cfg.SetTimer()
 	flg.Define()
 	alias.Define()
