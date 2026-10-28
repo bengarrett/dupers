@@ -36,8 +36,9 @@ require (
 	github.com/stangelandcl/ppmd v0.1.1 // indirect
 	github.com/ulikunitz/xz v0.5.17 // indirect
 	github.com/xo/terminfo v1.2.0 // indirect
-	go.uber.org/nilaway v0.0.0-20250805202745-8ad05f089790 // indirect
-	go4.org v0.0.0-20261027185433-fb99e133b372 // indirect
+	go.uber.org/nilaway v0.0.0-20260918162853-acb8859b9031 // indirect
+	go4.org v0.0.0-20261028031214-ed6929a230fe // indirect
+	golang.org/x/exp/typeparams v0.0.0-20260908205506-85c1c2202aba // indirect
 	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect

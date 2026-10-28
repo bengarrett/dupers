@@ -161,6 +161,7 @@ tasks:
     desc: Update the app package dependencies.
     cmds:
       - cmd: go get -u -x
+      - cmd: go get go.uber.org/nilaway/cmd/nilaway@latest
       - cmd: go mod verify
   # ===== Documentation Tasks =====
 
